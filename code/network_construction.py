@@ -1,6 +1,5 @@
 import pymnet as pn
 import numpy as np
-import scipy.sparse.csgraph
 
 import corrs_and_mask_calculations
 import clustering
