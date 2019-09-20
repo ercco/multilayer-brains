@@ -9,6 +9,27 @@ import network_io
 import subgraph_classification
 import corrs_and_mask_calculations
 
+def isomorphism_classes_from_file(filename,timewindow,overlap,intralayer_density,interlayer_density,
+                                clustering_method,
+                                isomorphism_class_sizes,isomorphism_class_savenames,isomorphism_allowed_aspects=[0],
+                                layersetwise_networks_savefolder=None,
+                                data_mask_filename=None):
+    '''
+    TODO documentation
+    '''
+    # load data
+    data = nib.load(filename)
+    image_array = data.get_fdata()
+    # mask data
+    maskdata = nib.load(data_mask_filename)
+    mask_array = maskdata.get_fdata()
+    corrs_and_mask_calculations.gray_mask(image_array,mask_array)
+    # get layersetwise network generator
+    layersetwise_generator = clustering_method_parser()
+
+def clustering_method_parser():
+    pass
+
 def isomorphism_classes_from_nifti(nii_data_filename, subj_id, run_number,
                        timewindow, overlap, intralayer_density, interlayer_density,
                        subgraph_size_dict,
