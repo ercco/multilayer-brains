@@ -26,6 +26,12 @@ def isomorphism_classes_from_file(filename,timewindow,overlap,intralayer_density
     corrs_and_mask_calculations.gray_mask(image_array,mask_array)
     # get layersetwise network generator
     layersetwise_generator = clustering_method_parser()
+    for M in layersetwise_generator:
+        M = threshold()
+        subgraph_classification.find_isomorphism_classes(M,n_nodes,n_layers,subnets_filename,
+                                                                     allowed_aspects=allowed_aspects,
+                                                                     aggregated_dict=aggregated_dicts_dict[(n_nodes,n_layers)],
+                                                                     examples_dict=examples_dicts_dict[(n_nodes,n_layers)])
 
 def clustering_method_parser():
     pass
