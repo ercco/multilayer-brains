@@ -9,27 +9,58 @@ import network_io
 import subgraph_classification
 import corrs_and_mask_calculations
 
-def isomorphism_classes_from_file(filename,timewindow,overlap,intralayer_density,interlayer_density,
-                                clustering_method,
-                                isomorphism_class_sizes,isomorphism_class_savenames,isomorphism_allowed_aspects=[0],
+def isomorphism_classes_from_file(filename,data_mask_filename,
+								timewindow,overlap,density_params,
+                                clustering_method_params,
+                                nlayers,nnodes,isomorphism_allowed_aspects=[0],
+                                isomorphism_class_savenames=None,
                                 layersetwise_networks_savefolder=None,
-                                data_mask_filename=None):
-    '''
-    TODO documentation
-    '''
+                                log_savename=None):
+    """Create isomorphism class dictionary from brain imaging data.
+    
+    Arguments:
+    filename : str, name of nifti file
+    data_mask_filename : str, name of file containing the gray matter mask for the data
+		(None = no masking)
+    timewindow : int, length of timewindow in data points
+    overlap : int, length of overlap between consecutive timewindows in data points
+    density_params : dict, with keys
+		intralayer_density : float, density of intralayer networks
+		interlayer_density : float, density of interlayer networks
+		OR
+		intra_avg_degree : float, average intralayer degree of nodes
+		inter_avg_degree : float, average in- and out-degree of nodes
+	clustering_method_params : dict, with keys
+		method : str, name of the clustering method
+		AND
+		key-value pairs giving parameters for chosen method (see section Clustering)
+	nlayers : int, the number of layers in graphlets of interest
+	nnodes : int or list of ints, the number of nodes in graphlets of interest
+		if list, each entry will be enumerated
+	isomorphism_allowed_aspects : list, define allowed aspects for isomorphism
+	isomorphism_class_savenames : str or list of strs, the same length as nnodes
+		filenames for saving found isomorphism class dicts (None = no saving)
+	layersetwise_networks_savefolder : str, folder for saving the generated networks
+		(None = no saving)
+	log_savename : str, appends successful completion info to this file (None = no logging)
+	
+	Clustering:
+	TODO explanation
+	"""
     # load data
     data = nib.load(filename)
     image_array = data.get_fdata()
     # mask data
-    maskdata = nib.load(data_mask_filename)
-    mask_array = maskdata.get_fdata()
-    corrs_and_mask_calculations.gray_mask(image_array,mask_array)
+    if data_mask_filename:
+    	maskdata = nib.load(data_mask_filename)
+    	mask_array = maskdata.get_fdata()
+    	corrs_and_mask_calculations.gray_mask(image_array,mask_array)
     # get layersetwise network generator
-    layersetwise_generator = clustering_method_parser()
+    layersetwise_generator = clustering_method_parser(image_array,timewindow,overlap,nlayers,clustering_method_params)
     for M in layersetwise_generator:
     	# write full network with all the weights
     	network_io.write_layersetwise_network(M,layersetwise_networks_savefolder)
-        M = threshold(M)
+        M = threshold(M,density_params)
         subgraph_classification.find_isomorphism_classes(M,n_nodes,n_layers,subnets_filename,
                                                                      allowed_aspects=allowed_aspects,
                                                                      aggregated_dict=aggregated_dicts_dict[(n_nodes,n_layers)],
@@ -37,8 +68,20 @@ def isomorphism_classes_from_file(filename,timewindow,overlap,intralayer_density
     	network_io.write_pickle_file(isom_classes_dict)
     	network_io.write_pickle_file(examples_dict)
 
-def clustering_method_parser():
-    pass
+def clustering_method_parser(image_array,timewindow,overlap,nlayers,clustering_method_params):
+	method = clustering_method_params['method']
+	if method == None:
+		# voxel-level
+		pass
+    elif method == "template":
+    	pass
+    elif method == "sklearn" or method == "HAC":
+    	pass
+    elif method == "consistency_growth":
+    	pass
+    else:
+    	raise NotImplementedError('Clustering method not implemented')
+    
 
 def isomorphism_classes_from_nifti(nii_data_filename, subj_id, run_number,
                        timewindow, overlap, intralayer_density, interlayer_density,
