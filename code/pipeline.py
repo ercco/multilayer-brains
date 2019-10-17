@@ -41,6 +41,8 @@ def isomorphism_classes_from_file(filename,data_mask_filename,
 	isomorphism_allowed_aspects : list, define allowed aspects for isomorphism
 	isomorphism_class_savenames : str or list of strs, the same length as nnodes
 		filenames for saving found isomorphism class dicts (None = no saving)
+	isomorphism_class_examples_savenames : str of list of strs, the same length as nnodes
+		filenames for saving example networks for each isomorphism class (None = no saving)
 	layersetwise_networks_savefolder : str, folder for saving the generated networks
 		(None = no saving)
 	log_savename : str, appends successful completion info to this file (None = no logging)
@@ -83,8 +85,12 @@ def isomorphism_classes_from_file(filename,data_mask_filename,
                                                                      allowed_aspects=isomorphism_allowed_aspects,
                                                                      aggregated_dict=aggregated_isomclass_dict[(nnodes[i],nlayers)],
                                                                      examples_dict=aggregated_example_dict[(nnodes[i],nlayers)])
-    		network_io.write_pickle_file(aggregated_isomclass_dict[(nnodes[i],nlayers)],isomorphism_class_savenames[i])
-    		network_io.write_pickle_file(aggregated_example_dict[(nnodes[i],nlayers)]isomorphism_class_examples_savenames[i])
+            if isomorphism_class_savenames:
+    			network_io.write_pickle_file(dict(aggregated_isomclass_dict[(nnodes[i],nlayers)]),isomorphism_class_savenames[i])
+    		if isomorphism_class_examples_savenames:
+    			network_io.write_pickle_file(aggregated_example_dict[(nnodes[i],nlayers)],isomorphism_class_examples_savenames[i])
+    # TODO return value
+    return
 
 def clustering_method_parser(image_array,timewindow,overlap,nlayers,clustering_method_params):
 	method = clustering_method_params['method']
@@ -99,7 +105,6 @@ def clustering_method_parser(image_array,timewindow,overlap,nlayers,clustering_m
     	pass
     else:
     	raise NotImplementedError('Clustering method not implemented')
-    
 
 def isomorphism_classes_from_nifti(nii_data_filename, subj_id, run_number,
                        timewindow, overlap, intralayer_density, interlayer_density,
