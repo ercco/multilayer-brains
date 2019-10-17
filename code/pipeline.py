@@ -14,9 +14,10 @@ def isomorphism_classes_from_file(filename,data_mask_filename,
                                 clustering_method_params,
                                 nlayers,nnodes,isomorphism_allowed_aspects=[0],
                                 isomorphism_class_savenames=None,
+                                isomorphism_class_examples_savenames=None,
                                 layersetwise_networks_savefolder=None,
                                 log_savename=None):
-    """Create isomorphism class dictionary from brain imaging data.
+    """Create isomorphism class dictionary/ies from brain imaging data.
     
     Arguments:
     filename : str, name of nifti file
@@ -36,7 +37,7 @@ def isomorphism_classes_from_file(filename,data_mask_filename,
 		key-value pairs giving parameters for chosen method (see section Clustering)
 	nlayers : int, the number of layers in graphlets of interest
 	nnodes : int or list of ints, the number of nodes in graphlets of interest
-		if list, each entry will be enumerated
+		if list, each entry will be combined with nlayers and enumerated
 	isomorphism_allowed_aspects : list, define allowed aspects for isomorphism
 	isomorphism_class_savenames : str or list of strs, the same length as nnodes
 		filenames for saving found isomorphism class dicts (None = no saving)
@@ -46,7 +47,22 @@ def isomorphism_classes_from_file(filename,data_mask_filename,
 	
 	Clustering:
 	TODO explanation
+	
+	Returns:
+	if nnodes is an int:
+		dict of dicts, first level of keys is isomorphism classes as tuples (complete
+		invariants) and second level of keys is (ordered) layersets as tuples
+		return_dict[compinvariant][layerset] = frequency
+	if nnodes is a list:
+		dict of dicts of dicts, first level of keys is nnodes,nlayeyers pairs as tuples,
+		second and third level as in the nnodes is an int case
+		return_dict[(nnodes,nlayers)][compinvariant][layerset] = frequency
 	"""
+	# convert int nnodes to length-1 list
+	nnodes = [nnodes] if isinstance(nnodes,int) else nnodes
+	# create container data structures for isomorphism classes
+	aggregated_isomclass_dict = collections.defaultdict(lambda: collections.defaultdict(dict))
+	aggregated_example_dict = collections.defaultdict(dict)
     # load data
     data = nib.load(filename)
     image_array = data.get_fdata()
@@ -58,15 +74,17 @@ def isomorphism_classes_from_file(filename,data_mask_filename,
     # get layersetwise network generator
     layersetwise_generator = clustering_method_parser(image_array,timewindow,overlap,nlayers,clustering_method_params)
     for M in layersetwise_generator:
-    	# write full network with all the weights
-    	network_io.write_layersetwise_network(M,layersetwise_networks_savefolder)
-        M = threshold(M,density_params)
-        subgraph_classification.find_isomorphism_classes(M,n_nodes,n_layers,subnets_filename,
-                                                                     allowed_aspects=allowed_aspects,
-                                                                     aggregated_dict=aggregated_dicts_dict[(n_nodes,n_layers)],
-                                                                     examples_dict=examples_dicts_dict[(n_nodes,n_layers)])
-    	network_io.write_pickle_file(isom_classes_dict)
-    	network_io.write_pickle_file(examples_dict)
+    	if layersetwise_networks_savefolder:
+    		# write full network with all the weights
+    		network_io.write_layersetwise_network(M,layersetwise_networks_savefolder)
+        M = network_construction.threshold_network(M,density_params)
+        for i in range(len(nnodes)):
+        	subgraph_classification.find_isomorphism_classes(M,nnodes[i],nlayers,None,
+                                                                     allowed_aspects=isomorphism_allowed_aspects,
+                                                                     aggregated_dict=aggregated_isomclass_dict[(nnodes[i],nlayers)],
+                                                                     examples_dict=aggregated_example_dict[(nnodes[i],nlayers)])
+    		network_io.write_pickle_file(aggregated_isomclass_dict[(nnodes[i],nlayers)],isomorphism_class_savenames[i])
+    		network_io.write_pickle_file(aggregated_example_dict[(nnodes[i],nlayers)]isomorphism_class_examples_savenames[i])
 
 def clustering_method_parser(image_array,timewindow,overlap,nlayers,clustering_method_params):
 	method = clustering_method_params['method']
