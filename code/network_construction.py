@@ -311,13 +311,13 @@ def calculate_cluster_correlation_matrix(imgdata_tw,voxels_in_clusters):
 #################### Thresholding ##########################################################################################################
 
 def threshold_network(M,density_params):
-	# threshold network according to params in density_params dict
-	if 'intralayer_density' in density_params and 'interlayer_density' in density_params:
-		return threshold_multilayer_network(M,density_params['intralayer_density'],density_params['interlayer_density'],density_params.get('replace_interlayer_weights_with_ones',True))
-	elif 'intra_avg_degree' in density_params and 'inter_avg_degree' in density_params:
-		raise NotImplementedError('Thresholding method not implemented')
-	else:
-		raise NotImplementedError('Thresholding method not implemented')
+    # threshold network according to params in density_params dict
+    if 'intralayer_density' in density_params and 'interlayer_density' in density_params:
+        return threshold_multilayer_network(M,density_params['intralayer_density'],density_params['interlayer_density'],density_params.get('replace_interlayer_weights_with_ones',True))
+    elif 'intra_avg_degree' in density_params and 'inter_avg_degree' in density_params:
+        raise NotImplementedError('Thresholding method not implemented')
+    else:
+        raise NotImplementedError('Thresholding method not implemented')
 
 def threshold_multiplex_network(M,density=0.05):
     # works only for multiplex networks

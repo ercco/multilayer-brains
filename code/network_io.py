@@ -96,7 +96,7 @@ def read_weighted_network(filename):
     return M
 
 def write_pickle_file(object,filename):
-	f = open(filename,'w')
+    f = open(filename,'w')
     pickle.dump(object,f)
     f.close()
     return
@@ -108,8 +108,8 @@ def read_pickle_file(filename):
     return obj
 
 def write_layersetwise_network(M,layersetwise_networks_savefolder):
-	# uses sorted layer names as the savename
-	net_name = layerset_net_filename = '_'.join([str(l) for l in sorted(M.iter_layers())])
-	filename = layersetwise_networks_savefolder+'/'+net_name
-	write_pickle_file(M,filename)
-	return
+    # uses sorted layer names as the savename
+    net_name = layerset_net_filename = '_'.join([str(l) for l in sorted(M.iter_layers())])
+    filename = layersetwise_networks_savefolder+'/'+net_name
+    write_pickle_file(M,filename)
+    return
