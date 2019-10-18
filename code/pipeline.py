@@ -95,14 +95,49 @@ def isomorphism_classes_from_file(filename,data_mask_filename,
 def clustering_method_parser(image_array,timewindow,overlap,nlayers,clustering_method_params):
     method = clustering_method_params['method']
     if method == None:
-        # voxel-level
-        pass
-    elif method == "template":
-        pass
-    elif method == "sklearn" or method == "HAC":
-        pass
-    elif method == "consistency_growth":
-        pass
+        # optional params
+        nan_log = clustering_method_params.get('nan_log_savename',None)
+        return network_construction.yield_multiplex_network_in_layersets(image_array,nlayers,timewindow,overlap,nanlogfile=nan_log)
+    elif method == 'template':
+        # required params
+        template_filename = clustering_method_params['template_filename']
+        template_data = nib.load(template_filename)
+        template_array = template_data.get_fdata()
+        # optional params
+        nan_log = clustering_method_params.get('nan_log_savename',None)
+        calculate_consistency = clustering_method_params.get('calculate_consistency',False)
+        return network_construction.yield_clustered_multilayer_network_in_layersets(             image_array,nlayers,timewindow,overlap,n_clusters=-1,method=method,template=template_array,nanlogfile=nan_log,             calculate_consistency=calculate_consistency)
+    elif method == 'sklearn' or method == 'HAC':
+        # required params
+        nclusters = clustering_method_params['nclusters']
+        # optional params
+        nan_log = clustering_method_params.get('nan_log_savename',None)
+        event_time_stamps = clustering_method_params.get('event_time_stamps',None)
+        calculate_consistency = clustering_method_params.get('calculate_consistency',False)
+        return network_construction.yield_clustered_multilayer_network_in_layersets( image_array,nlayers,timewindow,overlap,n_clusters=nclusters,method=method,template=None,nanlogfile=nan_log,             event_time_stamps=event_time_stamps, calculate_consistency=calculate_consistency)
+    elif method == 'consistency_optimized':
+        # required params
+        nclusters = clustering_method_params['nclusters']
+        consistency_target_function = clustering_method_params['consistency_target_function']
+        # optional params
+        centroid_template_filename = clustering_method_params.get('centroid_template_filename',None)
+        use_random_seeds = clustering_method_params.get('use_random_seeds',True)
+        # choose centroid acquisition method
+        if centroid_template_filename and not use_random_seeds:
+            centroid_template_data = nib.load(centroid_template_filename)
+            centroid_template_array = centroid_template_data.get_fdata()
+            ROI_centroids, _,_ = cbc.findROICentroids(centroid_template_array,fixCentroids=True)
+        elif use_random_seeds:
+            centroid_template_array = None
+            ROI_centroids = 'random'
+        ROI_names = clustering_method_params.get('ROI_names',[])
+        consistency_threshold = clustering_method_params.get('consistency_threshold',-1)
+        n_consistency_iters = clustering_method_params.get('n_consistency_iters',100)
+        n_consistency_CPUs = clustering_method_params.get('n_consistency_CPUs',5)
+        nan_log = clustering_method_params.get('nan_log_savename',None)
+        event_time_stamps = clustering_method_params.get('event_time_stamps',None)
+        calculate_consistency = clustering_method_params.get('calculate_consistency',False)
+        return network_construction.yield_clustered_multilayer_network_in_layersets(             image_array,nlayers,timewindow,overlap,n_clusters=nclusters,method=method,template=centroid_template_array,nanlogfile=nan_log,             event_time_stamps=event_time_stamps,ROI_centroids=ROI_centroids,ROI_names=ROI_names,consistency_threshold=consistency_threshold,consistency_target_function=consistency_target_function,f_transform_consistency=False,calculate_consistency=calculate_consistency,n_consistency_iters=n_consistency_iters,n_consistency_CPUs=n_consistency_CPUs)
     else:
         raise NotImplementedError('Clustering method not implemented')
 
