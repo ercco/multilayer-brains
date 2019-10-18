@@ -51,14 +51,12 @@ def isomorphism_classes_from_file(filename,data_mask_filename,
     TODO explanation
     
     Returns:
-    if nnodes is an int:
-        dict of dicts, first level of keys is isomorphism classes as tuples (complete
-        invariants) and second level of keys is (ordered) layersets as tuples
-        return_dict[compinvariant][layerset] = frequency
-    if nnodes is a list:
-        dict of dicts of dicts, first level of keys is nnodes,nlayeyers pairs as tuples,
-        second and third level as in the nnodes is an int case
-        return_dict[(nnodes,nlayers)][compinvariant][layerset] = frequency
+    dict of dicts of dicts, first level of keys is (nnodes,nlayers) pairs as tuples,
+    second level of keys is isomorphism classes as tuples (complete invariants),
+    and third level of keys is (ordered) layersets as tuples. The number of (nnodes,nlayers)
+    pairs depends on how many different nnodes are given.
+    return_dict[(nnodes,nlayers)][compinvariant][(layerset)] = frequency
+    (dicts are collections.defaultdict objects)
     """
     # convert int nnodes to length-1 list
     nnodes = [nnodes] if isinstance(nnodes,int) else nnodes
@@ -89,8 +87,7 @@ def isomorphism_classes_from_file(filename,data_mask_filename,
                 network_io.write_pickle_file(dict(aggregated_isomclass_dict[(nnodes[i],nlayers)]),isomorphism_class_savenames[i])
             if isomorphism_class_examples_savenames:
                 network_io.write_pickle_file(aggregated_example_dict[(nnodes[i],nlayers)],isomorphism_class_examples_savenames[i])
-    # TODO return value
-    return
+    return aggregated_isomclass_dict
 
 def clustering_method_parser(image_array,timewindow,overlap,nlayers,clustering_method_params):
     method = clustering_method_params['method']
