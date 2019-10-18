@@ -106,7 +106,7 @@ def clustering_method_parser(image_array,timewindow,overlap,nlayers,clustering_m
         # optional params
         nan_log = clustering_method_params.get('nan_log_savename',None)
         calculate_consistency = clustering_method_params.get('calculate_consistency',False)
-        return network_construction.yield_clustered_multilayer_network_in_layersets(             image_array,nlayers,timewindow,overlap,n_clusters=-1,method=method,template=template_array,nanlogfile=nan_log,             calculate_consistency=calculate_consistency)
+        return network_construction.yield_clustered_multilayer_network_in_layersets(image_array,nlayers,timewindow,overlap,n_clusters=-1,method=method,template=template_array,nanlogfile=nan_log,calculate_consistency=calculate_consistency)
     elif method == 'sklearn' or method == 'HAC':
         # required params
         nclusters = clustering_method_params['nclusters']
@@ -114,7 +114,7 @@ def clustering_method_parser(image_array,timewindow,overlap,nlayers,clustering_m
         nan_log = clustering_method_params.get('nan_log_savename',None)
         event_time_stamps = clustering_method_params.get('event_time_stamps',None)
         calculate_consistency = clustering_method_params.get('calculate_consistency',False)
-        return network_construction.yield_clustered_multilayer_network_in_layersets( image_array,nlayers,timewindow,overlap,n_clusters=nclusters,method=method,template=None,nanlogfile=nan_log,             event_time_stamps=event_time_stamps, calculate_consistency=calculate_consistency)
+        return network_construction.yield_clustered_multilayer_network_in_layersets(image_array,nlayers,timewindow,overlap,n_clusters=nclusters,method=method,template=None,nanlogfile=nan_log,event_time_stamps=event_time_stamps,calculate_consistency=calculate_consistency)
     elif method == 'consistency_optimized':
         # required params
         nclusters = clustering_method_params['nclusters']
@@ -137,7 +137,7 @@ def clustering_method_parser(image_array,timewindow,overlap,nlayers,clustering_m
         nan_log = clustering_method_params.get('nan_log_savename',None)
         event_time_stamps = clustering_method_params.get('event_time_stamps',None)
         calculate_consistency = clustering_method_params.get('calculate_consistency',False)
-        return network_construction.yield_clustered_multilayer_network_in_layersets(             image_array,nlayers,timewindow,overlap,n_clusters=nclusters,method=method,template=centroid_template_array,nanlogfile=nan_log,             event_time_stamps=event_time_stamps,ROI_centroids=ROI_centroids,ROI_names=ROI_names,consistency_threshold=consistency_threshold,consistency_target_function=consistency_target_function,f_transform_consistency=False,calculate_consistency=calculate_consistency,n_consistency_iters=n_consistency_iters,n_consistency_CPUs=n_consistency_CPUs)
+        return network_construction.yield_clustered_multilayer_network_in_layersets(image_array,nlayers,timewindow,overlap,n_clusters=nclusters,method=method,template=centroid_template_array,nanlogfile=nan_log,event_time_stamps=event_time_stamps,ROI_centroids=ROI_centroids,ROI_names=ROI_names,consistency_threshold=consistency_threshold,consistency_target_function=consistency_target_function,f_transform_consistency=False,calculate_consistency=calculate_consistency,n_consistency_iters=n_consistency_iters,n_consistency_CPUs=n_consistency_CPUs)
     else:
         raise NotImplementedError('Clustering method not implemented')
 
