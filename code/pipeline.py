@@ -126,7 +126,8 @@ def clustering_method_parser(image_array,timewindow,overlap,nlayers,clustering_m
         if centroid_template_filename and not use_random_seeds:
             centroid_template_data = nib.load(centroid_template_filename)
             centroid_template_array = centroid_template_data.get_fdata()
-            ROI_centroids, _,_ = cbc.findROICentroids(centroid_template_array,fixCentroids=True)
+            #TODO: add consistency optimization clustering files
+            #ROI_centroids, _,_ = cbc.findROICentroids(centroid_template_array,fixCentroids=True)
         elif use_random_seeds:
             centroid_template_array = None
             ROI_centroids = 'random'
