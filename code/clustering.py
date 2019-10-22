@@ -4,7 +4,7 @@ import scipy.sparse.csgraph
 import collections
 
 import corrs_and_mask_calculations
-
+import clustering_by_consistency as cbc
 '''
 Clustering on brain data.
 '''
