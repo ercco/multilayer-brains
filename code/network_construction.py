@@ -3,7 +3,7 @@ import numpy as np
 
 import corrs_and_mask_calculations
 import clustering
-import clustering-by-consistency as cbc
+import clustering_by_consistency as cbc
 
 
 #################### Network creating functions ############################################################################################

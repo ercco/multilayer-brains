@@ -7,6 +7,7 @@ Created on Wed Jan  9 15:31:06 2019
 Functions for clustering voxels by maximizing the spatial consistency (= mean Pearson
 correlation coefficient between the time series of voxels in the cluster). See
 functionwise documentation for further details.
+
 """
 import numpy as np
 import pickle
@@ -1215,12 +1216,10 @@ def growOptimizedROIs(cfg,verbal=True):
         ROICentroids = cfg['ROICentroids']
     imgdata = cfg['imgdata']
     voxelCoordinates = list(zip(*np.where(np.any(imgdata != 0, 3) == True)))
-#    if 'threshold' in cfg.keys():
-#        threshold = cfg['threshold']
-#    else:
-#        threshold = -1
-    threshold = 'voxel-wise'
-    # TODO: remove the hard-coding of the threshold!!! This is done only for testing purposes!!!
+    if 'threshold' in cfg.keys():
+        threshold = cfg['threshold']
+    else:
+        threshold = -1
     targetFunction = cfg['targetFunction']
     if targetFunction == 'spatialConsistency' or targetFunction == 'weighted mean consistency' or targetFunction == 'local weighted consistency':
         if 'consistencyType' in cfg.keys():
@@ -1857,21 +1856,7 @@ def optimizeParcellationByFlipping(cfg):
     print(str(missingSource) + 'source ROIs missing from neighboring ROIs')    
     import pdb; pdb.set_trace()            
     return voxelCoordinates, voxelLabels, targets, meanWeightedConsistencies
-                
-            
-            
-        
-        
-
-
-
-
-        
-        
-        
-        
-    
-        
+     
     # some pseudocode for what follows:
     # 0) ensure that there's a ROIVoxels list OK
     # 1) find boundary voxels of all ROIs
@@ -1902,6 +1887,44 @@ def optimizeParcellationByFlipping(cfg):
     #        there after the update and if their neighboring ROIs have changed. Remove/update tuples as needed. For tuples remaining
     #        in the list, update delta(target).
     #     NOTE: BEFORE ADDING ANY TUPLES, CHECK THAT THEY ARE VALID FLIPS (SEE 2.2 ABOVE)
+     
+def spectral_ncut_clustering(cfg):
+    """
+    Clusters voxels to ROIs using the spectral ncut method introduced by Craddock
+    et al. 2012 (Hum Brain Mapp. 33(8)). This function is meant to be applied on the
+    data of a single subject and therefore lacks the second, group-level clustering
+    also presented in the article.
+    
+    NOTE: Using this function requires installing pyClusterROI 
+    (http://ccraddock.github.io/cluster_roi/). The function assumes that the
+    pyClusterROI scripts are saved in a folder called pyClusterROI and that this
+    folder has been added to the PYTHONPATH.
+    
+    Parameters:
+    -----------
+    cfg: dict, contains:
+         imgdata: x*y*z*t np.array, fMRI measurement data to be used for the clustering.
+                  Three first dimensions correspond to voxel coordinates while the fourth is time.
+                  For voxels outside of the gray matter, all values must be set to 0.
+    
+    
+    Returns:
+    --------
+    voxelLabels: nVoxels x 1 np.array, ROI labels of all voxels. Voxels that don't belong to any ROI have label -1.
+    voxelCoordinates: list (len = nVoxels) of tuples (len = 3), coordinates (in voxels) of all voxels
+    meanConsistency: double, mean consistency of the final ROIs
+    """
+    imgdata = cfg['imgdata']
+    voxelCoordinates = list(zip(*np.where(np.any(imgdata != 0, 3) == True)))
+    nVoxels = len(voxelCoordinates)
+    nTime = imgdata.shape[3]
+    
+    allVoxelTs = np.zeros((nVoxels,nTime))
+    for i,voxel in enumerate(voxelCoordinates):
+        allVoxelTs[i,:] = imgdata[voxel[0],voxel[1],voxel[2],:]
+    
+    
+    
     
         
     
