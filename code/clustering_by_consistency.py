@@ -891,7 +891,7 @@ def makeLocalConnectivity(imdat, thresh):
     --------
     localConnectivity: 1D np.array that contains (in a concatenated form) the
                        x and y indices of connectivity values and the corresponding 
-                       values. Can be used as an input for binfile_parcellate.
+                       values. Can be used as an input for nCutClustering.
     """
     neighbors=np.array([[-1,-1,-1],[0,-1,-1],[1,-1,-1],
                      [-1, 0,-1],[0, 0,-1],[1, 0,-1],
@@ -982,10 +982,53 @@ def makeLocalConnectivity(imdat, thresh):
     localConnectivity=np.append(localConnectivity,sparse_w)
     
     return localConnectivity
+
+def nCutClustering(connectivity,k):
+    """
+    Performs the spectral ncut clustering described in Craddock et al. (2013) at
+    the level of a single local connectivity matrix.
+    NOTE: This function makes strongly use of pyClusterROI (http://ccraddock.github.io/cluster_roi/)
+    by Cameron Craddock et al.
+    NOTE2: This function requires the python_ncut_lib distributed with pyClusterROI
+    saved in the location accessible through PYTHONPATH.
     
+    Parameters:
+    -----------
+    connectivity: 1D np.array that contains (in a concatenated form) the x and y indices of 
+                  connectivity values and the corresponding values.
+    k: int, number of clusters to generate
     
+    Returns:
+    --------
+    group_img: 1D np.array, the value of each elements shows the index of the
+               cluster to which the corresponding voxel belongs
+    """
+    import python_ncut_lib as ncut
+    # calculate the number of non-zero weights in the connectivity matrix
+    n=len(connectivity)/3
+    # reshape the 1D vector read in from infile in to a 3xN array
+    a=np.reshape(connectivity,(3,n))
+    m=max(max(a[0,:]),max(a[1,:]))+1
+    # make the sparse matrix, CSC format is supposedly efficient for matrix
+    # arithmetic
+    W=csc_matrix((a[2,:],(a[0,:],a[1,:])), shape=(m,m))
     
+    # calculating the eigendecomposition of the Laplacian 
+    eigenval,eigenvec = ncut.ncut(W,k)
     
+    # clustering
+    eigk=eigenvec[:,:k]
+    eigenvec_discrete = ncut.discretisation(eigk)
+
+    # transform the discretised eigenvectors into a single vector
+    # where the value corresponds to the cluster # of the corresponding
+    # voxel (each voxel belongs to excactly one cluster)
+    group_img=eigenvec_discrete[:,0]
+    for i in range(1,k):
+        group_img=group_img+(i+1)*eigenvec_discrete[:,i]
+        
+    return group_img
+  
     
 def updateQueue(ROIIndex, priorityQueue, targetFunction, centroidTs, allVoxelTs, ROIVoxels,
                 consistencies=[], ROISizes = [], consistencyType='pearson c',fTransform=False):
@@ -2053,17 +2096,17 @@ def optimizeParcellationByFlipping(cfg):
     #        in the list, update delta(target).
     #     NOTE: BEFORE ADDING ANY TUPLES, CHECK THAT THEY ARE VALID FLIPS (SEE 2.2 ABOVE)
      
-def spectral_ncut_clustering(cfg):
+def spectralNCutClustering(cfg):
     """
     Clusters voxels to ROIs using the spectral ncut method introduced by Craddock
     et al. 2012 (Hum Brain Mapp. 33(8)). This function is meant to be applied on the
     data of a single subject and therefore lacks the second, group-level clustering
     also presented in the article.
     
-    NOTE: Using this function requires installing pyClusterROI 
-    (http://ccraddock.github.io/cluster_roi/). The function assumes that the
-    pyClusterROI scripts are saved in a folder called pyClusterROI and that this
-    folder has been added to the PYTHONPATH.
+    NOTE: Subfunctions of this function makes strong use of pyClusterROI py Cameron 
+    Craddock et al. (http://ccraddock.github.io/cluster_roi/). Using this function
+    requires the python_ncut_lib distributed with pyClusterROI to be saved in a 
+    location accessible through PYTHONPATH.
     
     Parameters:
     -----------
@@ -2073,22 +2116,22 @@ def spectral_ncut_clustering(cfg):
                   For voxels outside of the gray matter, all values must be set to 0.
          thres: float, threshold value, correlation coefficients lower than this value
                 will be removed from the matrix (set to zero).
-    TODO: note: thres can be transformed through pipeline as consistency_threshold
-    
+         nROIs: int, number of clusters to construct
     
     Returns:
     --------
     voxelLabels: nVoxels x 1 np.array, ROI labels of all voxels. Voxels that don't belong to any ROI have label -1.
     voxelCoordinates: list (len = nVoxels) of tuples (len = 3), coordinates (in voxels) of all voxels
-    meanConsistency: double, mean consistency of the final ROIs
     """
     imgdata = cfg['imgdata']
     thres = cfg['thres']
+    nClusters = cfg['nROIs']
     voxelCoordinates = list(zip(*np.where(np.any(imgdata != 0, 3) == True)))
-    nVoxels = len(voxelCoordinates)
-    nTime = imgdata.shape[3]
     
     localConnectivity = makeLocalConnectivity(imgdata,thres)
+    voxelLabels = nCutClustering(localConnectivity,nClusters)
+    
+    return voxelLabels,voxelCoordinates
     
     #TODO: next: copy binfile_parcellate from pyClusterROI and modify it to
     # work withough reading from files

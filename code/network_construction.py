@@ -1,5 +1,6 @@
 import pymnet as pn
 import numpy as np
+import cPickle as pickle
 
 import corrs_and_mask_calculations
 import clustering
@@ -224,11 +225,11 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                         cluster_overlap = get_overlap(set(voxels_in_clusters[cluster_number]),set(previous_voxels_in_clusters[previous_cluster_number]))
                         M[str(previous_voxels_in_clusters[previous_cluster_number]),tw_no-1][str(voxels_in_clusters[cluster_number]),tw_no] = cluster_overlap
                 previous_voxels_in_clusters = voxels_in_clusters # reference to the same object
-                if calculate_consistency: # calculating spatial consistency of formed clusters
+                if calculate_consistency_while_clustering: # calculating spatial consistency of formed clusters
                     windowdata = imgdata[:,:,:,start_times[tw_no]:end_times[tw_no]]
                     n_voxels = 0
                     for cluster in voxels_in_clusters.values():
-                    n_voxels = n_voxels + len(cluster)
+                        n_voxels = n_voxels + len(cluster)
                     n_time = windowdata.shape[3]
                     all_voxel_ts = np.zeros((n_voxels,n_time))
                     voxel_indices = []
@@ -269,7 +270,7 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                                     f.write('NaN correlation at nodes '+node1+', '+node2+' at timewindow '+str(tw_no)+'\n')
                             else:
                                 print('NaN correlation at nodes '+node1+', '+node2+' at timewindow '+str(tw_no)+'\n')
-                if calculate_consistency: #calculating spatial consistency of formed clusters
+                if calculate_consistency_while_clustering: #calculating spatial consistency of formed clusters
                     windowdata = imgdata[:,:,:,start_times[tw_no]:end_times[tw_no]]
                     n_voxels = 0
                     for cluster in voxels_in_clusters.values():
@@ -283,7 +284,7 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                         for i, voxel in enumerate(voxels):
                             all_voxel_ts[i + counter] = windowdata[voxel]
                         counter = counter + len(voxels)
-                    consistencies = cbc.calculateSpatialConsistencyInParallel(voxel_indices, all_voxel_ts,fTransform=f_transform_consistency,nCPUs=n_consistency_CPUs)
+                    consistencies = cbc.calculateSpatialConsistencyInParallel(voxel_indices,all_voxel_ts,fTransform=f_transform_consistency,nCPUs=n_consistency_CPUs)
                     path_components = nanlogfile.split('/')
                     if path_components[-1] == '':
                         consistency_save_path = '/'.join(path_components[:-2]) + '/' + str(tw_no) + consistency_save_name
@@ -333,7 +334,7 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                         cluster_overlap = get_overlap(set(voxels_in_clusters[cluster_number]),set(previous_voxels_in_clusters[previous_cluster_number]))
                         M[str(previous_voxels_in_clusters[previous_cluster_number]),tw_no-1][str(voxels_in_clusters[cluster_number]),tw_no] = cluster_overlap
                 previous_voxels_in_clusters = voxels_in_clusters
-                if calculate_consistency:
+                if calculate_consistency_while_clustering:
                     windowdata = imgdata[:,:,:,start_times[tw_no]:end_times[tw_no]]
                     n_voxels = len(voxel_coordinates)
                     n_time = windowdata.shape[3]
@@ -345,7 +346,7 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                         for i, voxel in enumerate(voxels):
                             all_voxel_ts[i + counter] = windowdata[voxel]
                         counter = counter + len(voxels)
-                    consistencies = cbc.calculateSpatialConsistencyInParallel(voxel_indices, all_voxel_ts,fTransform=f_transform_consistency,nCPUs=n_consistency_CPUs)
+                    consistencies = cbc.calculateSpatialConsistencyInParallel(voxel_indices,all_voxel_ts,fTransform=f_transform_consistency,nCPUs=n_consistency_CPUs)
                     path_components = nanlogfile.split('/')
                     if path_components[-1] == '':
                         consistency_save_path = '/'.join(path_components[:-2]) + '/' + str(tw_no) + consistency_save_name
@@ -392,8 +393,85 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                         cluster_overlap = get_overlap(set(voxels_in_clusters[cluster_number]),set(previous_voxels_in_clusters[previous_cluster_number]))
                         M[str(previous_voxels_in_clusters[previous_cluster_number]),tw_no-1][str(voxels_in_clusters[cluster_number]),tw_no] = cluster_overlap
                 previous_voxels_in_clusters = voxels_in_clusters
-                # TODO: do we need consistency calculation here?
+                if calculate_consistency_while_clustering:
+                    windowdata = imgdata[:,:,:,start_times[tw_no]:end_times[tw_no]]
+                    n_voxels = len(voxel_coordinates)
+                    n_time = windowdata.shape[3]
+                    all_voxel_ts = np.zeros((n_voxels,n_time))
+                    voxel_indices = []
+                    counter = 0
+                    for voxels in voxels_in_clusters.values():
+                        voxel_indices.append(np.arange(counter,counter + len(voxels)))
+                        for i, voxel in enumerate(voxels):
+                            all_voxel_ts[i + counter] = windowdata[voxel]
+                        counter = counter + len(voxels)
+                    consistencies = cbc.calculateSpatialConsistencyInParallel(voxel_indices,all_voxel_ts,fTransform=f_transform_consistency,nCPUs=n_consistency_CPUs)
+                    path_components = nanlogfile.split('/')
+                    if path_components[-1] == '':
+                        consistency_save_path = '/'.join(path_components[:-2]) + '/' + str(tw_no) + consistency_save_name
+                    else:
+                        consistency_save_path = '/'.join(path_components[:-1]) + '/' + str(tw_no) + consistency_save_name
+                    consistency_dict = {'consistency_type':'spatial with pearson c', 'ftransform':f_transform_consistency, 'consistencies':consistencies}
+                    with open(consistency_save_path, 'wb') as f:
+                        pickle.dump(consistency_dict, f, -1)
             del(voxels_in_clusters_by_timewindow[min(voxels_in_clusters_by_timewindow)])
+    elif method=='craddock':
+        voxels_in_clusters_by_timewindow = dict()
+        for layerset in layersets:
+            M = pn.MultilayerNetwork(aspects=1,fullyInterconnected=False)
+            previous_voxels_in_clusters = dict()
+            for tw_no in layerset:
+                cfg = {'imgdata':imgdata[:,:,:,start_times[tw_no]:end_times[tw_no]],'threshold':consistency_threshold,'nROIs':n_clusters}
+                if not tw_no in voxels_in_clusters_by_timewindow:
+                    voxels_in_clusters = dict()
+                    voxel_labels,voxel_coordinates = cbc.spectralNCutClustering(cfg)
+                    for ii, label in enumerate(voxel_labels):
+                        voxels_in_clusters.setdefault(label,[]).append(voxel_coordinates[ii]) # voxels_in_clusters will contain label:[voxels with label] pairs; here, coordinates of each voxel are added to the correct list
+                    if -1 in voxels_in_clusters:
+                        del voxels_in_clusters[-1] # Voxels that are not located in any ROI (because of thresholding) have label -1. These should not be considered further in the pipeline.
+                    voxels_in_clusters_by_timewindow[tw_no] = voxels_in_clusters
+                else:
+                    voxels_in_clusters = voxels_in_clusters_by_timewindow[tw_no]
+                R = calculate_cluster_correlation_matrix(imgdata[:,:,:,start_times[tw_no]:end_times[tw_no]],voxels_in_clusters)
+                for ii in range(R.shape[0]):
+                    node1 = str(voxels_in_clusters[ii])
+                    for jj in range(ii+1,R.shape[1]):
+                        node2 = str(voxels_in_clusters[jj])
+                        if not np.isnan(R[ii,jj]):
+                            M[node1,node2,tw_no] = R[ii,jj]
+                        else:
+                            if nanlogfile != None:
+                                with open(nanlogfile,'a+') as f:
+                                    f.write('NaN correlation at nodes ' + node1 + ',' + node2 + 'at timewindow ' + str(tw_no) + '/n')
+                            else:
+                                print('NaN correlation at nodes ' + node1 + ',' + node2 + 'at timewindow ' + str(tw_no) + '/n')
+                for cluster_number in voxels_in_clusters:
+                    for previous_cluster_number in previous_voxels_in_clusters:
+                        # If previous_voxels_in_clusters is empty, this loop isn't performed at all
+                        cluster_overlap = get_overlap(set(voxels_in_clusters[cluster_number]),set(previous_voxels_in_clusters[previous_cluster_number]))
+                        M[str(previous_voxels_in_clusters[previous_cluster_number]),tw_no-1][str(voxels_in_clusters[cluster_number]),tw_no] = cluster_overlap
+                previous_voxels_in_clusters = voxels_in_clusters
+                if calculate_consistency_while_clustering:
+                    windowdata = imgdata[:,:,:,start_times[tw_no]:end_times[tw_no]]
+                    n_voxels = len(voxel_coordinates)
+                    n_time = windowdata.shape[3]
+                    all_voxel_ts = np.zeros((n_voxels,n_time))
+                    voxel_indices = []
+                    counter = 0
+                    for voxels in voxels_in_clusters.values():
+                        voxel_indices.append(np.arange(counter,counter + len(voxels)))
+                        for i, voxel in enumerate(voxels):
+                            all_voxel_ts[i + counter] = windowdata[voxel]
+                        counter = counter + len(voxels)
+                    consistencies = cbc.calculateSpatialConsistencyInParallel(voxel_indices,all_voxel_ts,fTransform=f_transform_consistency,nCPUs=n_consistency_CPUs)
+                    path_components = nanlogfile.split('/')
+                    if path_components[-1] == '':
+                        consistency_save_path = '/'.join(path_components[:-2]) + '/' + str(tw_no) + consistency_save_name
+                    else:
+                        consistency_save_path = '/'.join(path_components[:-1]) + '/' + str(tw_no) + consistency_save_name
+                    consistency_dict = {'consistency_type':'spatial with pearson c', 'ftransform':f_transform_consistency, 'consistencies':consistencies}
+                    with open(consistency_save_path, 'wb') as f:
+                        pickle.dump(consistency_dict, f, -1)
             yield M
             del(M)
     else:
