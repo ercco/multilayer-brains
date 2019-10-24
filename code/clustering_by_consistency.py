@@ -18,8 +18,9 @@ import heapq
 
 import network_io
 
-from scipy import io
+from scipy import io, matrix
 from scipy.stats.stats import pearsonr
+from scipy.sparse import csc_matrix
 from concurrent.futures import ProcessPoolExecutor as Pool
 
 # Data io
@@ -631,6 +632,53 @@ def spaceToMNI(coordinate,resolution):
     m = np.array([-1*resolution,resolution,resolution])
     MNICoordinate = coordinate * m + origin
     return MNICoordinate
+    
+# simple function to translate 1D vector coordinates to 3D matrix coordinates,
+# for a 3D matrix of size sz
+def indx_1dto3d(idx,sz):
+    """
+    A simple function to translate 1D vector coordinates to 3D matrix coordinates,
+    for a 3D matrix of size sz
+    NOTE: This function is directly copied from pyClusterROI (http://ccraddock.github.io/cluster_roi/)
+    by Cameron Craddock et al.
+    
+    Parameters:
+    -----------
+    idx: int, 1D vector coordinate
+    sz: tuple, shape of the 3D matrix
+    
+    Returns:
+    --------
+    (x,y,z): coordinates in the 3D matrix
+    """
+    x=np.divide(idx,np.prod(sz[1:3]))
+    y=np.divide(idx-x*np.prod(sz[1:3]),sz[2])
+    z=idx-x*np.prod(sz[1:3])-y*sz[2]
+    return (x,y,z)
+
+# simple function to translate 3D matrix coordinates to 1D vector coordinates,
+# for a 3D matrix of size sz
+def indx_3dto1d(idx,sz):
+    """
+    A simple function to translate 3D matrix coordinates to 1D vector coordinates,
+    for a 3D matrix of size sz.
+    NOTE: This function is directly copied from pyClusterROI (http://ccraddock.github.io/cluster_roi/)
+    by Cameron Craddock et al.
+    
+    Parameters:
+    -----------
+    idx: coordinates in the 3D matrix
+    sz: shape of the 3D matrix
+    
+    Returns:
+    --------
+    idx1: coordinate in the 1D vector
+    """
+    if(np.rank(idx) == 1):
+        idx1=idx[0]*np.prod(sz[1:3])+idx[1]*sz[2]+idx[2]
+    else:
+        idx1=idx[:,0]*np.prod(sz[1:3])+idx[:,1]*sz[2]+idx[:,2]
+    return idx1
 
 def voxelLabelsToROIInfo(voxelLabels,voxelCoordinates,constructROIMaps=True):
     """
@@ -821,6 +869,123 @@ def calculateVoxelNeighborhoodCorrelation(voxelCoordinates,allVoxelTs):
             correlations.append(pearsonr(voxelTs,neighborTs)[0])
     voxelNeighborhoodCorrelation = np.mean(correlations)
     return voxelNeighborhoodCorrelation
+    
+def makeLocalConnectivity(imdat, thresh):
+    """
+    Creates the local connectivity matrix used for the Craddock spectral ncut
+    clustering method. This matrix contains for each voxel the Pearson correlation
+    coefficient with the 27 closest neighbors.
+    
+    NOTE: This function makes strongly use of pyClusterROI (http://ccraddock.github.io/cluster_roi/)
+    by Cameron Craddock et al.
+    
+    Parameters:
+    -----------
+    imdat: x*y*z*t np.array, fMRI measurement data to be used for the clustering.
+         Three first dimensions correspond to voxel coordinates while the fourth is time.
+         For voxels outside of the gray matter, all values must be set to 0.
+    thresh: float, threshold value, correlation coefficients lower than this value
+           will be removed from the matrix (set to zero).
+    
+    Returns:
+    --------
+    localConnectivity: 1D np.array that contains (in a concatenated form) the
+                       x and y indices of connectivity values and the corresponding 
+                       values. Can be used as an input for binfile_parcellate.
+    """
+    neighbors=np.array([[-1,-1,-1],[0,-1,-1],[1,-1,-1],
+                     [-1, 0,-1],[0, 0,-1],[1, 0,-1],
+                     [-1, 1,-1],[0, 1,-1],[1, 1,-1],
+                     [-1,-1, 0],[0,-1, 0],[1,-1, 0],
+                     [-1, 0, 0],[0, 0, 0],[1, 0, 0],
+                     [-1, 1, 0],[0, 1, 0],[1, 1, 0],
+                     [-1,-1, 1],[0,-1, 1],[1,-1, 1],
+                     [-1, 0, 1],[0, 0, 1],[1, 0, 1],
+                     [-1, 1, 1],[0, 1, 1],[1, 1, 1]])
+                     
+    # we need a gray matter mask; let's use a copy of the (already masked) imgdata                 
+    mskdat = np.copy(imdat)
+    msz = mskdat.shape
+    # convert the 3D mask array into a 1D vector
+    mskdat=np.reshape(mskdat,np.prod(msz))
+    # determine the 1D coordinates of the non-zero 
+    # elements of the mask
+    iv=np.nonzero(mskdat)[0]
+    m=len(iv)
+    print m, '# of non-zero voxels in the mask'
+    
+    # reshape fmri data to a num_voxels x num_timepoints array	
+    sz = imdat.shape
+    imdat=np.reshape(imdat,(np.prod(sz[:3]),sz[3]))
+    
+    # construct a sparse matrix from the mask
+    msk=csc_matrix((range(1,m+1),(iv,np.zeros(m))),shape=(np.prod(sz[:-1]),1))
+    sparse_i=[]
+    sparse_j=[]
+    sparse_w=[]
+
+    negcount=0
+    
+    # loop over all of the voxels in the mask 	
+    for i in range(0,m):
+        if i % 1000 == 0: print 'voxel #', i
+        # calculate the voxels that are in the 3D neighborhood
+        # of the center voxel
+        ndx3d=indx_1dto3d(iv[i],sz[:-1])+neighbors
+        ndx1d=indx_3dto1d(ndx3d,sz[:-1])
+        
+        # restrict the neigborhood using the mask
+        ondx1d=msk[ndx1d].todense()
+        ndx1d=ndx1d[np.nonzero(ondx1d)[0]]
+        ndx1d=ndx1d.flatten()
+        ondx1d=np.array(ondx1d[np.nonzero(ondx1d)[0]])
+        ondx1d=ondx1d.flatten()
+
+        # determine the index of the seed voxel in the neighborhood
+        nndx=np.nonzero(ndx1d==iv[i])[0]
+
+        # exctract the timecourses for all of the voxels in the 
+        # neighborhood
+        tc=matrix(imdat[ndx1d,:])
+	 
+        # make sure that the "seed" has variance, if not just
+        # skip it
+        if np.var(tc[nndx,:]) == 0:
+            continue
+
+        # calculate the correlation between all of the voxel TCs
+        R=np.corrcoef(tc)
+        if np.rank(R) == 0:
+            R=np.reshape(R,(1,1))
+
+        # extract just the correlations with the seed TC
+        R=R[nndx,:].flatten()
+
+        # set NaN values to 0
+        R[np.isnan(R)]=0
+        negcount=negcount+sum(R<0)
+
+        # set values below thresh to 0
+        R[R<thresh]=0
+
+        # determine the non-zero correlations (matrix weights)
+        # and add their indices and values to the list 
+        nzndx=np.nonzero(R)[0]
+        if(len(nzndx)>0):
+            sparse_i=np.append(sparse_i,ondx1d[nzndx]-1,0)
+            sparse_j=np.append(sparse_j,(ondx1d[nndx]-1)*np.ones(len(nzndx)))
+            sparse_w=np.append(sparse_w,R[nzndx],1)
+            
+    # concatenate the i, j and w_ij into a single vector	
+    localConnectivity=sparse_i
+    localConnectivity=np.append(localConnectivity,sparse_j)
+    localConnectivity=np.append(localConnectivity,sparse_w)
+    
+    return localConnectivity
+    
+    
+    
+    
     
 def updateQueue(ROIIndex, priorityQueue, targetFunction, centroidTs, allVoxelTs, ROIVoxels,
                 consistencies=[], ROISizes = [], consistencyType='pearson c',fTransform=False):
@@ -1906,6 +2071,9 @@ def spectral_ncut_clustering(cfg):
          imgdata: x*y*z*t np.array, fMRI measurement data to be used for the clustering.
                   Three first dimensions correspond to voxel coordinates while the fourth is time.
                   For voxels outside of the gray matter, all values must be set to 0.
+         thres: float, threshold value, correlation coefficients lower than this value
+                will be removed from the matrix (set to zero).
+    TODO: note: thres can be transformed through pipeline as consistency_threshold
     
     
     Returns:
@@ -1915,14 +2083,18 @@ def spectral_ncut_clustering(cfg):
     meanConsistency: double, mean consistency of the final ROIs
     """
     imgdata = cfg['imgdata']
+    thres = cfg['thres']
     voxelCoordinates = list(zip(*np.where(np.any(imgdata != 0, 3) == True)))
     nVoxels = len(voxelCoordinates)
     nTime = imgdata.shape[3]
     
-    allVoxelTs = np.zeros((nVoxels,nTime))
-    for i,voxel in enumerate(voxelCoordinates):
-        allVoxelTs[i,:] = imgdata[voxel[0],voxel[1],voxel[2],:]
+    localConnectivity = makeLocalConnectivity(imgdata,thres)
     
+    #TODO: next: copy binfile_parcellate from pyClusterROI and modify it to
+    # work withough reading from files
+    # fix the output format
+    # add an option for spectral_ncut to pipeline
+    # test by calculating consistency
     
     
     
