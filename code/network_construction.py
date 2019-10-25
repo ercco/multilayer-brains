@@ -141,7 +141,7 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                                                     event_time_stamps=None,ROI_centroids=[],ROI_names=[],
                                                     consistency_threshold=-1,consistency_target_function='spatialConsistency',
                                                     f_transform_consistency=False,calculate_consistency_while_clustering=False,
-                                                    n_consistency_CPUs=5,consistency_save_name='spatial-consistency.pkl',
+                                                    n_consistency_CPUs=5,consistency_save_path='spatial-consistency.pkl',
                                                     n_consistency_iters=100):
     
     """
@@ -176,7 +176,7 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                                             method. So, this can be applied together with 'template' or 'sklearn' methods. (default: False)
     n_consistency_CPUs: int, number of CPUs used for parallel consistency calculations if calculate_consistency_while_clustering == True.
                         (default: 5)
-    consistency_save_name: str, a base name for the file where to save the consistency pickle
+    consistency_save_path: str, a path to which the consistency pickle will be saved (default: 'spatial_consistency.pkl')
     n_consistency_iters: int, number of random seed sets to generate if ROI_centroids == 'random' (default = 100)
     """
     
@@ -240,11 +240,6 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                             all_voxel_ts[i + counter] = windowdata[voxel]
                         counter = counter + len(voxels)
                     consistencies = cbc.calculateSpatialConsistencyInParallel(voxel_indices, all_voxel_ts,fTransform=f_transform_consistency,nCPUs=n_consistency_CPUs)
-                    path_components = nanlogfile.split('/')
-                    if path_components[-1] == '':
-                        consistency_save_path = '/'.join(path_components[:-2]) + '/' + str(tw_no) + consistency_save_name
-                    else:
-                        consistency_save_path = '/'.join(path_components[:-1]) + '/' + str(tw_no) + consistency_save_name
                     consistency_dict = {'consistency_type':'spatial with pearson c', 'ftransform':f_transform_consistency, 'consistencies':consistencies}
                     with open(consistency_save_path, 'wb') as f:
                         pickle.dump(consistency_dict, f, -1)
@@ -285,11 +280,6 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                             all_voxel_ts[i + counter] = windowdata[voxel]
                         counter = counter + len(voxels)
                     consistencies = cbc.calculateSpatialConsistencyInParallel(voxel_indices,all_voxel_ts,fTransform=f_transform_consistency,nCPUs=n_consistency_CPUs)
-                    path_components = nanlogfile.split('/')
-                    if path_components[-1] == '':
-                        consistency_save_path = '/'.join(path_components[:-2]) + '/' + str(tw_no) + consistency_save_name
-                    else:
-                        consistency_save_path = '/'.join(path_components[:-1]) + '/' + str(tw_no) + consistency_save_name
                     consistency_dict = {'consistency_type':'spatial with pearson c', 'ftransform':f_transform_consistency, 'consistencies':consistencies}
                     with open(consistency_save_path, 'wb') as f:
                         pickle.dump(consistency_dict, f, -1)
@@ -347,11 +337,6 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                             all_voxel_ts[i + counter] = windowdata[voxel]
                         counter = counter + len(voxels)
                     consistencies = cbc.calculateSpatialConsistencyInParallel(voxel_indices,all_voxel_ts,fTransform=f_transform_consistency,nCPUs=n_consistency_CPUs)
-                    path_components = nanlogfile.split('/')
-                    if path_components[-1] == '':
-                        consistency_save_path = '/'.join(path_components[:-2]) + '/' + str(tw_no) + consistency_save_name
-                    else:
-                        consistency_save_path = '/'.join(path_components[:-1]) + '/' + str(tw_no) + consistency_save_name
                     consistency_dict = {'consistency_type':'spatial with pearson c', 'ftransform':f_transform_consistency, 'consistencies':consistencies}
                     with open(consistency_save_path, 'wb') as f:
                         pickle.dump(consistency_dict, f, -1)
@@ -406,11 +391,6 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                             all_voxel_ts[i + counter] = windowdata[voxel]
                         counter = counter + len(voxels)
                     consistencies = cbc.calculateSpatialConsistencyInParallel(voxel_indices,all_voxel_ts,fTransform=f_transform_consistency,nCPUs=n_consistency_CPUs)
-                    path_components = nanlogfile.split('/')
-                    if path_components[-1] == '':
-                        consistency_save_path = '/'.join(path_components[:-2]) + '/' + str(tw_no) + consistency_save_name
-                    else:
-                        consistency_save_path = '/'.join(path_components[:-1]) + '/' + str(tw_no) + consistency_save_name
                     consistency_dict = {'consistency_type':'spatial with pearson c', 'ftransform':f_transform_consistency, 'consistencies':consistencies}
                     with open(consistency_save_path, 'wb') as f:
                         pickle.dump(consistency_dict, f, -1)
@@ -464,11 +444,6 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                             all_voxel_ts[i + counter] = windowdata[voxel]
                         counter = counter + len(voxels)
                     consistencies = cbc.calculateSpatialConsistencyInParallel(voxel_indices,all_voxel_ts,fTransform=f_transform_consistency,nCPUs=n_consistency_CPUs)
-                    path_components = nanlogfile.split('/')
-                    if path_components[-1] == '':
-                        consistency_save_path = '/'.join(path_components[:-2]) + '/' + str(tw_no) + consistency_save_name
-                    else:
-                        consistency_save_path = '/'.join(path_components[:-1]) + '/' + str(tw_no) + consistency_save_name
                     consistency_dict = {'consistency_type':'spatial with pearson c', 'ftransform':f_transform_consistency, 'consistencies':consistencies}
                     with open(consistency_save_path, 'wb') as f:
                         pickle.dump(consistency_dict, f, -1)

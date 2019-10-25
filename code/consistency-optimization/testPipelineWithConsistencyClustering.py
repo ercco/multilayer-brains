@@ -14,28 +14,61 @@ import pipeline
 
 nii_data_filename = '/media/onerva/KINGSTON/test-data/010/epi_STD_mask_detrend_fullreg.nii'
 subj_id = '010'
-timewindow = 100
-overlap = 0
 run_number = 1
-intralayer_density = 0.1
-interlayer_density = 0.1
-subgraph_size_dict = {2:(2,3)} # Let's look for all subgraphs of two layers, two nodes and two layers, three nodes
-allowed_aspects = [0]
-use_aggregated_dict = True
-use_examples_dict = True
-clustering_method = 'consistency_optimized'
+
 mask_or_template_filename = '/media/onerva/KINGSTON/test-data/group_roi_mask-30-4mm_with_subcortl_and_cerebellum.nii'
 mask_or_template_name = 'random'
-preprocess_level_folder = '/media/onerva/KINGSTON/test-data/outcome/test-pipeline/'
-nClusters = 100
-n_consistency_iters = 5
-n_consistency_CPUs = 5
-use_random_seeds = True
 
-pipeline.isomorphism_classes_from_nifti(nii_data_filename,subj_id,run_number,timewindow,overlap,
+timewindow = 100
+overlap = 0
+
+# density params
+intralayer_density = 0.1
+interlayer_density = 0.1
+density_params = {'intralayer_density':intralayer_density,'interlayer_density':interlayer_density}
+
+# clustering method params
+clustering_method = 'craddock'
+nclusters = 246
+n_consistency_CPUs = 5
+n_consistency_iters = 5
+consistency_threshold = 'voxelwise' 
+craddock_threshold = 0.5 # the correlation threshold used by Craddock et al. 2012
+use_random_seeds = True
+calculate_consistency_while_clustering = True
+consistency_save_path = '/media/onerva/KINGSTON/test-data/010/spatial_consistency_optimized_craddock.pkl'
+clustering_method_params = {'clsutering_method':clustering_method,'consistency_threshold':consistency_threshold,'nclusters':nclusters,'calculate_consistency':calculate_consistency_while_clustering,'consistency_save_path':consistency_save_path,'n_consistency_CPUs':n_consistency_CPUs,'n_consistency_iters':n_consistency_iters,'use_random_seeds':use_random_seeds}
+
+# Let's look for all subgraphs of two layers, two nodes and two layers, three nodes
+nlayers = 2
+nnodes = [2,3]
+subgraph_size_dict = {2:(2,3)} 
+allowed_aspects = [0]
+
+use_aggregated_dict = True
+use_examples_dict = True
+
+preprocess_level_folder = '/media/onerva/KINGSTON/test-data/outcome/test-pipeline/'
+
+# TODO: check how to define save paths for networks
+
+
+
+if True:
+    pipeline.isomorphism_classes_from_file(nii_data_filename,
+                                           mask_or_template_filename,
+                                           overlap,
+                                           density_params,
+                                           clustering_method_params,
+                                           nlayers,
+                                           nnodes,
+                                           allowed_aspects,
+                                           )
+else:
+    pipeline.isomorphism_classes_from_nifti(nii_data_filename,subj_id,run_number,timewindow,overlap,
                                         intralayer_density,interlayer_density,subgraph_size_dict,
                                         allowed_aspects,use_aggregated_dict,use_examples_dict,clustering_method,
-                                        mask_or_template_filename,mask_or_template_name,nClusters,preprocess_level_folder=preprocess_level_folder,
+                                        mask_or_template_filename,mask_or_template_name,n_clusters,preprocess_level_folder=preprocess_level_folder,
                                         calculate_consistency=True,n_consistency_iters=n_consistency_iters,n_consistency_CPUs=n_consistency_CPUs,
                                         use_random_seeds=use_random_seeds)
 
