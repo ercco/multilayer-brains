@@ -37,7 +37,7 @@ craddock_threshold = 0.5 # the correlation threshold used by Craddock et al. 201
 use_random_seeds = True
 calculate_consistency_while_clustering = True
 consistency_save_path = '/media/onerva/KINGSTON/test-data/010/spatial_consistency_optimized_craddock.pkl'
-clustering_method_params = {'clsutering_method':clustering_method,'consistency_threshold':consistency_threshold,'nclusters':nclusters,'calculate_consistency':calculate_consistency_while_clustering,'consistency_save_path':consistency_save_path,'n_consistency_CPUs':n_consistency_CPUs,'n_consistency_iters':n_consistency_iters,'use_random_seeds':use_random_seeds}
+clustering_method_params = {'method':clustering_method,'consistency_threshold':consistency_threshold,'craddock_threshold':craddock_threshold,'nclusters':nclusters,'calculate_consistency':calculate_consistency_while_clustering,'consistency_save_path':consistency_save_path,'n_consistency_CPUs':n_consistency_CPUs,'n_consistency_iters':n_consistency_iters,'use_random_seeds':use_random_seeds}
 
 # Let's look for all subgraphs of two layers, two nodes and two layers, three nodes
 nlayers = 2
@@ -57,6 +57,7 @@ preprocess_level_folder = '/media/onerva/KINGSTON/test-data/outcome/test-pipelin
 if True:
     pipeline.isomorphism_classes_from_file(nii_data_filename,
                                            mask_or_template_filename,
+                                           timewindow,
                                            overlap,
                                            density_params,
                                            clustering_method_params,
@@ -68,7 +69,8 @@ else:
     pipeline.isomorphism_classes_from_nifti(nii_data_filename,subj_id,run_number,timewindow,overlap,
                                         intralayer_density,interlayer_density,subgraph_size_dict,
                                         allowed_aspects,use_aggregated_dict,use_examples_dict,clustering_method,
-                                        mask_or_template_filename,mask_or_template_name,n_clusters,preprocess_level_folder=preprocess_level_folder,
+                                        mask_or_template_filename,mask_or_template_name,nclusters,preprocess_level_folder=preprocess_level_folder,
                                         calculate_consistency=True,n_consistency_iters=n_consistency_iters,n_consistency_CPUs=n_consistency_CPUs,
                                         use_random_seeds=use_random_seeds)
 
+# TODO: network_construction.calculate_cluster_correlation_matrix rises an indexing error from line 549, need to sort this out

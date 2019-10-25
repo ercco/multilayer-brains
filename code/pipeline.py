@@ -154,7 +154,7 @@ def clustering_method_parser(image_array,timewindow,overlap,nlayers,clustering_m
         n_consistency_CPUs = clustering_method_params.get('n_consistency_CPUs',5)
         nan_log = clustering_method_params.get('nan_log_savename',None)
         event_time_stamps = clustering_method_params.get('event_time_stamps',None)
-        return network_construction.yield_clustered_multilayer_network_in_layersets(image_array,nlayers,timewindow,overlap,nclusters=nclusters,method=method,template=template_array,nanlogfile=nan_log,event_time_stamps=event_time_stamps,ROI_centroids=ROI_centroids,calculate_consistency_while_clustering=calculate_consistency_while_clustering,consistency_save_path=consistency_save_path,n_consistency_CPUs=n_consistency_CPUs)
+        return network_construction.yield_clustered_multilayer_network_in_layersets(image_array,nlayers,timewindow,overlap,n_clusters=nclusters,method=method,template=template_array,nanlogfile=nan_log,event_time_stamps=event_time_stamps,ROI_centroids=ROI_centroids,calculate_consistency_while_clustering=calculate_consistency_while_clustering,consistency_save_path=consistency_save_path,n_consistency_CPUs=n_consistency_CPUs)
     elif method=='craddock':
         # required params
         nclusters=clustering_method_params['nclusters']
@@ -165,7 +165,7 @@ def clustering_method_parser(image_array,timewindow,overlap,nlayers,clustering_m
         n_consistency_CPUs = clustering_method_params.get('n_consistency_CPUs',5)
         nan_log = clustering_method_params.get('nan_log_savename',None)
         event_time_stamps = clustering_method_params.get('event_time_stamps',None)
-        return network_construction.yield_clustered_multilayer_network_in_layersets(image_array,nlayers,timewindow,overlap,nclusters=nclusters,method=method,nanlogfile=nan_log,event_time_stamps=event_time_stamps,consistency_threshold=craddock_threshold,calculate_consistency_while_clustering=calculate_consistency_while_clustering,consistency_save_path=consistency_save_path,n_consistency_CPUs=n_consistency_CPUs)
+        return network_construction.yield_clustered_multilayer_network_in_layersets(image_array,nlayers,timewindow,overlap,n_clusters=nclusters,method=method,nanlogfile=nan_log,event_time_stamps=event_time_stamps,consistency_threshold=craddock_threshold,calculate_consistency_while_clustering=calculate_consistency_while_clustering,consistency_save_path=consistency_save_path,n_consistency_CPUs=n_consistency_CPUs)
     else:
         raise NotImplementedError('Clustering method not implemented')
 

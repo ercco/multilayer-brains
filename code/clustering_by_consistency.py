@@ -904,7 +904,7 @@ def makeLocalConnectivity(imdat, thresh):
                      [-1, 1, 1],[0, 1, 1],[1, 1, 1]])
                      
     # we need a gray matter mask; let's use a copy of the (already masked) imgdata                 
-    mskdat = np.copy(imdat)
+    mskdat = np.copy(imdat)[:,:,:,0]
     msz = mskdat.shape
     # convert the 3D mask array into a 1D vector
     mskdat=np.reshape(mskdat,np.prod(msz))
@@ -974,7 +974,7 @@ def makeLocalConnectivity(imdat, thresh):
         if(len(nzndx)>0):
             sparse_i=np.append(sparse_i,ondx1d[nzndx]-1,0)
             sparse_j=np.append(sparse_j,(ondx1d[nndx]-1)*np.ones(len(nzndx)))
-            sparse_w=np.append(sparse_w,R[nzndx],1)
+            sparse_w=np.append(sparse_w,R[nzndx],0) # The axis here used to be 1, which raided an error, so I changed it to 0
             
     # concatenate the i, j and w_ij into a single vector	
     localConnectivity=sparse_i
@@ -996,7 +996,8 @@ def nCutClustering(connectivity,k):
     -----------
     connectivity: 1D np.array that contains (in a concatenated form) the x and y indices of 
                   connectivity values and the corresponding values.
-    k: int, number of clusters to generate
+    k: int, number of clusters to generate. Note that this is the aimed number of clusters,
+       and the actual number of produced clusters may be slightly smaller.
     
     Returns:
     --------
@@ -2114,9 +2115,10 @@ def spectralNCutClustering(cfg):
          imgdata: x*y*z*t np.array, fMRI measurement data to be used for the clustering.
                   Three first dimensions correspond to voxel coordinates while the fourth is time.
                   For voxels outside of the gray matter, all values must be set to 0.
-         thres: float, threshold value, correlation coefficients lower than this value
-                will be removed from the matrix (set to zero).
-         nROIs: int, number of clusters to construct
+         threshold: float, threshold value, correlation coefficients lower than this value
+                    will be removed from the matrix (set to zero).
+         nROIs: int, number of clusters to construct. Note that this is the aimed number of ROIs,
+                and the actual number of produced ROIs may be slightly smaller.
     
     Returns:
     --------
@@ -2124,20 +2126,22 @@ def spectralNCutClustering(cfg):
     voxelCoordinates: list (len = nVoxels) of tuples (len = 3), coordinates (in voxels) of all voxels
     """
     imgdata = cfg['imgdata']
-    thres = cfg['thres']
+    thres = cfg['threshold']
     nClusters = cfg['nROIs']
     voxelCoordinates = list(zip(*np.where(np.any(imgdata != 0, 3) == True)))
     
     localConnectivity = makeLocalConnectivity(imgdata,thres)
     voxelLabels = nCutClustering(localConnectivity,nClusters)
+    voxelLabels = np.squeeze(np.array(voxelLabels.todense())).astype(int)
+    
+    # fixing the gaps in cluster labeling (because of the clustering method, some labels may be missing)
+    labels = np.unique(voxelLabels)
+    for label, expectedLabel in zip(labels,range(1,len(labels)+1)):
+        if not label == expectedLabel:
+            voxelLabels[np.where(voxelLabels==label)]=expectedLabel
     
     return voxelLabels,voxelCoordinates
-    
-    #TODO: next: copy binfile_parcellate from pyClusterROI and modify it to
-    # work withough reading from files
-    # fix the output format
-    # add an option for spectral_ncut to pipeline
-    # test by calculating consistency
+
     
     
     
