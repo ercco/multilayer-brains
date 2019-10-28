@@ -73,4 +73,3 @@ else:
                                         calculate_consistency=True,n_consistency_iters=n_consistency_iters,n_consistency_CPUs=n_consistency_CPUs,
                                         use_random_seeds=use_random_seeds)
 
-# TODO: network_construction.calculate_cluster_correlation_matrix rises an indexing error from line 549, need to sort this out

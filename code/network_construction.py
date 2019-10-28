@@ -405,6 +405,8 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                 if not tw_no in voxels_in_clusters_by_timewindow:
                     voxels_in_clusters = dict()
                     voxel_labels,voxel_coordinates = cbc.spectralNCutClustering(cfg)
+                    if min(np.abs(voxel_labels))>0: # if cluster indexing starts from a non-zero value, let's fix it to start from zero
+                        voxel_labels[np.where(voxel_labels)>0] -= np.min(voxel_labels[np.where(voxel_labels)>0])
                     for ii, label in enumerate(voxel_labels):
                         voxels_in_clusters.setdefault(label,[]).append(voxel_coordinates[ii]) # voxels_in_clusters will contain label:[voxels with label] pairs; here, coordinates of each voxel are added to the correct list
                     if -1 in voxels_in_clusters:
