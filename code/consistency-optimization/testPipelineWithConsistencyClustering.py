@@ -28,8 +28,8 @@ interlayer_density = 0.1
 density_params = {'intralayer_density':intralayer_density,'interlayer_density':interlayer_density}
 
 # clustering method params
-clustering_method = 'random_balls'
-nclusters = 2
+clustering_method = 'craddock'
+nclusters = 246
 n_consistency_CPUs = 5
 n_consistency_iters = 5
 consistency_threshold = 'voxelwise' 

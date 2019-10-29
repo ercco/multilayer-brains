@@ -243,10 +243,10 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                     consistency_dict = {'consistency_type':'spatial with pearson c', 'ftransform':f_transform_consistency, 'consistencies':consistencies}
                     if '.' in consistency_save_path:
                         name,extension = consistency_save_path.split('.')
-                        consistency_save_path = name + '_' + str(tw_no) + '.' + extension
+                        consistency_save_path_final = name + '_' + str(tw_no) + '.' + extension
                     else:
-                        consistency_save_path = name + '_' + str(tw_no) + '.pkl'
-                    with open(consistency_save_path, 'wb') as f:
+                        consistency_save_path_final = name + '_' + str(tw_no) + '.pkl'
+                    with open(consistency_save_path_final, 'wb') as f:
                         pickle.dump(consistency_dict, f, -1)
             del(voxels_in_clusters_by_timewindow[min(voxels_in_clusters_by_timewindow)])
             yield M
@@ -288,10 +288,10 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                     consistency_dict = {'consistency_type':'spatial with pearson c', 'ftransform':f_transform_consistency, 'consistencies':consistencies}
                     if '.' in consistency_save_path:
                         name,extension = consistency_save_path.split('.')
-                        consistency_save_path = name + '_' + str(tw_no) + '.' + extension
+                        consistency_save_path_final = name + '_' + str(tw_no) + '.' + extension
                     else:
-                        consistency_save_path = name + '_' + str(tw_no) + '.pkl'
-                    with open(consistency_save_path, 'wb') as f:
+                        consistency_save_path_final = name + '_' + str(tw_no) + '.pkl'
+                    with open(consistency_save_path_final, 'wb') as f:
                         pickle.dump(consistency_dict, f, -1)
             yield M
             del(M)
@@ -350,10 +350,10 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                     consistency_dict = {'consistency_type':'spatial with pearson c', 'ftransform':f_transform_consistency, 'consistencies':consistencies}
                     if '.' in consistency_save_path:
                         name,extension = consistency_save_path.split('.')
-                        consistency_save_path = name + '_' + str(tw_no) + '.' + extension
+                        consistency_save_path_final = name + '_' + str(tw_no) + '.' + extension
                     else:
-                        consistency_save_path = name + '_' + str(tw_no) + '.pkl'
-                    with open(consistency_save_path, 'wb') as f:
+                        consistency_save_path_final = name + '_' + str(tw_no) + '.pkl'
+                    with open(consistency_save_path_final, 'wb') as f:
                         pickle.dump(consistency_dict, f, -1)
             del(voxels_in_clusters_by_timewindow[min(voxels_in_clusters_by_timewindow)])
             yield M
@@ -409,10 +409,10 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                     consistency_dict = {'consistency_type':'spatial with pearson c', 'ftransform':f_transform_consistency, 'consistencies':consistencies}
                     if '.' in consistency_save_path:
                         name,extension = consistency_save_path.split('.')
-                        consistency_save_path = name + '_' + str(tw_no) + '.' + extension
+                        consistency_save_path_final = name + '_' + str(tw_no) + '.' + extension
                     else:
-                        consistency_save_path = name + '_' + str(tw_no) + '.pkl'
-                    with open(consistency_save_path, 'wb') as f:
+                        consistency_save_path_final = name + '_' + str(tw_no) + '.pkl'
+                    with open(consistency_save_path_final, 'wb') as f:
                         pickle.dump(consistency_dict, f, -1)
             del(voxels_in_clusters_by_timewindow[min(voxels_in_clusters_by_timewindow)])
     elif method=='craddock':
@@ -467,7 +467,12 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                         counter = counter + len(voxels)
                     consistencies = cbc.calculateSpatialConsistencyInParallel(voxel_indices,all_voxel_ts,fTransform=f_transform_consistency,nCPUs=n_consistency_CPUs)
                     consistency_dict = {'consistency_type':'spatial with pearson c', 'ftransform':f_transform_consistency, 'consistencies':consistencies}
-                    with open(consistency_save_path, 'wb') as f:
+                    if '.' in consistency_save_path:
+                        name,extension = consistency_save_path.split('.')
+                        consistency_save_path_final = name + '_' + str(tw_no) + '.' + extension
+                    else:
+                        consistency_save_path_final = name + '_' + str(tw_no) + '.pkl'
+                    with open(consistency_save_path_final, 'wb') as f:
                         pickle.dump(consistency_dict, f, -1)
             yield M
             del(M)
