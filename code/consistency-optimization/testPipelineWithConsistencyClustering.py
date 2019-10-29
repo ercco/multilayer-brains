@@ -28,8 +28,8 @@ interlayer_density = 0.1
 density_params = {'intralayer_density':intralayer_density,'interlayer_density':interlayer_density}
 
 # clustering method params
-clustering_method = 'craddock'
-nclusters = 246
+clustering_method = 'random_balls'
+nclusters = 2
 n_consistency_CPUs = 5
 n_consistency_iters = 5
 consistency_threshold = 'voxelwise' 
@@ -37,7 +37,7 @@ craddock_threshold = 0.5 # the correlation threshold used by Craddock et al. 201
 use_random_seeds = True
 calculate_consistency_while_clustering = True
 consistency_save_path = '/media/onerva/KINGSTON/test-data/010/spatial_consistency_optimized_craddock.pkl'
-clustering_method_params = {'method':clustering_method,'consistency_threshold':consistency_threshold,'craddock_threshold':craddock_threshold,'nclusters':nclusters,'calculate_consistency':calculate_consistency_while_clustering,'consistency_save_path':consistency_save_path,'n_consistency_CPUs':n_consistency_CPUs,'n_consistency_iters':n_consistency_iters,'use_random_seeds':use_random_seeds}
+clustering_method_params = {'method':clustering_method,'consistency_threshold':consistency_threshold,'craddock_threshold':craddock_threshold,'nclusters':nclusters,'calculate_consistency':calculate_consistency_while_clustering,'consistency_save_path':consistency_save_path,'n_consistency_CPUs':n_consistency_CPUs,'n_consistency_iters':n_consistency_iters,'use_random_seeds':use_random_seeds,'centroid_template_filename':mask_or_template_filename}
 
 # Let's look for all subgraphs of two layers, two nodes and two layers, three nodes
 nlayers = 2

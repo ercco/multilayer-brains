@@ -1352,7 +1352,7 @@ def growSphericalROIs(ROICentroids, imgdata, nROIs=246, template=None, equalSize
                 voxelLabels[neighbor] = ROIIndex
                 distanceMask[:,neighbor] = 0 # masking away voxels that have already been added to a ROI
         radius = radius + 1
-
+    voxelLabels = np.array([int(label) for label in voxelLabels])
     #import pdb; pdb.set_trace()            
     return voxelLabels, voxelCoordinates, radius
     
