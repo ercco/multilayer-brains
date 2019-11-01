@@ -400,6 +400,23 @@ class test_network_io(unittest.TestCase):
                         [[[timeseries6],[timeseries7]],[[timeseries8],
                           [timeseries9]],[[timeseries10],[timeseries11]]]])
                           
+    pickle_test_mplex = pn.MultiplexNetwork(couplings='ordinal',fullyInterconnected=True)
+    pickle_test_mplex['(1, 2, 3)',0]['(2, 3, 4)',0] = 0.5
+    pickle_test_mplex['(2, 3, 4)',1]['(3, 4, 5)',1] = 0.999
+    pickle_test_mplex['(1, 2, 3)',1]['(2, 3, 4)',1] = 0.001
+    pickle_test_mplex['(1, 2, 3)',1]['(3, 4, 5)',1] = 0.234
+    pickle_test_mplex['(3, 4, 5)',2]['(1, 2, 3)',2] = 1
+    
+    pickle_test_mlayer = pn.MultilayerNetwork(aspects=1,fullyInterconnected=False)
+    pickle_test_mlayer['[(1, 2, 3),(2, 3, 4)]',0]['[(3, 4, 5)]',0] = 0.123
+    pickle_test_mlayer['[(1, 2, 3)]',1]['[(2, 3, 4),(3, 4, 5)]',1] = 0.456
+    pickle_test_mlayer['[(1, 2, 3),(2, 3, 4)]',0]['[(1, 2, 3)]',1] = 0.5
+    pickle_test_mlayer['[(1, 2, 3),(2, 3, 4)]',0]['[(2, 3, 4),(3, 4, 5)]',1] = 0.333
+    pickle_test_mlayer['[(3, 4, 5)]',0]['[(1, 2, 3)]',1] = 0
+    pickle_test_mlayer['[(3, 4, 5)]',0]['[(2, 3, 4),(3, 4, 5)]',1] = 0.5
+    pickle_test_mlayer['[(4,5,6)]',1]['[(2, 3, 4),(3, 4, 5)]',1] = 0.01
+    pickle_test_mlayer['[(2, 3, 4)]',2]['[(2, 3, 4),(3, 4, 5)]',1] = 0.999
+    
     def round_edge_weights(self,M):
         # rounds edge weights to 10 decimals
         if isinstance(M,pn.net.MultiplexNetwork):
@@ -501,8 +518,23 @@ class test_network_io(unittest.TestCase):
         finally:
             os.remove('test_for_network_reading_WILL_BE_REMOVED.txt')
             
+    def test_pickle_file_io_for_networks(self):
+        try:
+            network_io.write_pickle_file(self.pickle_test_mplex,'test_for_pickle_io_mplex_network_WILL_BE_REMOVED.pkl')
+            network_io.write_pickle_file(self.pickle_test_mlayer,'test_for_pickle_io_mlayer_network_WILL_BE_REMOVED.pkl')
+            pickle_test_mplex_read = network_io.read_pickle_file('test_for_pickle_io_mplex_network_WILL_BE_REMOVED.pkl')
+            pickle_test_mlayer_read = network_io.read_pickle_file('test_for_pickle_io_mlayer_network_WILL_BE_REMOVED.pkl')
+            self.assertEqual(self.pickle_test_mplex,pickle_test_mplex_read)
+            self.assertEqual(self.pickle_test_mlayer,pickle_test_mlayer_read)
+        finally:
+            if os.path.exists('test_for_pickle_io_mplex_network_WILL_BE_REMOVED.pkl'):
+                os.remove('test_for_pickle_io_mplex_network_WILL_BE_REMOVED.pkl')
+            if os.path.exists('test_for_pickle_io_mlayer_network_WILL_BE_REMOVED.pkl'):
+                os.remove('test_for_pickle_io_mlayer_network_WILL_BE_REMOVED.pkl')
             
-            
+
+
+
 class test_statistics(unittest.TestCase):
     
     def test_t_tests_for_two_dict_lists(self):
