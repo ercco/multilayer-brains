@@ -408,14 +408,14 @@ class test_network_io(unittest.TestCase):
     pickle_test_mplex['(3, 4, 5)',2]['(1, 2, 3)',2] = 1
     
     pickle_test_mlayer = pn.MultilayerNetwork(aspects=1,fullyInterconnected=False)
-    pickle_test_mlayer['[(1, 2, 3),(2, 3, 4)]',0]['[(3, 4, 5)]',0] = 0.123
-    pickle_test_mlayer['[(1, 2, 3)]',1]['[(2, 3, 4),(3, 4, 5)]',1] = 0.456
-    pickle_test_mlayer['[(1, 2, 3),(2, 3, 4)]',0]['[(1, 2, 3)]',1] = 0.5
-    pickle_test_mlayer['[(1, 2, 3),(2, 3, 4)]',0]['[(2, 3, 4),(3, 4, 5)]',1] = 0.333
-    pickle_test_mlayer['[(3, 4, 5)]',0]['[(1, 2, 3)]',1] = 0
-    pickle_test_mlayer['[(3, 4, 5)]',0]['[(2, 3, 4),(3, 4, 5)]',1] = 0.5
-    pickle_test_mlayer['[(4,5,6)]',1]['[(2, 3, 4),(3, 4, 5)]',1] = 0.01
-    pickle_test_mlayer['[(2, 3, 4)]',2]['[(2, 3, 4),(3, 4, 5)]',1] = 0.999
+    pickle_test_mlayer['[(1, 2, 3),(2, 3, 4)]',9]['[(3, 4, 5)]',9] = 0.123
+    pickle_test_mlayer['[(1, 2, 3)]',10]['[(2, 3, 4),(3, 4, 5)]',10] = 0.456
+    pickle_test_mlayer['[(1, 2, 3),(2, 3, 4)]',9]['[(1, 2, 3)]',10] = 0.5
+    pickle_test_mlayer['[(1, 2, 3),(2, 3, 4)]',9]['[(2, 3, 4),(3, 4, 5)]',10] = 0.333
+    pickle_test_mlayer['[(3, 4, 5)]',9]['[(1, 2, 3)]',10] = 0
+    pickle_test_mlayer['[(3, 4, 5)]',9]['[(2, 3, 4),(3, 4, 5)]',10] = 0.5
+    pickle_test_mlayer['[(4,5,6)]',10]['[(2, 3, 4),(3, 4, 5)]',10] = 0.01
+    pickle_test_mlayer['[(2, 3, 4)]',11]['[(2, 3, 4),(3, 4, 5)]',10] = 0.999
     
     def round_edge_weights(self,M):
         # rounds edge weights to 10 decimals
@@ -531,7 +531,24 @@ class test_network_io(unittest.TestCase):
                 os.remove('test_for_pickle_io_mplex_network_WILL_BE_REMOVED.pkl')
             if os.path.exists('test_for_pickle_io_mlayer_network_WILL_BE_REMOVED.pkl'):
                 os.remove('test_for_pickle_io_mlayer_network_WILL_BE_REMOVED.pkl')
-            
+    
+    def test_write_layersetwise_network(self):
+        try:
+            os.mkdir('dir_for_test_write_layersetwise_network_WILL_BE_REMOVED')
+            network_io.write_layersetwise_network(self.pickle_test_mplex,'dir_for_test_write_layersetwise_network_WILL_BE_REMOVED')
+            network_io.write_layersetwise_network(self.pickle_test_mlayer,'dir_for_test_write_layersetwise_network_WILL_BE_REMOVED')
+            self.assertEqual(sorted(os.listdir('dir_for_test_write_layersetwise_network_WILL_BE_REMOVED')),['0_1_2','9_10_11'])
+            mplex = network_io.read_pickle_file('dir_for_test_write_layersetwise_network_WILL_BE_REMOVED/0_1_2')
+            mlayer = network_io.read_pickle_file('dir_for_test_write_layersetwise_network_WILL_BE_REMOVED/9_10_11')
+            self.assertEqual(self.pickle_test_mplex,mplex)
+            self.assertEqual(self.pickle_test_mlayer,mlayer)
+        finally:
+            if os.path.exists('dir_for_test_write_layersetwise_network_WILL_BE_REMOVED/0_1_2'):
+                os.remove('dir_for_test_write_layersetwise_network_WILL_BE_REMOVED/0_1_2')
+            if os.path.exists('dir_for_test_write_layersetwise_network_WILL_BE_REMOVED/9_10_11'):
+                os.remove('dir_for_test_write_layersetwise_network_WILL_BE_REMOVED/9_10_11')
+            if os.path.exists('dir_for_test_write_layersetwise_network_WILL_BE_REMOVED'):
+                os.rmdir('dir_for_test_write_layersetwise_network_WILL_BE_REMOVED')
 
 
 
