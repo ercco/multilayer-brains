@@ -3,6 +3,7 @@ import os
 import datetime
 import collections
 import pickle
+import numpy as np
 
 import network_construction
 import network_io
@@ -130,7 +131,9 @@ def clustering_method_parser(image_array,timewindow,overlap,nlayers,clustering_m
             centroid_template_array = centroid_template_data.get_fdata()
             ROI_centroids, _,_ = cbc.findROICentroids(centroid_template_array,fixCentroids=True)
         elif use_random_seeds:
-            centroid_template_array = None
+            image_array_nonzero = np.sum(np.abs(image_array),axis=3)
+            image_array_nonzero[image_array_nonzero > 0] = 1
+            centroid_template_array = image_array_nonzero
             ROI_centroids = 'random'
         ROI_names = clustering_method_params.get('ROI_names',[])
         consistency_threshold = clustering_method_params.get('consistency_threshold',-1)
