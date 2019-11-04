@@ -23,9 +23,9 @@ import matplotlib.pylab as plt
 from scipy.stats import binned_statistic
 
 preprocessLevelFolder = '/media/onerva/KINGSTON/test-data/outcome/test-pipeline/'
-subjects = ['010','011']
+subjects = ['010']
 runNumber = '1'
-clusteringMethods = ['template_clustering','consistency_optimized']#,'sklearn']
+clusteringMethods = ['template_clustering','consistency_optimized','craddock','random_balls']#,'sklearn']
 template = 'brainnetome'
 nClusters = 100 # this is needed for reading the consistencies of the sklearn ROIs
 windowLength = 100

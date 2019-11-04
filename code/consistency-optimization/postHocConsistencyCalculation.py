@@ -20,7 +20,7 @@ import corrs_and_mask_calculations
 from scipy.stats import binned_statistic
 
 # path parts
-subjectFolder = '/media/onerva/KINGSTON/test-data/outcome/test-pipeline'
+subjectFolder = '/media/onerva/KINGSTON/test-data/'
 subjects = ['010']
 niiDataFileNames = ['/media/onerva/KINGSTON/test-data/010/epi_STD_mask_detrend_fullreg.nii'] # This should have the same length as the subjects list
 runNumber = '1'

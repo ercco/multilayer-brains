@@ -30,14 +30,14 @@ import onion_parameters as params
 
 subjects = ['/media/onerva/KINGSTON/test-data/010/']
 originalROIInfoFile = '/media/onerva/KINGSTON/test-data/group_roi_mask-30-4mm_with_subcortl_and_cerebellum.mat'
-optimizedROIInfoFile = 'optimized-rois-test-for-Tarmo-mean-weighted-consistency-thresholded-voxelwise'
+optimizedROIInfoFile = 'optimized-rois-craddock'
 allVoxelTsFileName = '/roi_voxel_ts_all_rois4mm_FWHM0.mat'
 originalSpatialConsistencySavePath = '/media/onerva/KINGSTON/test-data/spatial-consistency-original.pkl'
-optimizedSpatialConsistencySaveName = '/spatial-consistency-optimized-test-for-Tarmo-mean-weighted-consistency-thresholded-voxelwise.pkl'
-originalCorrelationSavePath = '/media/onerva/KINGSTON/test-data/correlation-to-centroid-original.pkl'
-optimizedCorrelationSaveName = 'correlation-to-centroid-spatial-consistency-optimized-test-for-Tarmo-mean-weighted-consistency-thresholded-voxelwise.pkl'
-figureSavePath = '/media/onerva/KINGSTON/test-data/outcome/spatial-consisistency-validation-mean-weighted-consistency-thresholded-voxelwise.pdf'
-sizeSavePath = '/media/onerva/KINGSTON/test-data/outcome/spatial-consisistency-validation-mean-weighted-consistency-thresholded-voxelwise-sizes.pdf'
+optimizedSpatialConsistencySaveName = '/spatial-consistency-optimized-craddock_0.pkl'
+originalCorrelationSavePath = '/media/onerva/KINGSTON/test-data/010/correlation-to-centroid.pkl'
+optimizedCorrelationSaveName = 'correlation-to-centroid-spatial-consistency-optimized-craddock.pkl'
+figureSavePath = '/media/onerva/KINGSTON/test-data/outcome/spatial-consisistency-validation-craddock.pdf'
+sizeSavePath = '/media/onerva/KINGSTON/test-data/outcome/spatial-consisistency-validation-craddock.pdf'
 
 def getDistribution(data, nBins):
     """
@@ -122,7 +122,7 @@ for i, subject in enumerate(subjects):
     
     if i == 0:
         ax1.plot(consistencyBinCenters,consistencyDistribution,color=params.optimizedColor,alpha=params.optimizedAlpha,label='Optimized ROIs')
-        sizeAx.plot(sizeBinCenters,sizeDist,color=params.optimizedColor,alpha=params.optimizedAlpha,label='Optimzed ROIs')
+        sizeAx.plot(sizeBinCenters,sizeDist,color=params.optimizedColor,alpha=params.optimizedAlpha,label='Optimized ROIs')
 #        ax2.plot(correlationBinCenters,correlationDistribution,color=params.optimizedColor,alpha=params.optimizedAlpha,label='Optimized ROIs')
     else:
         ax1.plot(consistencyBinCenters,consistencyDistribution,color=params.optimizedColor,alpha=params.optimizedAlpha)
@@ -138,7 +138,7 @@ for ROIMap in originalROIMaps:
     ROIIndices.append(indices)
   
 spatialConsistencies = cbc.calculateSpatialConsistencyInParallel(ROIIndices,allVoxelTs)
-spatialConsistencyData = {'spaitalConsistencies':spatialConsistencies,'type':'original Brainnetome'}
+spatialConsistencyData = {'spatialConsistencies':spatialConsistencies,'type':'original Brainnetome'}
 with open(originalSpatialConsistencySavePath, 'wb') as f:
         pickle.dump(spatialConsistencyData, f, -1)
 print('Mean original consistency: ' + str(np.mean(spatialConsistencies)))
