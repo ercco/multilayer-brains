@@ -585,7 +585,12 @@ def threshold_network(M,density_params):
     if 'intralayer_density' in density_params and 'interlayer_density' in density_params:
         return threshold_multilayer_network(M,density_params['intralayer_density'],density_params['interlayer_density'],density_params.get('replace_interlayer_weights_with_ones',True))
     elif 'intra_avg_degree' in density_params and 'inter_avg_degree' in density_params:
-        raise NotImplementedError('Thresholding method not implemented')
+        assert len(set(map(lambda l: len(list(M.iter_nodes(l))),M.iter_layers()))) == 1,'Each layer should have the same number of nodes when using inter_avg_degree thresholding'
+        nnodes = len(list(M.iter_nodes(next(M.iter_layers()))))
+        # calculate densities that correspond to the avg degrees given
+        intralayer_density = density_params['intra_avg_degree']/float(nnodes-1)
+        interlayer_density = density_params['inter_avg_degree']/float(nnodes)
+        return threshold_multilayer_network(M,intralayer_density,interlayer_density,density_params.get('replace_interlayer_weights_with_ones',True))
     else:
         raise NotImplementedError('Thresholding method not implemented')
 
