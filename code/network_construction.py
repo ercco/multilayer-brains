@@ -227,27 +227,12 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                 previous_voxels_in_clusters = voxels_in_clusters # reference to the same object
                 if calculate_consistency_while_clustering: # calculating spatial consistency of formed clusters
                     windowdata = imgdata[:,:,:,start_times[tw_no]:end_times[tw_no]]
-                    n_voxels = 0
-                    for cluster in voxels_in_clusters.values():
-                        n_voxels = n_voxels + len(cluster)
-                    n_time = windowdata.shape[3]
-                    all_voxel_ts = np.zeros((n_voxels,n_time))
-                    voxel_indices = []
-                    counter = 0
-                    for voxels in voxels_in_clusters.values():
-                        voxel_indices.append(np.arange(counter,counter + len(voxels)))
-                        for i, voxel in enumerate(voxels):
-                            all_voxel_ts[i + counter] = windowdata[voxel]
-                        counter = counter + len(voxels)
-                    consistencies = cbc.calculateSpatialConsistencyInParallel(voxel_indices, all_voxel_ts,fTransform=f_transform_consistency,nCPUs=n_consistency_CPUs)
-                    consistency_dict = {'consistency_type':'spatial with pearson c', 'ftransform':f_transform_consistency, 'consistencies':consistencies}
                     if '.' in consistency_save_path:
                         name,extension = consistency_save_path.split('.')
                         consistency_save_path_final = name + '_' + str(tw_no) + '.' + extension
                     else:
                         consistency_save_path_final = name + '_' + str(tw_no) + '.pkl'
-                    with open(consistency_save_path_final, 'wb') as f:
-                        pickle.dump(consistency_dict, f, -1)
+                    calculate_spatial_consistency(windowdata,voxels_in_clusters,f_transform_consistency,n_consistency_CPUs,consistency_save_path_final)
             del(voxels_in_clusters_by_timewindow[min(voxels_in_clusters_by_timewindow)])
             yield M
             del(M)
@@ -272,27 +257,12 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                                 print('NaN correlation at nodes '+node1+', '+node2+' at timewindow '+str(tw_no)+'\n')
                 if calculate_consistency_while_clustering: #calculating spatial consistency of formed clusters
                     windowdata = imgdata[:,:,:,start_times[tw_no]:end_times[tw_no]]
-                    n_voxels = 0
-                    for cluster in voxels_in_clusters.values():
-                        n_voxels = n_voxels + len(cluster)
-                    n_time = windowdata.shape[3]
-                    all_voxel_ts = np.zeros((n_voxels,n_time))
-                    voxel_indices = []
-                    counter = 0
-                    for voxels in voxels_in_clusters.values():
-                        voxel_indices.append(np.arange(counter,counter + len(voxels)))
-                        for i, voxel in enumerate(voxels):
-                            all_voxel_ts[i + counter] = windowdata[voxel]
-                        counter = counter + len(voxels)
-                    consistencies = cbc.calculateSpatialConsistencyInParallel(voxel_indices,all_voxel_ts,fTransform=f_transform_consistency,nCPUs=n_consistency_CPUs)
-                    consistency_dict = {'consistency_type':'spatial with pearson c', 'ftransform':f_transform_consistency, 'consistencies':consistencies}
                     if '.' in consistency_save_path:
                         name,extension = consistency_save_path.split('.')
                         consistency_save_path_final = name + '_' + str(tw_no) + '.' + extension
                     else:
                         consistency_save_path_final = name + '_' + str(tw_no) + '.pkl'
-                    with open(consistency_save_path_final, 'wb') as f:
-                        pickle.dump(consistency_dict, f, -1)
+                    calculate_spatial_consistency(windowdata,voxels_in_clusters,f_transform_consistency,n_consistency_CPUs,consistency_save_path_final)
             yield M
             del(M)
     elif method == 'consistency_optimized':
@@ -336,25 +306,12 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                 previous_voxels_in_clusters = voxels_in_clusters
                 if calculate_consistency_while_clustering:
                     windowdata = imgdata[:,:,:,start_times[tw_no]:end_times[tw_no]]
-                    n_voxels = len(voxel_coordinates)
-                    n_time = windowdata.shape[3]
-                    all_voxel_ts = np.zeros((n_voxels,n_time))
-                    voxel_indices = []
-                    counter = 0
-                    for voxels in voxels_in_clusters.values():
-                        voxel_indices.append(np.arange(counter,counter + len(voxels)))
-                        for i, voxel in enumerate(voxels):
-                            all_voxel_ts[i + counter] = windowdata[voxel]
-                        counter = counter + len(voxels)
-                    consistencies = cbc.calculateSpatialConsistencyInParallel(voxel_indices,all_voxel_ts,fTransform=f_transform_consistency,nCPUs=n_consistency_CPUs)
-                    consistency_dict = {'consistency_type':'spatial with pearson c', 'ftransform':f_transform_consistency, 'consistencies':consistencies}
                     if '.' in consistency_save_path:
                         name,extension = consistency_save_path.split('.')
                         consistency_save_path_final = name + '_' + str(tw_no) + '.' + extension
                     else:
                         consistency_save_path_final = name + '_' + str(tw_no) + '.pkl'
-                    with open(consistency_save_path_final, 'wb') as f:
-                        pickle.dump(consistency_dict, f, -1)
+                    calculate_spatial_consistency(windowdata,voxels_in_clusters,f_transform_consistency,n_consistency_CPUs,consistency_save_path_final)
             del(voxels_in_clusters_by_timewindow[min(voxels_in_clusters_by_timewindow)])
             yield M
             del(M)
@@ -395,25 +352,12 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                 previous_voxels_in_clusters = voxels_in_clusters
                 if calculate_consistency_while_clustering:
                     windowdata = imgdata[:,:,:,start_times[tw_no]:end_times[tw_no]]
-                    n_voxels = len(voxel_coordinates)
-                    n_time = windowdata.shape[3]
-                    all_voxel_ts = np.zeros((n_voxels,n_time))
-                    voxel_indices = []
-                    counter = 0
-                    for voxels in voxels_in_clusters.values():
-                        voxel_indices.append(np.arange(counter,counter + len(voxels)))
-                        for i, voxel in enumerate(voxels):
-                            all_voxel_ts[i + counter] = windowdata[voxel]
-                        counter = counter + len(voxels)
-                    consistencies = cbc.calculateSpatialConsistencyInParallel(voxel_indices,all_voxel_ts,fTransform=f_transform_consistency,nCPUs=n_consistency_CPUs)
-                    consistency_dict = {'consistency_type':'spatial with pearson c', 'ftransform':f_transform_consistency, 'consistencies':consistencies}
                     if '.' in consistency_save_path:
                         name,extension = consistency_save_path.split('.')
                         consistency_save_path_final = name + '_' + str(tw_no) + '.' + extension
                     else:
                         consistency_save_path_final = name + '_' + str(tw_no) + '.pkl'
-                    with open(consistency_save_path_final, 'wb') as f:
-                        pickle.dump(consistency_dict, f, -1)
+                    calculate_spatial_consistency(windowdata,voxels_in_clusters,f_transform_consistency,n_consistency_CPUs,consistency_save_path_final)
             del(voxels_in_clusters_by_timewindow[min(voxels_in_clusters_by_timewindow)])
     elif method=='craddock':
         voxels_in_clusters_by_timewindow = dict()
@@ -455,25 +399,12 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                 previous_voxels_in_clusters = voxels_in_clusters
                 if calculate_consistency_while_clustering:
                     windowdata = imgdata[:,:,:,start_times[tw_no]:end_times[tw_no]]
-                    n_voxels = len(voxel_coordinates)
-                    n_time = windowdata.shape[3]
-                    all_voxel_ts = np.zeros((n_voxels,n_time))
-                    voxel_indices = []
-                    counter = 0
-                    for voxels in voxels_in_clusters.values():
-                        voxel_indices.append(np.arange(counter,counter + len(voxels)))
-                        for i, voxel in enumerate(voxels):
-                            all_voxel_ts[i + counter] = windowdata[voxel]
-                        counter = counter + len(voxels)
-                    consistencies = cbc.calculateSpatialConsistencyInParallel(voxel_indices,all_voxel_ts,fTransform=f_transform_consistency,nCPUs=n_consistency_CPUs)
-                    consistency_dict = {'consistency_type':'spatial with pearson c', 'ftransform':f_transform_consistency, 'consistencies':consistencies}
                     if '.' in consistency_save_path:
                         name,extension = consistency_save_path.split('.')
                         consistency_save_path_final = name + '_' + str(tw_no) + '.' + extension
                     else:
                         consistency_save_path_final = name + '_' + str(tw_no) + '.pkl'
-                    with open(consistency_save_path_final, 'wb') as f:
-                        pickle.dump(consistency_dict, f, -1)
+                    calculate_spatial_consistency(windowdata,voxels_in_clusters,f_transform_consistency,n_consistency_CPUs,consistency_save_path_final)
             yield M
             del(M)
     else:
@@ -575,6 +506,26 @@ def calculate_cluster_correlation_matrix(imgdata_tw,voxels_in_clusters):
         for cluster_number_2 in voxels_in_clusters:
             R[cluster_number_1,cluster_number_2] = np.corrcoef(cluster_timeseries[cluster_number_1],cluster_timeseries[cluster_number_2])[0][1]
     return R
+    
+def calculate_spatial_consistency(windowdata,voxels_in_clusters,f_transform_consistency,n_consistency_CPUs,consistency_save_path):
+    ROI_sizes = []
+    n_voxels = 0
+    for cluster in voxels_in_clusters.values():
+        n_voxels = n_voxels + len(cluster)
+        ROI_sizes.append(len(cluster))
+    n_time = windowdata.shape[3]
+    all_voxel_ts = np.zeros((n_voxels,n_time))
+    voxel_indices = []
+    counter = 0
+    for voxels in voxels_in_clusters.values():
+        voxel_indices.append(np.arange(counter,counter + len(voxels)))
+        for i, voxel in enumerate(voxels):
+            all_voxel_ts[i + counter] = windowdata[voxel]
+        counter = counter + len(voxels)
+    consistencies = cbc.calculateSpatialConsistencyInParallel(voxel_indices, all_voxel_ts,fTransform=f_transform_consistency,nCPUs=n_consistency_CPUs)
+    consistency_dict = {'consistency_type':'spatial with pearson c', 'ftransform':f_transform_consistency, 'consistencies':consistencies, 'ROI_sizes':ROI_sizes}
+    with open(consistency_save_path, 'wb') as f:
+        pickle.dump(consistency_dict, f, -1)
 
 
 

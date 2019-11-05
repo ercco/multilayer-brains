@@ -24,8 +24,9 @@ subjectFolder = '/media/onerva/KINGSTON/test-data/'
 subjects = ['010']
 niiDataFileNames = ['/media/onerva/KINGSTON/test-data/010/epi_STD_mask_detrend_fullreg.nii'] # This should have the same length as the subjects list
 runNumber = '1'
-clusteringMethods = ['consistency_optimized','template_clustering']
-templateNames = [['brainnetome','random'],['brainnetome']]  # this is a methods x templates structure
+clusteringMethods = ['craddock','random_balls','consistency_optimized_thresholded','consistency_optimized_non-thresholded','template']
+templateNames = [['craddock'],['random'],['brainnetome'],['brainnetome']]  # this is a methods x templates structure
+# TODO: check if the looping over template names is needed (and otherwise fix the code to correspond to Tarmo's final folder structure)
 netIdentificators = [[['net_100_0_2019-02-19T16.26.24','net_100_0_2019-03-22T18.40.27'],['net_100_0_2019-02-19T13.40.36']]] # this should be a subjects x clustering methods x templates list (they may have different network identificators); is there any way to do this automatically?
 nLayers = 2
 allFileNames = ['0_1']
@@ -45,17 +46,23 @@ fTransform=False
 nCPUs=5
 template = '/media/onerva/KINGSTON/test-data/group_roi_mask-30-4mm_with_subcortl_and_cerebellum.nii'
 consistencySavePath = subjectFolder + '/' + 'spatialConsistency_' + runNumber + '.pkl'
-calculateConsistencies = True # set to False to read and visualize earlier calculated consistency
+calculateConsistencies = False # set to False to read and visualize earlier calculated consistency
+
+# parameters for reading consistencies calculated during clustering
+calculatedDuringClustering = True
+excludeSizes = True
+consistencySaveNames = ['spatial_consistency_optimized_craddock','spatial_consistency_optimized_random_balls','spatial-consistency-optimized-test-for-Tarmo-mean-weighted-consistency-thresholded-voxelwise','spatial-consistency-optimized-test-for-Tarmo-weighted-mean-consistency']
+timeWindows = ['0']
 
 templateimg = nib.load(template)
 template = templateimg.get_fdata()
 
 # visualization parameters
 nConsBins = 50
-consFigureSavePath = '/media/onerva/KINGSTON/test-data/outcome/test-pipeline/consistency_distributions.pdf'
+consFigureSavePath = '/media/onerva/KINGSTON/test-data/outcome/test-pipeline/consistency_distributions_all.pdf'
 
 nSizeBins = 50
-sizeFigureSavePath = '/media/onerva/KINGSTON/test-data/outcome/test-pipeline/size_distributions.pdf'
+sizeFigureSavePath = '/media/onerva/KINGSTON/test-data/outcome/test-pipeline/size_distributions_all.pdf'
     
 #import pdb; pdb.set_trace()
 startTimes,endTimes = network_construction.get_start_and_end_times(nLayers,timewindow,overlap) # end and start points of time windows
@@ -93,6 +100,29 @@ if calculateConsistencies:
     data = {'metaData':metaData,'consistencies':pooledConsistencies,'ROI sizes':ROISizes}
     with open(consistencySavePath, 'wb') as f:
         pickle.dump(data, f, -1)
+        
+elif calculatedDuringClustering:
+    for subject in subjects:
+        consistencySaveNames = [subjectFolder + subject + '/' + consistencySaveName for consistencySaveName in consistencySaveNames]
+        for i, (clusteringMethod, tempalateNamesPerMethod, consistencySaveName) in enumerate(zip(clusteringMethods,templateNames,consistencySaveNames)):
+            for j, templateName in enumerate(templateNamesPerMethod):
+                for timeWindow in timeWindows:
+                    consistencyPath = consistencySaveName + '_' + timeWindow + '.pkl'
+                    f = open(consistencyPath, 'r')
+                    data = pickle.load(f)
+                    f.close()
+                    if 'consistencies' in data.keys():
+                        pooledConsistencies[i][j].extend(data['consistencies'])
+                    else:
+                        pooledConsistencies[i][j].extend(data['spatialConsistencies'])
+    # TODO: remove the following lines, they are a hack!!!
+#    templateNames.append(['brainnetome'])
+#    f = open('/media/onerva/KINGSTON/test-data/spatial-consistency-original.pkl','r')
+#    data = pickle.load(f)
+#    f.close()
+#    pooledConsistencies.append([data['spatialConsistencies']])
+#    ROISizes.append([[]])
+                         
 else:
     f = open(consistencySavePath,'r')
     data = pickle.load(f)
@@ -103,22 +133,24 @@ else:
 consFig = plt.figure(1)
 consAx = consFig.add_subplot(111)
 
-sizeFig = plt.figure(2)
-sizeAx = sizeFig.add_subplot(111)
+if not excludeSizes:
+    sizeFig = plt.figure(2)
+    sizeAx = sizeFig.add_subplot(111)
 
 for pooledConsistencyPerMethod, sizesPerMethod, clusteringMethod, templateNamesPerMethod in zip(pooledConsistencies, ROISizes, clusteringMethods, templateNames):
-    for pooledConsistency, ROISizes, templateName in zip(pooledConsistencyPerMethod, sizesPerMethod, templateNamesPerMethod):
+    for pooledConsistency, sizes, templateName in zip(pooledConsistencyPerMethod, sizesPerMethod, templateNamesPerMethod):
         consDistribution,consBinEdges,_ = binned_statistic(pooledConsistency,pooledConsistency,statistic='count',bins=nConsBins)
         consBinWidth = (consBinEdges[1] - consBinEdges[0])
         consBinCenters = consBinEdges[1:] - consBinWidth/2
         consDistribution = consDistribution/float(np.sum(consDistribution))
         consAx.plot(consBinCenters,consDistribution,label=clusteringMethod + ', ' + templateName)
         
-        sizeDistribution,sizeBinEdges,_ = binned_statistic(ROISizes,ROISizes,statistic='count',bins=nSizeBins)
-        sizeBinWidth = (sizeBinEdges[1] - sizeBinEdges[0])
-        sizeBinCenters = sizeBinEdges[1:] - sizeBinWidth/2
-        sizeDistribution = sizeDistribution/float(np.sum(sizeDistribution))
-        sizeAx.plot(sizeBinCenters,sizeDistribution,label=clusteringMethod + ', ' + templateName)
+        if not excludeSizes:
+            sizeDistribution,sizeBinEdges,_ = binned_statistic(ROISizes,sizes,statistic='count',bins=nSizeBins)
+            sizeBinWidth = (sizeBinEdges[1] - sizeBinEdges[0])
+            sizeBinCenters = sizeBinEdges[1:] - sizeBinWidth/2
+            sizeDistribution = sizeDistribution/float(np.sum(sizeDistribution))
+            sizeAx.plot(sizeBinCenters,sizeDistribution,label=clusteringMethod + ', ' + templateName)
 
 plt.figure(1)
         
@@ -129,12 +161,14 @@ consAx.legend()
 plt.tight_layout()
 plt.savefig(consFigureSavePath,format='pdf',bbox_inches='tight')
 
-plt.figure(2)
+if not excludeSizes:
 
-sizeAx.set_xlabel('ROI size (number of voxels)')
-sizeAx.set_ylabel('PDF')
-sizeAx.legend()
-
-plt.tight_layout()
-plt.savefig(sizeFigureSavePath,format='pdf',bbox_inches='tight')
+    plt.figure(2)
+    
+    sizeAx.set_xlabel('ROI size (number of voxels)')
+    sizeAx.set_ylabel('PDF')
+    sizeAx.legend()
+    
+    plt.tight_layout()
+    plt.savefig(sizeFigureSavePath,format='pdf',bbox_inches='tight')
 
