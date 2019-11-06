@@ -120,11 +120,11 @@ def clustering_method_parser(image_array,timewindow,overlap,nlayers,clustering_m
         return network_construction.yield_clustered_multilayer_network_in_layersets(image_array,nlayers,timewindow,overlap,n_clusters=nclusters,method=method,template=None,nanlogfile=nan_log,event_time_stamps=event_time_stamps,calculate_consistency_while_clustering=calculate_consistency_while_clustering,consistency_save_path=consistency_save_path,n_consistency_CPUs=n_consistency_CPUs)
     elif method == 'consistency_optimized':
         # required params
-        nclusters = clustering_method_params['nclusters']
         consistency_target_function = clustering_method_params['consistency_target_function']
         # optional params
         centroid_template_filename = clustering_method_params.get('centroid_template_filename',None)
         use_random_seeds = clustering_method_params.get('use_random_seeds',True)
+        nclusters = clustering_method_params.get('nclusters',100) # used only if centroid template is not used (i.e. random seeds are used)
         # choose centroid acquisition method
         if centroid_template_filename and not use_random_seeds:
             centroid_template_data = nib.load(centroid_template_filename)
