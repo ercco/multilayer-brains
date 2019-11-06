@@ -1,5 +1,6 @@
 import pymnet as pn
 import pickle
+import os
 
 def write_weighted_network(M,filename,metadata):
     # First line: Multiplex or Multilayer, depending on network type
@@ -110,6 +111,8 @@ def read_pickle_file(filename):
 def write_layersetwise_network(M,layersetwise_networks_savefolder):
     # uses sorted layer names as the savename
     net_name = '_'.join([str(l) for l in sorted(M.iter_layers())])
-    filename = layersetwise_networks_savefolder+'/'+net_name
+    if not layersetwise_networks_savefolder[-1] == os.path.sep:
+        layersetwise_networks_savefolder = layersetwise_networks_savefolder+os.path.sep
+    filename = layersetwise_networks_savefolder+net_name
     write_pickle_file(M,filename)
     return
