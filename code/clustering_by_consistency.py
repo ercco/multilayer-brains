@@ -216,7 +216,8 @@ def getRandomCentroids(nROIs, template):
     -----------
     nROIs: int, number of centroids
     template: 3D numpy array where each element corresponds to a voxel. The 
-              value of each voxel is the index of the ROI the voxel belongs to.
+              value of each voxel included to the analysis should be >0 (e.g.
+              the index of the ROI the voxel belongs to)-
               Voxels outside of ROIs (= outside of the gray matter) have value 0.
               
     Returns:
@@ -1396,13 +1397,15 @@ def growOptimizedROIs(cfg,verbal=True):
                     - 'voxel-neighbor': no voxel is added to a ROI if its average correlation to the voxels of this
                     ROI is lower than the average correlation of a voxel to its closest (6-voxel) neighborhood. This
                     threshold value is calculated as an average across all voxels before starting to build the ROIs.
-         targetFunction: str, measure that will be optimized (options: correlationWithCentroid, spatialConsistency)
+         targetFunction: str, measure that will be optimized (options: correlationWithCentroid, spatialConsistency, weighted
+                         mean consistency, local weighted consistency)
          consistencyType: str, definition of spatial consistency to be used if 
                           targetFunction == 'spatialConsistency' (default: 'pearson c' (mean Pearson correlation coefficient))
          fTransform: bool, should Fisher Z transform be applied if targetFunction == 'spatialConsistency' 
                      (default=False)
-         template: 3D numpy array where each element corresponds to a voxel. The value of each voxel is the index of the ROI the voxel belongs to.
-                   Voxels outside of ROIs (= outside of the gray matter) have value 0. Template is used only if cfg[ROICentroids] == 'random' (default = None)
+         template: 3D numpy array where each element corresponds to a voxel. The value of voxels included in the analysis should
+                   be >0 (e.g. the index of the ROI the voxel belongs to). Voxels outside of ROIs (= outside of the gray matter) 
+                   have value 0. Template is used only if cfg[ROICentroids] == 'random' (default = None)
          nROIs: int, number of ROIs. Only used if cfg[ROICentroids] == 'random' (default = 100)
          verbal: bool, if verbal == True, more progress information is printed (default = True)
     

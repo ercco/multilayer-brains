@@ -131,9 +131,7 @@ def clustering_method_parser(image_array,timewindow,overlap,nlayers,clustering_m
             centroid_template_array = centroid_template_data.get_fdata()
             ROI_centroids, _,_ = cbc.findROICentroids(centroid_template_array,fixCentroids=True)
         elif use_random_seeds:
-            image_array_nonzero = np.sum(np.abs(image_array),axis=3)
-            image_array_nonzero[image_array_nonzero > 0] = 1
-            centroid_template_array = image_array_nonzero
+            centroid_template_array = np.sum(np.abs(image_array),axis=3)
             ROI_centroids = 'random'
         ROI_names = clustering_method_params.get('ROI_names',[])
         consistency_threshold = clustering_method_params.get('consistency_threshold',-1)
