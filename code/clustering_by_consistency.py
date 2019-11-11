@@ -16,7 +16,7 @@ import decimal
 import random
 import heapq
 
-import network_io
+import network_io, corrs_and_mask_calculations, network_construction
 
 from scipy import io, matrix
 from scipy.stats.stats import pearsonr
@@ -1255,10 +1255,7 @@ def calculateSpatialConsistencyInParallel(voxelIndices,allVoxelTs,consistencyTyp
           'pearson c' (mean Pearson correlation coefficient), other options:
     fTransform: bool, are the correlations Fisher f transformed before averaging
                 when consistencyType = 'pearson c' (default=False)
-    nCPUs = int, number of CPUs to be used for the parallel computing (default = 5)consistencyType: str, definition of spatial consistency to be used if 
-                          targetFunction == 'spatialConsistency' (default: 'pearson c' (mean Pearson correlation coefficient))
-         fTransform: bool, should Fisher Z transform be applied if targetFunction == 'spatialConsistency' 
-                     (default=False)
+    nCPUs = int, number of CPUs to be used for the parallel computing (default = 5)
     
     
     Returns:
@@ -1278,6 +1275,97 @@ def calculateSpatialConsistencyInParallel(voxelIndices,allVoxelTs,consistencyTyp
 
     return spatialConsistencies
 
+def calculateSpatialConsistencyPostHoc(data_files,template_file,layersetwise_network_savefolders,network_files,
+                                       n_layers,timewindow,overlap,consistency_type='pearson c',f_transform=False,nCPUs=5,
+                                       save_path=None):
+    """
+    Calculates spatial consistency and size of earlier-created ROIs. The ROIs should be
+    saved by pipeline.isomorphism_classes_from_file; they cant be
+    e.g. an outcome of consistency optimization or random chunks of voxels. 
+    
+    Parameters:
+    -----------
+    data_files: lists of strs, paths to the .nii files used for calculating spatial
+                consistency.
+    template_file: str, path to the .nii template file where all voxels belonging to the
+                   area of interest (e.g. gray matter) should have value >0.
+    layersetwise_networks_savefolders: list of strs, paths to the folders where
+                                       networks created by pipeline.isomorphism_classes_from_file
+                                       (and related ROI information) have been saved. Must be of
+                                       the same length as data_files.
+    network_files: list of strs, names of all network files saved in layersetwise_networks_savefolder
+                   (should be the same for all savefolders)
+    n_layers: int, number of layers used for constructing networks in isomorphism_classes_from file
+              (used for reading data)
+    timewindow: int, length of time window used in isomorphism_classes_from_file
+    overlap: int, time window overlap used in isomorphism_classes_from_file
+    consistency_type: str, definition of spatial consistency to be used; default:
+                     'pearson c' (mean Pearson correlation coefficient), other options:
+    f_transform: bool, are the correlations Fisher f transformed before averaging
+                when consistencyType = 'pearson c' (default=False)
+    nCPUs: int, number of CPUs to be used for the parallel computing (default = 5)
+    save_path: str, path to which save the calculated consistencies (default = None, no saving)
+    
+    Returns:
+    --------
+    spatial_consistency_data: dict, contains:
+                              'data_files':data_files
+                              'layersetwise_network_savefolders':layersetwise_network_savefolders
+                              'network_files':network_files
+                              'n_layers': n_layers
+                              'consistency_type': consistency_type
+                              'f_transform': f_transform
+                              'timewindow': timewindow
+                              'overlap': overlap
+                              'spatial_consistencies': list of floats, spatial consistencies of all ROIs 
+                                                       (len = len(layersetwise_network_savefolders)*len(network_files)*n_timewindows*n_ROIs)
+                              'roi_sizes': list of ints, sizes of all ROIs
+    """
+    spatial_consistencies = []
+    roi_sizes = []
+    # first, let's pick the network files to be read
+    # same layer is saved in multiple files; therefore we read only every nLayer-th file
+    # this is a hard-coded part that corresponds to the file naming system of isomorphism_classes_from_file
+    network_files = [network_files[index] for index in range(0,len(network_files),n_layers)]
+    # reading template file
+    template = nib.load(template_file)
+    templatedata = template.get_fdata()
+    # looping over network_savefolders (can be over subjects but also over a single subject in multiple runs)
+    for data_file, layersetwise_network_savefolder in zip(data_files,layersetwise_network_savefolders):
+        # reading and masking data; later on, this will be used to calculate consistencies
+        img = nib.load(data_file) 
+        imgdata = img.get_fdata()
+        corrs_and_mask_calculations.gray_mask(imgdata,templatedata)
+        n_time = imgdata.shape[-1]
+        # finding end and start points of time windows that correspond to layers (consistency will be calculated inside windows)
+        k = network_construction.get_number_of_layers(imgdata.shape,timewindow,overlap)
+        start_times,end_times = network_construction.get_start_and_end_times(k,timewindow,overlap)
+         # finding voxel coordinates (these may vary between subjects: it's possible that subject's EPI doesn't include all voxels of the template)
+        x,y,z = np.where(imgdata[:,:,:,0] != 0)
+        n_voxels = len(x)
+        voxel_coordinates = np.concatenate((x,y,z)).reshape(3,n_voxels).T
+        # reading voxel time series
+        all_voxel_ts = np.zeros((n_voxels,n_time)) 
+        for i, voxel in enumerate(voxel_coordinates):
+            all_voxel_ts[i,:] = imgdata[voxel[0],voxel[1],voxel[2],:]
+        # reading network data and ROI information
+        layer_index = 0
+        for network_file in network_files:
+            voxel_indices = readVoxelIndices(layersetwise_network_savefolder+'/'+network_file,voxel_coordinates,layers='all')
+            for voxel_indices_per_layer, start_time, end_time in zip(voxel_indices, start_times[layer_index:layer_index+n_layers], end_times[layer_index:layer_index+n_layers]):
+                        roi_sizes.extend([len(voxel_inds) for voxel_inds in voxel_indices_per_layer])
+                        spatial_consistencies.extend(calculateSpatialConsistencyInParallel(voxel_indices_per_layer,all_voxel_ts[:,start_time:end_time],consistency_type,f_transform,nCPUs))
+            layer_index += n_layers
+    spatial_consistency_data = {'data_files':data_files,'layersetwise_network_savefolders':layersetwise_network_savefolders,
+                                'network_files':network_files,'n_layers':n_layers,'consistency_type':consistency_type,
+                                'f_transform':f_transform,'timewindow':timewindow,'overlap':overlap,'spatial_consistencies':spatial_consistencies,
+                                'roi_sizes':roi_sizes}
+    if not save_path==None:
+        with open(save_path, 'wb') as f:
+            pickle.dump(spatial_consistency_data, f, -1)
+            
+    return spatial_consistency_data
+        
 # ROI construction without optimization
     
 def growSphericalROIs(ROICentroids, imgdata, nROIs=246, template=None, equalSized=False):

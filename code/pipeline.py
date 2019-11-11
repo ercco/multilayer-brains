@@ -43,7 +43,7 @@ def isomorphism_classes_from_file(filename,data_mask_filename,
     isomorphism_allowed_aspects : list, define allowed aspects for isomorphism
     isomorphism_class_savenames : str or list of strs, the same length as nnodes
         filenames for saving found isomorphism class dicts (None = no saving)
-    isomorphism_class_examples_savenames : str of list of strs, the same length as nnodes
+    isomorphism_class_examples_savenames : str or list of strs, the same length as nnodes
         filenames for saving example networks for each isomorphism class (None = no saving)
     layersetwise_networks_savefolder : str, folder for saving the generated networks
         (None = no saving)
