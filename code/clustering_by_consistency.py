@@ -1179,6 +1179,38 @@ def checkFlipValidity(flip,ROIVoxels,voxelCoordinates,voxelLabels):
 #                        valid[k] = True
         valid = all(valid)
     return valid
+
+def getInAndBwROIMasks(inROIIndices):
+    """
+    Returns the masks for picking correlations within and between rois from
+    a voxel-voxel correlation matrix where voxels are ordered by their ROI identity
+    
+    Parameters:
+    -----------
+    inROIIndices: list of arrays; indices of voxels belonging to each ROI
+    
+    Returns:
+    --------
+    withinROIMask, betweenROIMask: nROIs x nROIs arrays where elements a) inside a ROI
+                                   or b) between ROIs are 1, others 0
+    """
+    inROIxIndices = []
+    inROIyIndices = []
+    nVoxels = 0
+    offset = 0
+    for ROI in inROIIndices:
+        s = len(ROI)
+        nVoxels = nVoxels + s
+        template = np.zeros((s, s))
+        triu = np.triu_indices_from(template, 1)
+        inROIxIndices.extend(triu[0] + offset)
+        inROIyIndices.extend(triu[1] + offset)
+        offset = offset + s
+    withinROIMask = np.zeros((nVoxels,nVoxels))
+    withinROIMask[inROIxIndices, inROIyIndices] = 1
+    betweenROIMask = np.ones((nVoxels,nVoxels))
+    betweenROIMask = np.triu(betweenROIMask - withinROIMask - np.eye(nVoxels))
+    return (withinROIMask, betweenROIMask)
             
 # Consistency calculation
     
@@ -1365,6 +1397,87 @@ def calculateSpatialConsistencyPostHoc(data_files,template_file,layersetwise_net
             pickle.dump(spatial_consistency_data, f, -1)
             
     return spatial_consistency_data
+
+def calculateCorrelationsInAndBetweenROIs(dataFiles,templateFile,layersetwiseNetworkSavefolders,
+                                      networkFiles,nLayers,timewindow,overlap,savePath=None):
+    """
+    Starting from ROIs saved earlier by pipeline.isomorphism_classes_from_file,
+    calculates the Pearson correlation coefficients between voxels in the same ROI
+    and in different ROIs.
+    
+    Parameters:
+    -----------
+    dataFiles: lists of strs, paths to the .nii files used for calculating the correlations
+    templateFile: str, path to the .nii template file where all voxels belonging to the
+                   area of interest (e.g. gray matter) should have value >0.
+    layersetwiseNetworksSavefolders: list of strs, paths to the folders where
+                                       networks created by pipeline.isomorphism_classes_from_file
+                                       (and related ROI information) have been saved. Must be of
+                                       the same length as data_files.
+    networkFiles: list of strs, names of all network files saved in layersetwise_networks_savefolder
+                   (should be the same for all savefolders)
+    nLayers: int, number of layers used for constructing networks in isomorphism_classes_from file
+              (used for reading data)
+    timewindow: int, length of time window used in isomorphism_classes_from_file
+    overlap: int, time window overlap used in isomorphism_classes_from_file
+    savePath: str, path to which save the correlations (default = None, no saving)
+    
+    Returns:
+    --------
+    correlationData: dict, contains:
+                              'dataFiles':dataFiles
+                              'layersetwiseNetworkSavefolders':layersetwiseNetworkSavefolders
+                              'networkFiles':networkFiles
+                              'nLayers': nLayers
+                              'timewindow': timewindow
+                              'overlap': overlap
+                              'inROICorrelations': list of floats, correlation values between voxels in the same ROI
+                              'betweenROICorrelations': list of floats, correlation values between voxels in different ROIs
+    """
+    inROICorrelations = []
+    betweenROICorrelations = []
+    # first, let's pick the network files to be read
+    # same layer is saved in multiple files; therefore we read only every nLayer-th file
+    # this is a hard-coded part that corresponds to the file naming system of isomorphism_classes_from_file
+    networkFiles = [networkFiles[index] for index in range(0,len(networkFiles),nLayers)]
+    # reading template file
+    template = nib.load(templateFile)
+    templatedata = template.get_fdata()
+    # looping over network_savefolders (can be over subjects but also over a single subject in multiple runs)
+    for dataFile, layersetwiseNetworkSavefolder in zip(dataFiles,layersetwiseNetworkSavefolders):
+        # reading and masking data; later on, this will be used to calculate consistencies
+        img = nib.load(dataFile) 
+        imgdata = img.get_fdata()
+        corrs_and_mask_calculations.gray_mask(imgdata,templatedata)
+        nTime = imgdata.shape[-1]
+        # finding end and start points of time windows that correspond to layers (correlations will be calculated inside windows)
+        k = network_construction.get_number_of_layers(imgdata.shape,timewindow,overlap)
+        startTimes,endTimes = network_construction.get_start_and_end_times(k,timewindow,overlap)
+         # finding voxel coordinates (these may vary between subjects: it's possible that subject's EPI doesn't include all voxels of the template)
+        x,y,z = np.where(imgdata[:,:,:,0] != 0)
+        nVoxels = len(x)
+        voxelCoordinates = np.concatenate((x,y,z)).reshape(3,nVoxels).T
+        # reading voxel time series
+        allVoxelTs = np.zeros((nVoxels,nTime)) 
+        for i, voxel in enumerate(voxelCoordinates):
+            allVoxelTs[i,:] = imgdata[voxel[0],voxel[1],voxel[2],:]
+        layerIndex = 0
+        for networkFile in networkFiles:
+            voxelIndices = readVoxelIndices(layersetwiseNetworkSavefolder+'/'+networkFile,voxelCoordinates,layers='all')
+            for voxelIndicesPerLayer, startTime, endTime in zip(voxelIndices, startTimes[layerIndex:layerIndex+nLayers], endTimes[layerIndex:layerIndex+nLayers]):
+                allVoxelCorrelations = np.corrcoef(imgdata[:,:,:,startTime:endTime])
+                inROIMask, betweenROIMask = getInAndBwROIMasks(voxelIndicesPerLayer)
+                inROICorrelations.extend(allVoxelCorrelations[np.where(inROIMask > 0)])
+                betweenROICorrelations.extend(allVoxelCorrelations[np.where(betweenROIMask > 0)])
+    correlationData = {'dataFiles':dataFiles,'layersetwiseNetworkSavefolders':layersetwiseNetworkSavefolders,
+                                'networkFiles':networkFiles,'nLayers':nLayers,'timewindow':timewindow,
+                                'overlap':overlap,'inROICorrelations':inROICorrelations,
+                                'betweenROICorrelations':betweenROICorrelations}
+    if not savePath==None:
+        with open(savePath, 'wb') as f:
+            pickle.dump(correlationData, f, -1)
+            
+    return correlationData
         
 # ROI construction without optimization
     

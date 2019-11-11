@@ -43,7 +43,7 @@ consistencyType='pearson c'
 fTransform=False
 nCPUs=5
 templateFile = '/media/onerva/KINGSTON/test-data/group_roi_mask-30-4mm_with_subcortl_and_cerebellum.nii'
-calculateConsistencies = False # set to False to read and visualize earlier calculated consistency
+calculateConsistencies = True # set to False to read and visualize earlier calculated consistency
 
 # parameters for reading consistencies calculated during clustering
 calculatedDuringClustering = False
