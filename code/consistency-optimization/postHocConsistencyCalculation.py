@@ -71,7 +71,7 @@ if calculateConsistencies:
         for j, (templateName, netIdentificatorsPerTemplate) in enumerate(zip(templateNamesPerMethod,netIdentificatorsPerMethod)):
             layersetwiseNetworkSavefolders = [subjectFolder + '/' + subject + '/' + clusteringMethod + '/' + templateName + '/' + netIdentificator for subject,netIdentificator in zip(subjects,netIdentificatorsPerTemplate)]
             savePath = subjectFolder + '/spatialConsistency_' + clusteringMethod + '_' + templateName + '.pkl'
-            spatialConsistencyData = cbc.calculateSpatialConsistencyPostHoc(niiDataFileNames,templateFile,layersetwiseNetworkSavefolders,
+            spatialConsistencyData = cbc.calculateSpatialConsistencyPostHoc(niiDataFileNames,layersetwiseNetworkSavefolders,
                                                                             allFileNames,nLayers,timewindow,overlap,consistencyType,
                                                                             fTransform,nCPUs,savePath)
             ROISizes[i][j].extend(spatialConsistencyData['roi_sizes'])

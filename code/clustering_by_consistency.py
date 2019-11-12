@@ -170,7 +170,7 @@ def createNii(ROIInfo, savePath, imgSize=[45,54,45], affine=np.eye(4)):
     img = nib.Nifti1Image(data,affine)     
     nib.save(img,savePath)
     
-def readVoxelIndices(path, voxelCoordinates, layers=all):
+def readVoxelIndices(path, voxelCoordinates=[], layers=all):
     """
     Reads the saved ROIs and based on them constructs the voxel indices for calculating
     consistency. The input file should contain a multilayer network so that nodes of each
@@ -187,24 +187,32 @@ def readVoxelIndices(path, voxelCoordinates, layers=all):
     
     Returns:
     --------
-    voxelIndices: list of list (nLayers x nROIs) of np.arrays, each array containing indices of voxels of one ROI; 
+    voxelIndices: list of lists (nLayers x nROIs) of np.arrays, each array containing indices of voxels of one ROI; 
                   these indices refer to voxels' locations in the voxel time series array.
+    readVoxelCoordinates: list of lists (nLayers x nROIs) of np.arrays, each array containing the coordinates of
+                  voxels of one ROI
+    
     """
     M = network_io.read_weighted_network(path)
     voxelIndices = []
+    readVoxelCoordinates = []
     if layers == 'all':
         layers = list(M.get_layers())
     for layer in layers:
         nodes = M.iter_nodes(layer)
         voxelIndicesPerLayer = []
+        readVoxelCoordinatesPerLayer = []
         for node in nodes:
             voxelIndicesPerROI = []
             voxels = eval(node)
-            for voxel in voxels:
-                voxelIndicesPerROI.append(np.where((voxelCoordinates==voxel).all(axis=1))[0][0])
+            readVoxelCoordinatesPerLayer.append(voxels)
+            if len(voxelCoordinates)>0:
+                for voxel in voxels:
+                    voxelIndicesPerROI.append(np.where((voxelCoordinates==voxel).all(axis=1))[0][0])
             voxelIndicesPerLayer.append(np.array(voxelIndicesPerROI))
         voxelIndices.append(voxelIndicesPerLayer)
-    return voxelIndices
+        readVoxelCoordinates.append(readVoxelCoordinatesPerLayer)
+    return voxelIndices, readVoxelCoordinates
 
 # Helper functions
 
@@ -1307,7 +1315,7 @@ def calculateSpatialConsistencyInParallel(voxelIndices,allVoxelTs,consistencyTyp
 
     return spatialConsistencies
 
-def calculateSpatialConsistencyPostHoc(data_files,template_file,layersetwise_network_savefolders,network_files,
+def calculateSpatialConsistencyPostHoc(data_files,layersetwise_network_savefolders,network_files,
                                        n_layers,timewindow,overlap,consistency_type='pearson c',f_transform=False,nCPUs=5,
                                        save_path=None):
     """
@@ -1319,8 +1327,6 @@ def calculateSpatialConsistencyPostHoc(data_files,template_file,layersetwise_net
     -----------
     data_files: lists of strs, paths to the .nii files used for calculating spatial
                 consistency.
-    template_file: str, path to the .nii template file where all voxels belonging to the
-                   area of interest (e.g. gray matter) should have value >0.
     layersetwise_networks_savefolders: list of strs, paths to the folders where
                                        networks created by pipeline.isomorphism_classes_from_file
                                        (and related ROI information) have been saved. Must be of
@@ -1359,34 +1365,32 @@ def calculateSpatialConsistencyPostHoc(data_files,template_file,layersetwise_net
     # same layer is saved in multiple files; therefore we read only every nLayer-th file
     # this is a hard-coded part that corresponds to the file naming system of isomorphism_classes_from_file
     network_files = [network_files[index] for index in range(0,len(network_files),n_layers)]
-    # reading template file
-    template = nib.load(template_file)
-    templatedata = template.get_fdata()
     # looping over network_savefolders (can be over subjects but also over a single subject in multiple runs)
     for data_file, layersetwise_network_savefolder in zip(data_files,layersetwise_network_savefolders):
-        # reading and masking data; later on, this will be used to calculate consistencies
+        # reading data; later on, this will be used to calculate consistencies
         img = nib.load(data_file) 
         imgdata = img.get_fdata()
-        corrs_and_mask_calculations.gray_mask(imgdata,templatedata)
         n_time = imgdata.shape[-1]
         # finding end and start points of time windows that correspond to layers (consistency will be calculated inside windows)
         k = network_construction.get_number_of_layers(imgdata.shape,timewindow,overlap)
         start_times,end_times = network_construction.get_start_and_end_times(k,timewindow,overlap)
-         # finding voxel coordinates (these may vary between subjects: it's possible that subject's EPI doesn't include all voxels of the template)
-        x,y,z = np.where(imgdata[:,:,:,0] != 0)
-        n_voxels = len(x)
-        voxel_coordinates = np.concatenate((x,y,z)).reshape(3,n_voxels).T
-        # reading voxel time series
-        all_voxel_ts = np.zeros((n_voxels,n_time)) 
-        for i, voxel in enumerate(voxel_coordinates):
-            all_voxel_ts[i,:] = imgdata[voxel[0],voxel[1],voxel[2],:]
-        # reading network data and ROI information
         layer_index = 0
         for network_file in network_files:
-            voxel_indices = readVoxelIndices(layersetwise_network_savefolder+'/'+network_file,voxel_coordinates,layers='all')
-            for voxel_indices_per_layer, start_time, end_time in zip(voxel_indices, start_times[layer_index:layer_index+n_layers], end_times[layer_index:layer_index+n_layers]):
-                        roi_sizes.extend([len(voxel_inds) for voxel_inds in voxel_indices_per_layer])
-                        spatial_consistencies.extend(calculateSpatialConsistencyInParallel(voxel_indices_per_layer,all_voxel_ts[:,start_time:end_time],consistency_type,f_transform,nCPUs))
+            _,voxel_coordinates = readVoxelIndices(layersetwise_network_savefolder+'/'+network_file,layers='all')
+            for voxel_coordinates_per_layer, start_time, end_time in zip(voxel_coordinates, start_times[layer_index:layer_index+n_layers], end_times[layer_index:layer_index+n_layers]):
+                roi_sizes_per_layer = [len(voxel_coords) for voxel_coords in voxel_coordinates_per_layer]
+                roi_sizes.extend(roi_sizes_per_layer)
+                n_voxels = sum(roi_sizes_per_layer)
+                all_voxel_ts = np.zeros((n_voxels,n_time))
+                voxel_indices = []
+                offset = 0
+                for ROI in voxel_coordinates_per_layer:
+                    s = len(ROI)
+                    for i, voxel in enumerate(ROI):
+                        all_voxel_ts[offset+i,:]=imgdata[voxel[0],voxel[1],voxel[2],:]
+                    voxel_indices.append(np.arange(offset,offset+s))
+                    offset += s
+                spatial_consistencies.extend(calculateSpatialConsistencyInParallel(voxel_indices,all_voxel_ts[:,start_time:end_time],consistency_type,f_transform,nCPUs))
             layer_index += n_layers
     spatial_consistency_data = {'data_files':data_files,'layersetwise_network_savefolders':layersetwise_network_savefolders,
                                 'network_files':network_files,'n_layers':n_layers,'consistency_type':consistency_type,
@@ -1440,35 +1444,34 @@ def calculateCorrelationsInAndBetweenROIs(dataFiles,templateFile,layersetwiseNet
     # same layer is saved in multiple files; therefore we read only every nLayer-th file
     # this is a hard-coded part that corresponds to the file naming system of isomorphism_classes_from_file
     networkFiles = [networkFiles[index] for index in range(0,len(networkFiles),nLayers)]
-    # reading template file
-    template = nib.load(templateFile)
-    templatedata = template.get_fdata()
     # looping over network_savefolders (can be over subjects but also over a single subject in multiple runs)
     for dataFile, layersetwiseNetworkSavefolder in zip(dataFiles,layersetwiseNetworkSavefolders):
-        # reading and masking data; later on, this will be used to calculate consistencies
+        # reading data; later on, this will be used to calculate consistencies
         img = nib.load(dataFile) 
         imgdata = img.get_fdata()
-        corrs_and_mask_calculations.gray_mask(imgdata,templatedata)
         nTime = imgdata.shape[-1]
         # finding end and start points of time windows that correspond to layers (correlations will be calculated inside windows)
         k = network_construction.get_number_of_layers(imgdata.shape,timewindow,overlap)
         startTimes,endTimes = network_construction.get_start_and_end_times(k,timewindow,overlap)
-         # finding voxel coordinates (these may vary between subjects: it's possible that subject's EPI doesn't include all voxels of the template)
-        x,y,z = np.where(imgdata[:,:,:,0] != 0)
-        nVoxels = len(x)
-        voxelCoordinates = np.concatenate((x,y,z)).reshape(3,nVoxels).T
-        # reading voxel time series
-        allVoxelTs = np.zeros((nVoxels,nTime)) 
-        for i, voxel in enumerate(voxelCoordinates):
-            allVoxelTs[i,:] = imgdata[voxel[0],voxel[1],voxel[2],:]
         layerIndex = 0
         for networkFile in networkFiles:
-            voxelIndices = readVoxelIndices(layersetwiseNetworkSavefolder+'/'+networkFile,voxelCoordinates,layers='all')
-            for voxelIndicesPerLayer, startTime, endTime in zip(voxelIndices, startTimes[layerIndex:layerIndex+nLayers], endTimes[layerIndex:layerIndex+nLayers]):
-                allVoxelCorrelations = np.corrcoef(imgdata[:,:,:,startTime:endTime])
-                inROIMask, betweenROIMask = getInAndBwROIMasks(voxelIndicesPerLayer)
+            _,voxelCoordinates = readVoxelIndices(layersetwiseNetworkSavefolder+'/'+networkFile,layers='all')
+            for voxelCoordinatesPerLayer, startTime, endTime in zip(voxelCoordinates, startTimes[layerIndex:layerIndex+nLayers], endTimes[layerIndex:layerIndex+nLayers]):
+                nVoxels = sum([len(ROI) for ROI in voxelCoordinatesPerLayer])
+                allVoxelTs = np.zeros((nVoxels,nTime))
+                voxelIndices = []
+                offset = 0
+                for ROI in voxelCoordinatesPerLayer:
+                    s = len(ROI)
+                    for i, voxel in enumerate(ROI):
+                        allVoxelTs[offset+i,:]=imgdata[voxel[0],voxel[1],voxel[2],:]
+                    voxelIndices.append(np.arange(offset,offset+s))
+                    offset += s
+                allVoxelCorrelations = np.corrcoef(allVoxelTs[:,startTime:endTime])
+                inROIMask, betweenROIMask = getInAndBwROIMasks(voxelIndices)
                 inROICorrelations.extend(allVoxelCorrelations[np.where(inROIMask > 0)])
                 betweenROICorrelations.extend(allVoxelCorrelations[np.where(betweenROIMask > 0)])
+            layerIndex += nLayers
     correlationData = {'dataFiles':dataFiles,'layersetwiseNetworkSavefolders':layersetwiseNetworkSavefolders,
                                 'networkFiles':networkFiles,'nLayers':nLayers,'timewindow':timewindow,
                                 'overlap':overlap,'inROICorrelations':inROICorrelations,
