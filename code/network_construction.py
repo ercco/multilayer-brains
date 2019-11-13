@@ -534,14 +534,14 @@ def calculate_spatial_consistency(windowdata,voxels_in_clusters,f_transform_cons
 def threshold_network(M,density_params):
     # threshold network according to params in density_params dict
     if 'intralayer_density' in density_params and 'interlayer_density' in density_params:
-        return threshold_multilayer_network(M,density_params['intralayer_density'],density_params['interlayer_density'],density_params.get('replace_interlayer_weights_with_ones',True))
+        return threshold_multilayer_network(M,density_params['intralayer_density'],density_params['interlayer_density'],density_params.get('replace_intralayer_weights_with_ones',True),density_params.get('replace_interlayer_weights_with_ones',True))
     elif 'intra_avg_degree' in density_params and 'inter_avg_degree' in density_params:
         assert len(set(map(lambda l: len(list(M.iter_nodes(l))),M.iter_layers()))) == 1,'Each layer should have the same number of nodes when using inter_avg_degree thresholding'
         nnodes = len(list(M.iter_nodes(next(M.iter_layers()))))
         # calculate densities that correspond to the avg degrees given
         intralayer_density = density_params['intra_avg_degree']/float(nnodes-1)
         interlayer_density = density_params['inter_avg_degree']/float(nnodes)
-        return threshold_multilayer_network(M,intralayer_density,interlayer_density,density_params.get('replace_interlayer_weights_with_ones',True))
+        return threshold_multilayer_network(M,intralayer_density,interlayer_density,density_params.get('replace_intralayer_weights_with_ones',True),density_params.get('replace_interlayer_weights_with_ones',True))
     else:
         raise NotImplementedError('Thresholding method not implemented')
 
@@ -562,7 +562,7 @@ def threshold_multiplex_network(M,density=0.05):
                 M.A[layer][edge[0],edge[1]] = 0
     return M
 
-def threshold_multilayer_network(M,intralayer_density=0.05,interlayer_density=0.05,replace_interlayer_weights_with_ones=True):
+def threshold_multilayer_network(M,intralayer_density=0.05,interlayer_density=0.05,replace_intralayer_weights_with_ones=True,replace_interlayer_weights_with_ones=True):
     layers = sorted(list(M.get_layers()))
     assert(layers == list(range(min(layers),max(layers)+1)))
     #pairwise_layersets = zip(*(range(len(layers))[ii:] for ii in range(2)))
@@ -575,7 +575,8 @@ def threshold_multilayer_network(M,intralayer_density=0.05,interlayer_density=0.
     thresholded_edges = ordered_edges[0:int(np.floor(max_edges*intralayer_density))]
     for edge in ordered_edges:
         if edge in thresholded_edges:
-            M[edge[0],edge[1],edge[2],edge[3]] = 1
+            if replace_intralayer_weights_with_ones:
+                M[edge[0],edge[1],edge[2],edge[3]] = 1
         else:
             M[edge[0],edge[1],edge[2],edge[3]] = 0
             
@@ -588,7 +589,8 @@ def threshold_multilayer_network(M,intralayer_density=0.05,interlayer_density=0.
         thresholded_edges = ordered_edges[0:int(np.floor(max_edges*intralayer_density))]
         for edge in ordered_edges:
             if edge in thresholded_edges:
-                M[edge[0],edge[1],edge[2],edge[3]] = 1
+                if replace_intralayer_weights_with_ones:
+                    M[edge[0],edge[1],edge[2],edge[3]] = 1
             else:
                 M[edge[0],edge[1],edge[2],edge[3]] = 0
         interlayer_ordered_edges = sorted([edge for edge in pn.subnet(M,M.iter_nodes(),[layer,layer-1]).edges if edge[2] != edge[3]],key=lambda w:w[4],reverse=True)

@@ -64,6 +64,26 @@ class test_network_construction(unittest.TestCase):
     template[0,1,1] = 1
     template[0,0,1] = 1.5
     template[1,1,0] = 1.5
+    
+    def generate_full_random_weighted_network(self,nnodes,nlayers):
+        # random node names and random sequential layer numbers
+        M = pn.MultilayerNetwork(aspects=1,fullyInterconnected=False)
+        letters = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
+        # start from layer 9 to check that there are no indexing issues with 9->10
+        l0 = 9
+        # have one node name constant over all layers
+        c = 'fixed'
+        for l in range(l0,l0+nlayers):
+            M.add_layer(l)
+            nodes_l = [c]+[''.join(np.random.choice(letters,5)) for i in range(nnodes-1)]
+            for i1 in range(len(nodes_l)):
+                for i2 in range(i1+1,len(nodes_l)):
+                    M[nodes_l[i1],l][nodes_l[i2],l] = 1.0 - np.random.random()
+            if l != l0:
+                for n1 in nodes_l:
+                    for n2 in M.iter_nodes(l-1):
+                        M[n1,l][n2,l-1] = 1.0 - np.random.random()
+        return M
                         
     def get_R_true_index(self,voxel):
         return self.imgdata.shape[1]*self.imgdata.shape[2]*voxel[0] + self.imgdata.shape[2]*voxel[1] + voxel[2]
@@ -153,6 +173,22 @@ class test_network_construction(unittest.TestCase):
         truenet[5,4,2,3] = 1
         truenet[8,7,2,3] = 1
         self.assertEqual(thresholded_net,truenet)
+        
+    def test_threshold_network(self):
+        # test different parameter sets
+        M = self.generate_full_random_weighted_network(10,3)
+        w1 = sorted([e[4] for e in M.edges if e[2] == 9 and e[3] == 9],reverse=True)
+        w2 = sorted([e[4] for e in M.edges if e[2] == 10 and e[3] == 10],reverse=True)
+        w3 = sorted([e[4] for e in M.edges if e[2] == 11 and e[3] == 11],reverse=True)
+        w12 = sorted([e[4] for e in M.edges if (e[2] == 9 and e[3] == 10) or (e[2] == 10 and e[3] == 9)],reverse=True)
+        w23 = sorted([e[4] for e in M.edges if (e[2] == 10 and e[3] == 11) or (e[2] == 11 and e[3] == 10)],reverse=True)
+        M = network_construction.threshold_network(M,{'intra_avg_degree':1.6,'inter_avg_degree':0.5,'replace_intralayer_weights_with_ones':False,'replace_interlayer_weights_with_ones':False})
+        layers = sorted(list(M.iter_layers()))
+        self.assertEqual(sorted([e[4] for e in M.edges if e[2] == 9 and e[3] == 9],reverse=True),w1[0:8])
+        self.assertEqual(sorted([e[4] for e in M.edges if e[2] == 10 and e[3] == 10],reverse=True),w2[0:8])
+        self.assertEqual(sorted([e[4] for e in M.edges if e[2] == 11 and e[3] == 11],reverse=True),w3[0:8])
+        self.assertEqual(sorted([e[4] for e in M.edges if (e[2] == 9 and e[3] == 10) or (e[2] == 10 and e[3] == 9)],reverse=True),w12[0:5])
+        self.assertEqual(sorted([e[4] for e in M.edges if (e[2] == 10 and e[3] == 11) or (e[2] == 11 and e[3] == 10)],reverse=True),w23[0:5])
         
     def test_make_multiplex(self):
         # voxel-level = multiplex network
