@@ -183,12 +183,19 @@ class test_network_construction(unittest.TestCase):
         w12 = sorted([e[4] for e in M.edges if (e[2] == 9 and e[3] == 10) or (e[2] == 10 and e[3] == 9)],reverse=True)
         w23 = sorted([e[4] for e in M.edges if (e[2] == 10 and e[3] == 11) or (e[2] == 11 and e[3] == 10)],reverse=True)
         M = network_construction.threshold_network(M,{'intra_avg_degree':1.6,'inter_avg_degree':0.5,'replace_intralayer_weights_with_ones':False,'replace_interlayer_weights_with_ones':False})
-        layers = sorted(list(M.iter_layers()))
         self.assertEqual(sorted([e[4] for e in M.edges if e[2] == 9 and e[3] == 9],reverse=True),w1[0:8])
         self.assertEqual(sorted([e[4] for e in M.edges if e[2] == 10 and e[3] == 10],reverse=True),w2[0:8])
         self.assertEqual(sorted([e[4] for e in M.edges if e[2] == 11 and e[3] == 11],reverse=True),w3[0:8])
         self.assertEqual(sorted([e[4] for e in M.edges if (e[2] == 9 and e[3] == 10) or (e[2] == 10 and e[3] == 9)],reverse=True),w12[0:5])
         self.assertEqual(sorted([e[4] for e in M.edges if (e[2] == 10 and e[3] == 11) or (e[2] == 11 and e[3] == 10)],reverse=True),w23[0:5])
+        M = self.generate_full_random_weighted_network(10,3)
+        M = network_construction.threshold_network(M,{'intra_avg_degree':2.1,'inter_avg_degree':2.06,'replace_intralayer_weights_with_ones':True,'replace_interlayer_weights_with_ones':True})
+        self.assertEqual(len([e[4] for e in M.edges if e[2] == 9 and e[3] == 9]),10)
+        self.assertEqual(len([e[4] for e in M.edges if e[2] == 10 and e[3] == 10]),10)
+        self.assertEqual(len([e[4] for e in M.edges if e[2] == 11 and e[3] == 11]),10)
+        self.assertEqual(len([e[4] for e in M.edges if (e[2] == 9 and e[3] == 10) or (e[2] == 10 and e[3] == 9)]),20)
+        self.assertEqual(len([e[4] for e in M.edges if (e[2] == 10 and e[3] == 11) or (e[2] == 11 and e[3] == 10)]),20)
+        self.assertTrue(all([e[4]==1 for e in M.edges]))
         
     def test_make_multiplex(self):
         # voxel-level = multiplex network
