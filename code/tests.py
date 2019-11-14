@@ -189,6 +189,7 @@ class test_network_construction(unittest.TestCase):
         self.assertEqual(sorted([e[4] for e in M.edges if (e[2] == 9 and e[3] == 10) or (e[2] == 10 and e[3] == 9)],reverse=True),w12[0:5])
         self.assertEqual(sorted([e[4] for e in M.edges if (e[2] == 10 and e[3] == 11) or (e[2] == 11 and e[3] == 10)],reverse=True),w23[0:5])
         M = self.generate_full_random_weighted_network(10,3)
+        # when the target number of edges is not an integer, it should be rounded down
         M = network_construction.threshold_network(M,{'intra_avg_degree':2.1,'inter_avg_degree':2.06,'replace_intralayer_weights_with_ones':True,'replace_interlayer_weights_with_ones':True})
         self.assertEqual(len([e[4] for e in M.edges if e[2] == 9 and e[3] == 9]),10)
         self.assertEqual(len([e[4] for e in M.edges if e[2] == 10 and e[3] == 10]),10)
