@@ -65,9 +65,9 @@ def getDistribution(data, nBins):
     
     
 # path parts
-subjectFolder = '/media/onerva/KINGSTON/test-data/outcome/test-pipeline'
+subjectFolder = '/m/cs/scratch/networks/aokorhon/multilayer/'
 subjects = ['010/1']
-niiDataFileNames = ['/media/onerva/KINGSTON/test-data/010/epi_STD_mask_detrend_fullreg.nii'] # This should have the same length as the subjects list
+niiDataFileNames = ['/m/cs/scratch/networks/aokorhon/multilayer/010/epi_STD_mask_detrend_fullreg.nii'] # This should have the same length as the subjects list
 runNumbers = ['1','2']
 clusteringMethods = ['consistency_optimized','template_clustering']
 templateNames = [['brainnetome','random'],['brainnetome']] # this is a methods x templates structure
