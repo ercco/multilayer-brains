@@ -1402,7 +1402,7 @@ def calculateSpatialConsistencyPostHoc(data_files,layersetwise_network_savefolde
             
     return spatial_consistency_data
 
-def calculateCorrelationsInAndBetweenROIs(dataFiles,templateFile,layersetwiseNetworkSavefolders,
+def calculateCorrelationsInAndBetweenROIs(dataFiles,layersetwiseNetworkSavefolders,
                                       networkFiles,nLayers,timewindow,overlap,savePath=None):
     """
     Starting from ROIs saved earlier by pipeline.isomorphism_classes_from_file,
@@ -1412,8 +1412,6 @@ def calculateCorrelationsInAndBetweenROIs(dataFiles,templateFile,layersetwiseNet
     Parameters:
     -----------
     dataFiles: lists of strs, paths to the .nii files used for calculating the correlations
-    templateFile: str, path to the .nii template file where all voxels belonging to the
-                   area of interest (e.g. gray matter) should have value >0.
     layersetwiseNetworksSavefolders: list of strs, paths to the folders where
                                        networks created by pipeline.isomorphism_classes_from_file
                                        (and related ROI information) have been saved. Must be of
