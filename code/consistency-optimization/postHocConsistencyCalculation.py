@@ -18,12 +18,12 @@ import clustering_by_consistency as cbc
 from scipy.stats import binned_statistic
 
 # path parts
-subjectFolder = '/media/onerva/KINGSTON/test-data/outcome/test-pipeline'
-subjects = ['010/1']
+subjectFolder = '/media/onerva/KINGSTON/test-data/'
+subjects = ['010/']
 niiDataFileNames = ['/media/onerva/KINGSTON/test-data/010/epi_STD_mask_detrend_fullreg.nii'] # This should have the same length as the subjects list
 runNumbers = ['1','2']
-clusteringMethods = ['consistency_optimized','template_clustering']
-templateNames = [['brainnetome','random'],['brainnetome']] # this is a methods x templates structure
+clusteringMethods = ['craddoc','random_balls','optimized_thresholded','optimized','template']
+templateNames = [['brainnetome'],['random'],['brainnetome'],['brainnetome'],['brainnetome']] # this is a methods x templates structure
 # TODO: check if the looping over template names is needed (and otherwise fix the code to correspond to Tarmo's final folder structure)
 netIdentificators = [[['net_100_0_2019-02-19T16.26.24/2_layers'],['net_100_0_2019-03-22T18.40.27/2_layers']],[['net_100_0_2019-02-19T13.40.36/2_layers']]] # this should be a clustering methods x templates x subjects list (they may have different network identificators); is there any way to do this automatically?
 nLayers = 2
@@ -43,12 +43,12 @@ consistencyType='pearson c'
 fTransform=False
 nCPUs=5
 templateFile = '/media/onerva/KINGSTON/test-data/group_roi_mask-30-4mm_with_subcortl_and_cerebellum.nii'
-calculateConsistencies = True # set to False to read and visualize earlier calculated consistency
+calculateConsistencies = False # set to False to read and visualize earlier calculated consistency
 
 # parameters for reading consistencies calculated during clustering
-calculatedDuringClustering = False
-excludeSizes = True
-consistencySaveNames = ['spatial_consistency_optimized_craddock','spatial_consistency_optimized_random_balls','spatial-consistency-optimized-test-for-Tarmo-mean-weighted-consistency-thresholded-voxelwise','spatial-consistency-optimized-test-for-Tarmo-weighted-mean-consistency']
+calculatedDuringClustering = True
+excludeSizes = False
+consistencySaveNames = ['spatial_consistency_optimized_craddock','spatial_consistency_optimized_random_balls','spatial_consistency_optimized_mean_weighted_consistency_thresholded_voxelwise','spatial_consistency_optimized_mean_weighted_consistency_nonthresholded','spatial-consistency-original']
 timeWindows = ['0']
 
 templateimg = nib.load(templateFile)
@@ -90,7 +90,13 @@ elif calculatedDuringClustering:
                     if 'consistencies' in data.keys():
                         pooledConsistencies[i][j].extend(data['consistencies'])
                     else:
-                        pooledConsistencies[i][j].extend(data['spatialConsistencies'])                        
+                        pooledConsistencies[i][j].extend(data['spatialConsistencies'])
+                    if not excludeSizes:
+                        if 'ROI_sizes' in data.keys():
+                            ROISizes[i][j].extend(data['ROI_sizes'])
+                        elif clusteringMethod == 'template': # TODO: this is a hack to be removed later
+                            originalCentroids,_,originalVoxelCoordinates,originalROIMaps = cbc.readROICentroids('/media/onerva/KINGSTON/test-data/group_roi_mask-30-4mm_with_subcortl_and_cerebellum.mat',readVoxels=True,fixCentroids=True)
+                            ROISizes[i][j].extend([len(ROIMap) for ROIMap in originalROIMaps])
 else:
     for i, (clusteringMethod, templateNamesPerMethod, netIdentificatorsPerMethod) in enumerate(zip(clusteringMethods,templateNames,netIdentificators)):
         for j, (templateName, netIdentificatorsPerTemplate) in enumerate(zip(templateNamesPerMethod,netIdentificatorsPerMethod)):
@@ -118,7 +124,7 @@ for pooledConsistencyPerMethod, sizesPerMethod, clusteringMethod, templateNamesP
         consAx.plot(consBinCenters,consDistribution,label=clusteringMethod + ', ' + templateName)
         
         if not excludeSizes:
-            sizeDistribution,sizeBinEdges,_ = binned_statistic(ROISizes,sizes,statistic='count',bins=nSizeBins)
+            sizeDistribution,sizeBinEdges,_ = binned_statistic(sizes,sizes,statistic='count',bins=nSizeBins)
             sizeBinWidth = (sizeBinEdges[1] - sizeBinEdges[0])
             sizeBinCenters = sizeBinEdges[1:] - sizeBinWidth/2
             sizeDistribution = sizeDistribution/float(np.sum(sizeDistribution))

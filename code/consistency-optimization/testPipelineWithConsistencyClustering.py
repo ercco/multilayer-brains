@@ -33,11 +33,11 @@ consistency_target_function = 'weighted mean consistency'
 nclusters = 246
 n_consistency_CPUs = 5
 n_consistency_iters = 5
-consistency_threshold = 'voxelwise' 
+consistency_threshold = -1 
 craddock_threshold = 0.5 # the correlation threshold used by Craddock et al. 2012
-use_random_seeds = True
+use_random_seeds = False
 calculate_consistency_while_clustering = True
-consistency_save_path = '/media/onerva/KINGSTON/test-data/010/spatial_consistency_optimized_.pkl'
+consistency_save_path = '/media/onerva/KINGSTON/test-data/010/spatial_consistency_optimized_mean_weighted_consistency_nonthresholded.pkl'
 clustering_method_params = {'method':clustering_method,'consistency_target_function':consistency_target_function,'consistency_threshold':consistency_threshold,'craddock_threshold':craddock_threshold,'nclusters':nclusters,'calculate_consistency':calculate_consistency_while_clustering,'consistency_save_path':consistency_save_path,'n_consistency_CPUs':n_consistency_CPUs,'n_consistency_iters':n_consistency_iters,'use_random_seeds':use_random_seeds,'centroid_template_filename':mask_or_template_filename}
 
 # Let's look for all subgraphs of two layers, two nodes and two layers, three nodes
@@ -64,8 +64,7 @@ if True:
                                            clustering_method_params,
                                            nlayers,
                                            nnodes,
-                                           allowed_aspects,
-                                           )
+                                           allowed_aspects)
 else:
     pipeline.isomorphism_classes_from_nifti(nii_data_filename,subj_id,run_number,timewindow,overlap,
                                         intralayer_density,interlayer_density,subgraph_size_dict,
