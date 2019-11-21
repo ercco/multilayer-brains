@@ -34,6 +34,8 @@ allVoxelTsFileName = '/roi_voxel_ts_all_rois4mm_FWHM0.mat'
 figureSavePath = '/scracth/cs/networks/aokorhon/multilayer/outcome/correlation-distributions-weighted-mean-consistency_NEWTEST.pdf'
 nBins = 100
 
+returnCorrelations = False
+
 originalColor = params.originalColor
 originalAlpha = params.originalAlpha
 optimizedColor = params.optimizedColor
@@ -98,7 +100,8 @@ if calculateCorrelations:
             #savePath = subjectFolder + '/in-between-correlations_' + clusteringMethod + '_' + templateName + '.pkl'
             savePath = None
             correlationData = cbc.calculateCorrelationsInAndBetweenROIs(niiDataFileNames,layersetwiseNetworkSavefolders,
-                                                                            allFileNames,nLayers,timewindow,overlap,savePath)
+                                                                            allFileNames,nLayers,timewindow,overlap,savePath,
+                                                                            nBins=nBins,returnCorrelations=returnCorrelations)
             inROICorrelations[i][j].extend(correlationData['inROICorrelations'])
             betweenROICorrelations[i][j].extend(correlationData['betweenROICorrelations'])
             
