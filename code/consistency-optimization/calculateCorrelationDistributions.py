@@ -41,6 +41,8 @@ optimizedAlpha = params.optimizedAlpha
 inROILs = params.inROILs
 betweenROILs = params.betweenROILs
 
+import pdb; pdb.set_trace() 
+
 def getDistribution(data, nBins):
     """
     Calculates the PDF of the given data
@@ -63,17 +65,15 @@ def getDistribution(data, nBins):
     
     
 # path parts
-subjectFolder = '/media/onerva/KINGSTON/test-data/outcome/test-pipeline'
+subjectFolder = '/m/cs/scratch/networks/aokorhon/multilayer/'
 subjects = ['010/1']
-niiDataFileNames = ['/media/onerva/KINGSTON/test-data/010/epi_STD_mask_detrend_fullreg.nii'] # This should have the same length as the subjects list
+niiDataFileNames = ['/m/cs/scratch/networks/aokorhon/multilayer/010/epi_STD_mask_detrend_fullreg.nii'] # This should have the same length as the subjects list
 runNumbers = ['1','2']
 clusteringMethods = ['consistency_optimized','template_clustering']
 templateNames = [['brainnetome','random'],['brainnetome']] # this is a methods x templates structure
 netIdentificators = [[['net_100_0_2019-02-19T16.26.24/2_layers'],['net_100_0_2019-03-22T18.40.27/2_layers']],[['net_100_0_2019-02-19T13.40.36/2_layers']]] # this should be a clustering methods x templates x subjects list (they may have different network identificators); is there any way to do this automatically?
 nLayers = 2
 allFileNames = ['0_1']
-
-templateFile = '/media/onerva/KINGSTON/test-data/group_roi_mask-30-4mm_with_subcortl_and_cerebellum.nii'
 
 # time window parameters
 timewindow = 100 # This is the time window length used to construct the ROIs
@@ -97,7 +97,7 @@ if calculateCorrelations:
             layersetwiseNetworkSavefolders = [subjectFolder + '/' + subject + '/' + clusteringMethod + '/' + templateName + '/' + netIdentificator for subject,netIdentificator in zip(subjects,netIdentificatorsPerTemplate)]
             #savePath = subjectFolder + '/in-between-correlations_' + clusteringMethod + '_' + templateName + '.pkl'
             savePath = None
-            correlationData = cbc.calculateCorrelationsInAndBetweenROIs(niiDataFileNames,templateFile,layersetwiseNetworkSavefolders,
+            correlationData = cbc.calculateCorrelationsInAndBetweenROIs(niiDataFileNames,layersetwiseNetworkSavefolders,
                                                                             allFileNames,nLayers,timewindow,overlap,savePath)
             inROICorrelations[i][j].extend(correlationData['inROICorrelations'])
             betweenROICorrelations[i][j].extend(correlationData['betweenROICorrelations'])
@@ -112,22 +112,22 @@ else:
             inROICorrelations[i][j].extend(correlationData['inROICorrelations'])
             betweenROICorrelations[i][j].extend(correlationData['betweenROICorrelations'])
             
-fig = plt.figure()
-ax = fig.add_subplot(111)
-
-for inROICorrelationsPerMethod, betweenROICorrelationsPerMethod, clusteringMethod, templateNamesPerMethod, color, alpha in zip(inROICorrelations, betweenROICorrelations, clusteringMethods, templateNames, colors, alphas):
-    for inROICorrelation, betweenROICorrelation, templateName in zip(inROICorrelationsPerMethod, betweenROICorrelationsPerMethod, templateNamesPerMethod):
-        inDistribution,inBinCenters = getDistribution(inROICorrelation,nBins)
-        betweenDistribution,betweenBinCenters = getDistribution(betweenROICorrelation,nBins)
-        plt.plot(inBinCenters,inDistribution,color=color,alpha=alpha,ls=inROILs,label=clusteringMethod+', ' + templateName + ', inside ROI')
-        plt.plot(betweenBinCenters,betweenDistribution,color=color,alpha=alpha,ls=betweenROILs,label=clusteringMethod+', ' + templateName + ', between ROIs')
-
-ax.set_xlabel('Pearson correlation coefficient')
-ax.set_ylabel('PDF')
-ax.legend()
-
-plt.tight_layout()
-plt.savefig(figureSavePath,format='pdf',bbox_inches='tight')
+#fig = plt.figure()
+#ax = fig.add_subplot(111)
+#
+#for inROICorrelationsPerMethod, betweenROICorrelationsPerMethod, clusteringMethod, templateNamesPerMethod, color, alpha in zip(inROICorrelations, betweenROICorrelations, clusteringMethods, templateNames, colors, alphas):
+#    for inROICorrelation, betweenROICorrelation, templateName in zip(inROICorrelationsPerMethod, betweenROICorrelationsPerMethod, templateNamesPerMethod):
+#        inDistribution,inBinCenters = getDistribution(inROICorrelation,nBins)
+#        betweenDistribution,betweenBinCenters = getDistribution(betweenROICorrelation,nBins)
+#        plt.plot(inBinCenters,inDistribution,color=color,alpha=alpha,ls=inROILs,label=clusteringMethod+', ' + templateName + ', inside ROI')
+#        plt.plot(betweenBinCenters,betweenDistribution,color=color,alpha=alpha,ls=betweenROILs,label=clusteringMethod+', ' + templateName + ', between ROIs')
+#
+#ax.set_xlabel('Pearson correlation coefficient')
+#ax.set_ylabel('PDF')
+#ax.legend()
+#
+#plt.tight_layout()
+#plt.savefig(figureSavePath,format='pdf',bbox_inches='tight')
 
     
 
