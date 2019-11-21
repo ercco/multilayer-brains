@@ -1410,7 +1410,7 @@ def calculateCorrelationsInAndBetweenROIs(dataFiles,layersetwiseNetworkSavefolde
     Starting from ROIs saved earlier by pipeline.isomorphism_classes_from_file,
     calculates the Pearson correlation coefficients between voxels in the same ROI
     and in different ROIs and their distribution. The distributions are calculated
-    using nBins equal-sized bins ranging from 0 to 1.
+    using nBins equal-sized bins ranging from -1 to 1.
     
     Parameters:
     -----------
@@ -1482,8 +1482,8 @@ def calculateCorrelationsInAndBetweenROIs(dataFiles,layersetwiseNetworkSavefolde
                 betweenCorrs = allVoxelCorrelations[np.where(betweenROIMask > 0)]
                 # calculating the sum of observations in each bin
                 if initializeDistribution:
-                    bins = np.arange(0,1,1.0/nBins) # Correlation is always limited between 0 and 1 so we can hardcode the boundaries
-                    bins.append(1.0)
+                    bins = np.arange(-1.,1,2.0/nBins) # Correlation is always limited between -1 and 1 so we can hardcode the boundaries
+                    bins = np.concatenate((bins, np.array([1.0])))
                     inROIDistribution, binEdges,_ = binned_statistic(inCorrs,inCorrs,statistic='count',bins=bins)
                     betweenROIDistribution,_,_ = binned_statistic(betweenCorrs,betweenCorrs,statistic='count',bins=bins)
                     initializeDistribution = False
@@ -1495,8 +1495,8 @@ def calculateCorrelationsInAndBetweenROIs(dataFiles,layersetwiseNetworkSavefolde
                     betweenROICorrelations.extend(betweenCorrs)
             layerIndex += nLayers
     # normalizing distributions
-    inROIDistribution = inROIDistribution/float(np.sum(inROIDistribution*binEdges[0]-binEdges[1]))        
-    betweenROIDistribution = betweenROIDistribution/float(np.sum(betweenROIDistribution*binEdges[0]-binEdges[1]))
+    inROIDistribution = inROIDistribution/float(np.sum(inROIDistribution*np.abs(binEdges[0]-binEdges[1])))        
+    betweenROIDistribution = betweenROIDistribution/float(np.sum(betweenROIDistribution*np.abs(binEdges[0]-binEdges[1])))
     binCenters = 0.5*(binEdges[:-1]+binEdges[1:])            
     correlationData = {'dataFiles':dataFiles,'layersetwiseNetworkSavefolders':layersetwiseNetworkSavefolders,
                                 'networkFiles':networkFiles,'nLayers':nLayers,'timewindow':timewindow,

@@ -97,8 +97,8 @@ if calculateCorrelations:
         for j, (templateName, netIdentificatorsPerTemplate) in enumerate(zip(templateNamesPerMethod,netIdentificatorsPerMethod)):
             print 'calculating correlations... ' + clusteringMethod + ', ' + templateName
             layersetwiseNetworkSavefolders = [subjectFolder + '/' + subject + '/' + clusteringMethod + '/' + templateName + '/' + netIdentificator for subject,netIdentificator in zip(subjects,netIdentificatorsPerTemplate)]
-            #savePath = subjectFolder + '/in-between-correlations_' + clusteringMethod + '_' + templateName + '.pkl'
-            savePath = None
+            savePath = subjectFolder + '/in-between-correlations_' + clusteringMethod + '_' + templateName + '.pkl'
+            #savePath = None
             correlationData = cbc.calculateCorrelationsInAndBetweenROIs(niiDataFileNames,layersetwiseNetworkSavefolders,
                                                                             allFileNames,nLayers,timewindow,overlap,savePath,
                                                                             nBins=nBins,returnCorrelations=returnCorrelations)
