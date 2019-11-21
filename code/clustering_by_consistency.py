@@ -1453,7 +1453,8 @@ def calculateCorrelationsInAndBetweenROIs(dataFiles,layersetwiseNetworkSavefolde
     # this is a hard-coded part that corresponds to the file naming system of isomorphism_classes_from_file
     networkFiles = [networkFiles[index] for index in range(0,len(networkFiles),nLayers)]
     # looping over network_savefolders (can be over subjects but also over a single subject in multiple runs)
-    for i, (dataFile, layersetwiseNetworkSavefolder) in enumerate(zip(dataFiles,layersetwiseNetworkSavefolders)):
+    initializeDistribution = True
+    for dataFile, layersetwiseNetworkSavefolder in zip(dataFiles,layersetwiseNetworkSavefolders):
         # reading data; later on, this will be used to calculate consistencies
         img = nib.load(dataFile) 
         imgdata = img.get_data()
@@ -1480,11 +1481,12 @@ def calculateCorrelationsInAndBetweenROIs(dataFiles,layersetwiseNetworkSavefolde
                 inCorrs = allVoxelCorrelations[np.where(inROIMask > 0)]
                 betweenCorrs = allVoxelCorrelations[np.where(betweenROIMask > 0)]
                 # calculating the sum of observations in each bin
-                if i == 0:
+                if initializeDistribution:
                     bins = np.arange(0,1,1.0/nBins) # Correlation is always limited between 0 and 1 so we can hardcode the boundaries
                     bins.append(1.0)
                     inROIDistribution, binEdges,_ = binned_statistic(inCorrs,inCorrs,statistic='count',bins=bins)
                     betweenROIDistribution,_,_ = binned_statistic(betweenCorrs,betweenCorrs,statistic='count',bins=bins)
+                    initializeDistribution = False
                 else:
                     inROIDistribution = inROIDistribution + binned_statistic(inCorrs,inCorrs,statistic='count',bins=bins)[0]
                     betweenROIDistribution = betweenROIDistribution + binned_statistic(betweenCorrs,betweenCorrs,statistic='count',bins=bins)[0]
