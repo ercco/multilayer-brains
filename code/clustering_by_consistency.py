@@ -1446,7 +1446,7 @@ def calculateCorrelationsInAndBetweenROIs(dataFiles,layersetwiseNetworkSavefolde
     for dataFile, layersetwiseNetworkSavefolder in zip(dataFiles,layersetwiseNetworkSavefolders):
         # reading data; later on, this will be used to calculate consistencies
         img = nib.load(dataFile) 
-        imgdata = img.get_fdata()
+        imgdata = img.get_data()
         nTime = imgdata.shape[-1]
         # finding end and start points of time windows that correspond to layers (correlations will be calculated inside windows)
         k = network_construction.get_number_of_layers(imgdata.shape,timewindow,overlap)
