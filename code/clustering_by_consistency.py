@@ -16,9 +16,10 @@ import decimal
 import random
 import heapq
 
-import network_io, corrs_and_mask_calculations, network_construction
+import network_io, network_construction
 
 from scipy import io, matrix
+from scipy.stats import binned_statistic
 from scipy.stats.stats import pearsonr
 from scipy.sparse import csc_matrix
 from concurrent.futures import ProcessPoolExecutor as Pool
@@ -1403,11 +1404,13 @@ def calculateSpatialConsistencyPostHoc(dataFiles,layersetwiseNetworkSavefolders,
     return spatialConsistencyData
 
 def calculateCorrelationsInAndBetweenROIs(dataFiles,layersetwiseNetworkSavefolders,
-                                      networkFiles,nLayers,timewindow,overlap,savePath=None):
+                                      networkFiles,nLayers,timewindow,overlap,savePath=None,
+                                      nBins=100,returnCorrelations=False):
     """
     Starting from ROIs saved earlier by pipeline.isomorphism_classes_from_file,
     calculates the Pearson correlation coefficients between voxels in the same ROI
-    and in different ROIs.
+    and in different ROIs and their distribution. The distributions are calculated
+    using nBins equal-sized bins ranging from 0 to 1.
     
     Parameters:
     -----------
@@ -1423,6 +1426,10 @@ def calculateCorrelationsInAndBetweenROIs(dataFiles,layersetwiseNetworkSavefolde
     timewindow: int, length of time window used in isomorphism_classes_from_file
     overlap: int, time window overlap used in isomorphism_classes_from_file
     savePath: str, path to which save the correlations (default = None, no saving)
+    nBins: int, number of bins used to calculate the distribution (default = 100)
+    returnCorrelations: boolean, if True, lists of all in-ROI and between-ROI correlations
+                        are returned in addition to the distribution; note that these lists
+                        are in most cases extremely long (default = False)
     
     Returns:
     --------
@@ -1435,6 +1442,9 @@ def calculateCorrelationsInAndBetweenROIs(dataFiles,layersetwiseNetworkSavefolde
                               'overlap': overlap
                               'inROICorrelations': list of floats, correlation values between voxels in the same ROI
                               'betweenROICorrelations': list of floats, correlation values between voxels in different ROIs
+                              'inROIDistribution': np.array of floats, distribution of correlation values between voxels in the same ROI
+                              'betweenROIDistribution': np.array of floats, distribution of correlation values between voxels in different ROIs
+                              'binCenters': np.array of floats, centers of bins (same bins used both in-ROI and between-ROI distributions)
     """
     inROICorrelations = []
     betweenROICorrelations = []
@@ -1443,10 +1453,10 @@ def calculateCorrelationsInAndBetweenROIs(dataFiles,layersetwiseNetworkSavefolde
     # this is a hard-coded part that corresponds to the file naming system of isomorphism_classes_from_file
     networkFiles = [networkFiles[index] for index in range(0,len(networkFiles),nLayers)]
     # looping over network_savefolders (can be over subjects but also over a single subject in multiple runs)
-    for dataFile, layersetwiseNetworkSavefolder in zip(dataFiles,layersetwiseNetworkSavefolders):
+    for i, (dataFile, layersetwiseNetworkSavefolder) in enumerate(zip(dataFiles,layersetwiseNetworkSavefolders)):
         # reading data; later on, this will be used to calculate consistencies
         img = nib.load(dataFile) 
-        imgdata = img.get_fdata()
+        imgdata = img.get_data()
         nTime = imgdata.shape[-1]
         # finding end and start points of time windows that correspond to layers (correlations will be calculated inside windows)
         k = network_construction.get_number_of_layers(imgdata.shape,timewindow,overlap)
@@ -1467,13 +1477,30 @@ def calculateCorrelationsInAndBetweenROIs(dataFiles,layersetwiseNetworkSavefolde
                     offset += s
                 allVoxelCorrelations = np.corrcoef(allVoxelTs[:,startTime:endTime])
                 inROIMask, betweenROIMask = getInAndBwROIMasks(voxelIndices)
-                inROICorrelations.extend(allVoxelCorrelations[np.where(inROIMask > 0)])
-                betweenROICorrelations.extend(allVoxelCorrelations[np.where(betweenROIMask > 0)])
+                inCorrs = allVoxelCorrelations[np.where(inROIMask > 0)]
+                betweenCorrs = allVoxelCorrelations[np.where(betweenROIMask > 0)]
+                # calculating the sum of observations in each bin
+                if i == 0:
+                    bins = np.arange(0,1,1.0/nBins) # Correlation is always limited between 0 and 1 so we can hardcode the boundaries
+                    bins.append(1.0)
+                    inROIDistribution, binEdges,_ = binned_statistic(inCorrs,inCorrs,statistic='count',bins=bins)
+                    betweenROIDistribution,_,_ = binned_statistic(betweenCorrs,betweenCorrs,statistic='count',bins=bins)
+                else:
+                    inROIDistribution = inROIDistribution + binned_statistic(inCorrs,inCorrs,statistic='count',bins=bins)[0]
+                    betweenROIDistribution = betweenROIDistribution + binned_statistic(betweenCorrs,betweenCorrs,statistic='count',bins=bins)[0]
+                if returnCorrelations:
+                    inROICorrelations.extend(inCorrs)
+                    betweenROICorrelations.extend(betweenCorrs)
             layerIndex += nLayers
+    # normalizing distributions
+    inROIDistribution = inROIDistribution/float(np.sum(inROIDistribution*binEdges[0]-binEdges[1]))        
+    betweenROIDistribution = betweenROIDistribution/float(np.sum(betweenROIDistribution*binEdges[0]-binEdges[1]))
+    binCenters = 0.5*(binEdges[:-1]+binEdges[1:])            
     correlationData = {'dataFiles':dataFiles,'layersetwiseNetworkSavefolders':layersetwiseNetworkSavefolders,
                                 'networkFiles':networkFiles,'nLayers':nLayers,'timewindow':timewindow,
                                 'overlap':overlap,'inROICorrelations':inROICorrelations,
-                                'betweenROICorrelations':betweenROICorrelations}
+                                'betweenROICorrelations':betweenROICorrelations,'inROIDistribution':inROIDistribution,
+                                'betweenROIDistribution':betweenROIDistribution,'binCenters':binCenters}
     if not savePath==None:
         with open(savePath, 'wb') as f:
             pickle.dump(correlationData, f, -1)
