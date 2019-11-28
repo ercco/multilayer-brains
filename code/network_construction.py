@@ -533,6 +533,8 @@ def calculate_spatial_consistency(windowdata,voxels_in_clusters,f_transform_cons
 
 def threshold_network(M,density_params):
     # threshold network according to params in density_params dict
+    if isinstance(M,pn.MultiplexNetwork) and 'intralayer_density' in density_params:
+        return threshold_multiplex_network(M,density=density_params['intralayer_density'])
     if 'intralayer_density' in density_params and 'interlayer_density' in density_params:
         return threshold_multilayer_network(M,density_params['intralayer_density'],density_params['interlayer_density'],density_params.get('replace_intralayer_weights_with_ones',True),density_params.get('replace_interlayer_weights_with_ones',True))
     elif 'intra_avg_degree' in density_params and 'inter_avg_degree' in density_params:
