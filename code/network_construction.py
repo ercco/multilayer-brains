@@ -535,6 +535,11 @@ def threshold_network(M,density_params):
     # threshold network according to params in density_params dict
     if isinstance(M,pn.MultiplexNetwork) and 'intralayer_density' in density_params:
         return threshold_multiplex_network(M,density=density_params['intralayer_density'])
+    if isinstance(M,pn.MultiplexNetwork) and 'intra_avg_degree' in density_params:
+        assert len(set(map(lambda l: len(list(M.iter_nodes(l))),M.iter_layers()))) == 1,'Each layer should have the same number of nodes when using inter_avg_degree thresholding'
+        nnodes = len(list(M.iter_nodes(next(M.iter_layers()))))
+        intralayer_density = density_params['intra_avg_degree']/float(nnodes-1)
+        return threshold_multiplex_network(M,density=intralayer_density)
     if 'intralayer_density' in density_params and 'interlayer_density' in density_params:
         return threshold_multilayer_network(M,density_params['intralayer_density'],density_params['interlayer_density'],density_params.get('replace_intralayer_weights_with_ones',True),density_params.get('replace_interlayer_weights_with_ones',True))
     elif 'intra_avg_degree' in density_params and 'inter_avg_degree' in density_params:
