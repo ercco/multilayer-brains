@@ -89,6 +89,9 @@ def isomorphism_classes_from_file(filename,data_mask_filename,
         network_io.write_pickle_file(dict(aggregated_isomclass_dict[(nnodes[i],nlayers)]),isomorphism_class_savenames[i])
     if isomorphism_class_examples_savenames:
         network_io.write_pickle_file(aggregated_example_dict[(nnodes[i],nlayers)],isomorphism_class_examples_savenames[i])
+    if log_savename:
+        with open(log_savename,'a+') as f:
+            f.write(str(nlayers)+' layers '+','.join([str(n) for n in nnodes])+' nodes done\n')
     return aggregated_isomclass_dict
 
 def clustering_method_parser(image_array,timewindow,overlap,nlayers,clustering_method_params):
