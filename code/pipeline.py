@@ -85,10 +85,10 @@ def isomorphism_classes_from_file(filename,data_mask_filename,
                                                                      allowed_aspects=isomorphism_allowed_aspects,
                                                                      aggregated_dict=aggregated_isomclass_dict[(nnodes[i],nlayers)],
                                                                      examples_dict=aggregated_example_dict[(nnodes[i],nlayers)])
-            if isomorphism_class_savenames:
-                network_io.write_pickle_file(dict(aggregated_isomclass_dict[(nnodes[i],nlayers)]),isomorphism_class_savenames[i])
-            if isomorphism_class_examples_savenames:
-                network_io.write_pickle_file(aggregated_example_dict[(nnodes[i],nlayers)],isomorphism_class_examples_savenames[i])
+    if isomorphism_class_savenames:
+        network_io.write_pickle_file(dict(aggregated_isomclass_dict[(nnodes[i],nlayers)]),isomorphism_class_savenames[i])
+    if isomorphism_class_examples_savenames:
+        network_io.write_pickle_file(aggregated_example_dict[(nnodes[i],nlayers)],isomorphism_class_examples_savenames[i])
     return aggregated_isomclass_dict
 
 def clustering_method_parser(image_array,timewindow,overlap,nlayers,clustering_method_params):
