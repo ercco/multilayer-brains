@@ -62,6 +62,8 @@ def isomorphism_classes_from_file(filename,data_mask_filename,
     """
     # convert int nnodes to length-1 list
     nnodes = [nnodes] if isinstance(nnodes,int) else nnodes
+    isomorphism_class_savenames = [isomorphism_class_savenames] if isinstance(isomorphism_class_savenames,str) else isomorphism_class_savenames
+    isomorphism_class_examples_savenames = [isomorphism_class_examples_savenames] if isinstance(isomorphism_class_examples_savenames,str) else isomorphism_class_examples_savenames
     # create container data structures for isomorphism classes
     aggregated_isomclass_dict = collections.defaultdict(lambda: collections.defaultdict(dict))
     aggregated_example_dict = collections.defaultdict(dict)
