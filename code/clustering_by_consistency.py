@@ -1365,12 +1365,12 @@ def calculateSpatialConsistencyPostHoc(dataFiles,layersetwiseNetworkSavefolders,
     # first, let's pick the network files to be read
     # same layer is saved in multiple files; therefore we read only every nLayer-th file
     # this is a hard-coded part that corresponds to the file naming system of isomorphism_classes_from_file
-    networkFiles = [networkFiles[index] for index in range(0,len(networkFiles),nLayers)]
+    # networkFiles = [networkFiles[index] for index in range(0,len(networkFiles),nLayers)]
     # looping over network_savefolders (can be over subjects but also over a single subject in multiple runs)
     for dataFile, layersetwiseNetworkSavefolder in zip(dataFiles,layersetwiseNetworkSavefolders):
         # reading data; later on, this will be used to calculate consistencies
         img = nib.load(dataFile) 
-        imgdata = img.get_fdata()
+        imgdata = img.get_data()
         nTime = imgdata.shape[-1]
         # finding end and start points of time windows that correspond to layers (consistency will be calculated inside windows)
         k = network_construction.get_number_of_layers(imgdata.shape,timewindow,overlap)
@@ -1451,7 +1451,7 @@ def calculateCorrelationsInAndBetweenROIs(dataFiles,layersetwiseNetworkSavefolde
     # first, let's pick the network files to be read
     # same layer is saved in multiple files; therefore we read only every nLayer-th file
     # this is a hard-coded part that corresponds to the file naming system of isomorphism_classes_from_file
-    networkFiles = [networkFiles[index] for index in range(0,len(networkFiles),nLayers)]
+    # networkFiles = [networkFiles[index] for index in range(0,len(networkFiles),nLayers)]
     # looping over network_savefolders (can be over subjects but also over a single subject in multiple runs)
     initializeDistribution = True
     for dataFile, layersetwiseNetworkSavefolder in zip(dataFiles,layersetwiseNetworkSavefolders):

@@ -43,7 +43,7 @@ optimizedAlpha = params.optimizedAlpha
 inROILs = params.inROILs
 betweenROILs = params.betweenROILs
 
-import pdb; pdb.set_trace() 
+#import pdb; pdb.set_trace() 
 
 def getDistribution(data, nBins):
     """
