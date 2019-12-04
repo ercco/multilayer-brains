@@ -31,7 +31,7 @@ subjects = ['/scratch/cs/networks/aokorhon/multilayer/010/']
 originalROIInfoFile = '/scratch/cs/networks/aokorhon/multilayer/group_roi_mask-30-4mm_with_subcortl_and_cerebellum.mat'
 optimizedROIInfoFile = 'optimized-rois-test-for-Tarmo-mean-weighted-consistency'
 allVoxelTsFileName = '/roi_voxel_ts_all_rois4mm_FWHM0.mat'
-figureSavePath = '/scracth/cs/networks/aokorhon/multilayer/outcome/correlation-distributions-weighted-mean-consistency_NEWTEST.pdf'
+figureSavePath = '/media/onerva/KINGSTON/test-data/outcome/test-pipeline/correlation-distributions-weighted-mean-consistency.pdf'
 nBins = 100
 
 returnCorrelations = False
@@ -67,7 +67,7 @@ def getDistribution(data, nBins):
     
     
 # path parts
-subjectFolder = '/m/cs/scratch/networks/aokorhon/multilayer/'
+subjectFolder = '/media/onerva/KINGSTON/test-data/outcome/test-pipeline/'
 subjects = ['010/1']
 niiDataFileNames = ['/m/cs/scratch/networks/aokorhon/multilayer/010/epi_STD_mask_detrend_fullreg.nii'] # This should have the same length as the subjects list
 runNumbers = ['1','2']
@@ -82,15 +82,20 @@ timewindow = 100 # This is the time window length used to construct the ROIs
 overlap = 0 # This is the overlap between consequent time windows
 
 # visualization parameters:
-colors = ['r','k']
+# TODO: check parameters before final visualization!!!
+colors = [['r','k'],['g']]
 alphas = [0.9,0.5]
 inROILs = '-'
 betweenROILs = '--'
 
-calculateCorrelations = True
+calculateCorrelations = False
+visualizeDistributions = True
 
 inROICorrelations = [[[] for templateName in templateNamesPerMethod] for templateNamesPerMethod in templateNames] # this is a clustering methods x template names x ROIs list (ROIs pooled over subjects and layers)
 betweenROICorrelations = [[[] for templateName in templateNamesPerMethod] for templateNamesPerMethod in templateNames]
+
+inROIDistributions = [[[] for templateName in templateNamesPerMethod] for templateNamesPerMethod in templateNames] 
+betweenROIDistributions= [[[] for templateName in templateNamesPerMethod] for templateNamesPerMethod in templateNames] 
 
 if calculateCorrelations:
     for i, (clusteringMethod, templateNamesPerMethod, netIdentificatorsPerMethod) in enumerate(zip(clusteringMethods,templateNames,netIdentificators)):
@@ -103,7 +108,9 @@ if calculateCorrelations:
                                                                             allFileNames,nLayers,timewindow,overlap,savePath,
                                                                             nBins=nBins,returnCorrelations=returnCorrelations)
             inROICorrelations[i][j].extend(correlationData['inROICorrelations'])
+            inROIDistributions[i][j].extend(correlationData['inROIDistribution'])
             betweenROICorrelations[i][j].extend(correlationData['betweenROICorrelations'])
+            betweenROIDistributions[i][j].extend(correlationData['betweenROIDistribution'])
             
 else:
     for i, (clusteringMethod, templateNamesPerMethod, netIdentificatorsPerMethod) in enumerate(zip(clusteringMethods,templateNames,netIdentificators)):
@@ -112,25 +119,29 @@ else:
             f = open(savePath,'r')
             correlationData = pickle.load(f)
             f.close()
-            inROICorrelations[i][j].extend(correlationData['inROICorrelations'])
-            betweenROICorrelations[i][j].extend(correlationData['betweenROICorrelations'])
+            inROIDistributions[i][j].extend(correlationData['inROIDistribution'])
+            betweenROIDistributions[i][j].extend(correlationData['betweenROIDistribution'])
+            if i == 0:
+                binCenters = correlationData['binCenters'] # bin centers depend only on the number of bins that is same for all methods
             
-#fig = plt.figure()
-#ax = fig.add_subplot(111)
-#
-#for inROICorrelationsPerMethod, betweenROICorrelationsPerMethod, clusteringMethod, templateNamesPerMethod, color, alpha in zip(inROICorrelations, betweenROICorrelations, clusteringMethods, templateNames, colors, alphas):
-#    for inROICorrelation, betweenROICorrelation, templateName in zip(inROICorrelationsPerMethod, betweenROICorrelationsPerMethod, templateNamesPerMethod):
-#        inDistribution,inBinCenters = getDistribution(inROICorrelation,nBins)
-#        betweenDistribution,betweenBinCenters = getDistribution(betweenROICorrelation,nBins)
-#        plt.plot(inBinCenters,inDistribution,color=color,alpha=alpha,ls=inROILs,label=clusteringMethod+', ' + templateName + ', inside ROI')
-#        plt.plot(betweenBinCenters,betweenDistribution,color=color,alpha=alpha,ls=betweenROILs,label=clusteringMethod+', ' + templateName + ', between ROIs')
-#
-#ax.set_xlabel('Pearson correlation coefficient')
-#ax.set_ylabel('PDF')
-#ax.legend()
-#
-#plt.tight_layout()
-#plt.savefig(figureSavePath,format='pdf',bbox_inches='tight')
+if visualizeDistributions:
+    
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    
+    for inROIDistributionsPerMethod, betweenROIDistributionsPerMethod, clusteringMethod, templateNamesPerMethod, color, alpha in zip(inROIDistributions, betweenROIDistributions, clusteringMethods, templateNames, colors, alphas):
+        for inROIDistribution, betweenROIDistribution, templateName, c in zip(inROIDistributionsPerMethod, betweenROIDistributionsPerMethod, templateNamesPerMethod, color):
+            #inDistribution,inBinCenters = getDistribution(inROICorrelation,nBins)
+            #betweenDistribution,betweenBinCenters = getDistribution(betweenROICorrelation,nBins)
+            plt.plot(binCenters,inROIDistribution,color=c,alpha=alpha,ls=inROILs,label=clusteringMethod+', ' + templateName + ', inside ROI')
+            plt.plot(binCenters,betweenROIDistribution,color=c,alpha=alpha,ls=betweenROILs,label=clusteringMethod+', ' + templateName + ', between ROIs')
+    
+    ax.set_xlabel('Pearson correlation coefficient')
+    ax.set_ylabel('PDF')
+    ax.legend()
+    
+    plt.tight_layout()
+    plt.savefig(figureSavePath,format='pdf',bbox_inches='tight')
 
     
 

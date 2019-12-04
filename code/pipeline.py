@@ -62,6 +62,8 @@ def isomorphism_classes_from_file(filename,data_mask_filename,
     """
     # convert int nnodes to length-1 list
     nnodes = [nnodes] if isinstance(nnodes,int) else nnodes
+    isomorphism_class_savenames = [isomorphism_class_savenames] if isinstance(isomorphism_class_savenames,str) else isomorphism_class_savenames
+    isomorphism_class_examples_savenames = [isomorphism_class_examples_savenames] if isinstance(isomorphism_class_examples_savenames,str) else isomorphism_class_examples_savenames
     # create container data structures for isomorphism classes
     aggregated_isomclass_dict = collections.defaultdict(lambda: collections.defaultdict(dict))
     aggregated_example_dict = collections.defaultdict(dict)
@@ -85,10 +87,14 @@ def isomorphism_classes_from_file(filename,data_mask_filename,
                                                                      allowed_aspects=isomorphism_allowed_aspects,
                                                                      aggregated_dict=aggregated_isomclass_dict[(nnodes[i],nlayers)],
                                                                      examples_dict=aggregated_example_dict[(nnodes[i],nlayers)])
-            if isomorphism_class_savenames:
-                network_io.write_pickle_file(dict(aggregated_isomclass_dict[(nnodes[i],nlayers)]),isomorphism_class_savenames[i])
-            if isomorphism_class_examples_savenames:
-                network_io.write_pickle_file(aggregated_example_dict[(nnodes[i],nlayers)],isomorphism_class_examples_savenames[i])
+    for i in range(len(nnodes)):
+        if isomorphism_class_savenames:
+            network_io.write_pickle_file(dict(aggregated_isomclass_dict[(nnodes[i],nlayers)]),isomorphism_class_savenames[i])
+        if isomorphism_class_examples_savenames:
+            network_io.write_pickle_file(aggregated_example_dict[(nnodes[i],nlayers)],isomorphism_class_examples_savenames[i])
+    if log_savename:
+        with open(log_savename,'a+') as f:
+            f.write(str(nlayers)+' layers '+','.join([str(n) for n in nnodes])+' nodes done\n')
     return aggregated_isomclass_dict
 
 def clustering_method_parser(image_array,timewindow,overlap,nlayers,clustering_method_params):
@@ -105,8 +111,7 @@ def clustering_method_parser(image_array,timewindow,overlap,nlayers,clustering_m
         # optional params
         nan_log = clustering_method_params.get('nan_log_savename',None)
         calculate_consistency_while_clustering = clustering_method_params.get('calculate_consistency',False)
-        if calculate_consistency_while_clustering:
-            consistency_save_path = clustering_method_params.get('consistency_save_path',None)
+        consistency_save_path = clustering_method_params.get('consistency_save_path',None)
         n_consistency_CPUs = clustering_method_params.get('n_consistency_CPUs',5)
         return network_construction.yield_clustered_multilayer_network_in_layersets(image_array,nlayers,timewindow,overlap,n_clusters=-1,method=method,template=template_array,nanlogfile=nan_log,calculate_consistency_while_clustering=calculate_consistency_while_clustering,consistency_save_path=consistency_save_path,n_consistency_CPUs=n_consistency_CPUs)
     elif method == 'sklearn' or method == 'HAC':
@@ -116,8 +121,7 @@ def clustering_method_parser(image_array,timewindow,overlap,nlayers,clustering_m
         nan_log = clustering_method_params.get('nan_log_savename',None)
         event_time_stamps = clustering_method_params.get('event_time_stamps',None)
         calculate_consistency_while_clustering = clustering_method_params.get('calculate_consistency',False)
-        if calculate_consistency_while_clustering:
-            consistency_save_path = clustering_method_params.get('consistency_save_path',None)
+        consistency_save_path = clustering_method_params.get('consistency_save_path',None)
         n_consistency_CPUs = clustering_method_params.get('n_consistency_CPUs',5)
         return network_construction.yield_clustered_multilayer_network_in_layersets(image_array,nlayers,timewindow,overlap,n_clusters=nclusters,method=method,template=None,nanlogfile=nan_log,event_time_stamps=event_time_stamps,calculate_consistency_while_clustering=calculate_consistency_while_clustering,consistency_save_path=consistency_save_path,n_consistency_CPUs=n_consistency_CPUs)
     elif method == 'consistency_optimized':
@@ -142,8 +146,7 @@ def clustering_method_parser(image_array,timewindow,overlap,nlayers,clustering_m
         nan_log = clustering_method_params.get('nan_log_savename',None)
         event_time_stamps = clustering_method_params.get('event_time_stamps',None)
         calculate_consistency_while_clustering = clustering_method_params.get('calculate_consistency',False)
-        if calculate_consistency_while_clustering:
-            consistency_save_path = clustering_method_params.get('consistency_save_path',None)
+        consistency_save_path = clustering_method_params.get('consistency_save_path',None)
         return network_construction.yield_clustered_multilayer_network_in_layersets(image_array,nlayers,timewindow,overlap,n_clusters=nclusters,method=method,template=centroid_template_array,nanlogfile=nan_log,event_time_stamps=event_time_stamps,ROI_centroids=ROI_centroids,ROI_names=ROI_names,consistency_threshold=consistency_threshold,consistency_target_function=consistency_target_function,f_transform_consistency=False,calculate_consistency_while_clustering=calculate_consistency_while_clustering,n_consistency_iters=n_consistency_iters,n_consistency_CPUs=n_consistency_CPUs,consistency_save_path=consistency_save_path)
     elif method=='random_balls':
         # required params
@@ -154,8 +157,7 @@ def clustering_method_parser(image_array,timewindow,overlap,nlayers,clustering_m
         template_array = template_data.get_fdata()
         # optional params
         calculate_consistency_while_clustering = clustering_method_params.get('calculate_consistency',False)
-        if calculate_consistency_while_clustering:
-            consistency_save_path = clustering_method_params.get('consistency_save_path',None)
+        consistency_save_path = clustering_method_params.get('consistency_save_path',None)
         n_consistency_CPUs = clustering_method_params.get('n_consistency_CPUs',5)
         nan_log = clustering_method_params.get('nan_log_savename',None)
         event_time_stamps = clustering_method_params.get('event_time_stamps',None)
@@ -166,8 +168,7 @@ def clustering_method_parser(image_array,timewindow,overlap,nlayers,clustering_m
         craddock_threshold = clustering_method_params['craddock_threshold']
         # optional params
         calculate_consistency_while_clustering = clustering_method_params.get('calculate_consistency',False)
-        if calculate_consistency_while_clustering:
-            consistency_save_path = clustering_method_params.get('consistency_save_path',None)
+        consistency_save_path = clustering_method_params.get('consistency_save_path',None)
         n_consistency_CPUs = clustering_method_params.get('n_consistency_CPUs',5)
         nan_log = clustering_method_params.get('nan_log_savename',None)
         event_time_stamps = clustering_method_params.get('event_time_stamps',None)
