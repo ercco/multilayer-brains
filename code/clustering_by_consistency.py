@@ -1318,7 +1318,7 @@ def calculateSpatialConsistencyInParallel(voxelIndices,allVoxelTs,consistencyTyp
 
 def calculateSpatialConsistencyPostHoc(dataFiles,layersetwiseNetworkSavefolders,networkFiles,
                                        nLayers,timewindow,overlap,consistencyType='pearson c',fTransform=False,nCPUs=5,
-                                       savePath=None):
+                                       savePath=None,subjectIndex=None):
     """
     Calculates spatial consistency and size of earlier-created ROIs. The ROIs should be
     saved by pipeline.isomorphism_classes_from_file; they cant be
@@ -1344,6 +1344,9 @@ def calculateSpatialConsistencyPostHoc(dataFiles,layersetwiseNetworkSavefolders,
                 when consistencyType = 'pearson c' (default=False)
     nCPUs: int, number of CPUs to be used for the parallel computing (default = 5)
     savePath: str, path to which save the calculated consistencies (default = None, no saving)
+    subjectIndex: int, index of the subject to be analyzed. If subject index is not None, only
+                  the subjectIndex-th dataFile and layersetwiseNetworkSaveFolder will be used.
+                  (default = None)
     
     Returns:
     --------
@@ -1362,10 +1365,9 @@ def calculateSpatialConsistencyPostHoc(dataFiles,layersetwiseNetworkSavefolders,
     """
     spatialConsistencies = []
     roiSizes = []
-    # first, let's pick the network files to be read
-    # same layer is saved in multiple files; therefore we read only every nLayer-th file
-    # this is a hard-coded part that corresponds to the file naming system of isomorphism_classes_from_file
-    # networkFiles = [networkFiles[index] for index in range(0,len(networkFiles),nLayers)]
+    if not subjectIndex == None:
+        dataFiles = [dataFiles[subjectIndex]]
+        layersetwiseNetworkSavefolders = [layersetwiseNetworkSavefolders[subjectIndex]]
     # looping over network_savefolders (can be over subjects but also over a single subject in multiple runs)
     for dataFile, layersetwiseNetworkSavefolder in zip(dataFiles,layersetwiseNetworkSavefolders):
         # reading data; later on, this will be used to calculate consistencies
