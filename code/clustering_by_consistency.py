@@ -194,7 +194,7 @@ def readVoxelIndices(path, voxelCoordinates=[], layers=all):
                   voxels of one ROI
     
     """
-    M = network_io.read_weighted_network(path)
+    M = network_io.read_pickle_file(path)
     voxelIndices = []
     readVoxelCoordinates = []
     if layers == 'all':
