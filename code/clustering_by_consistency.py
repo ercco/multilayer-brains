@@ -1407,7 +1407,7 @@ def calculateSpatialConsistencyPostHoc(dataFiles,layersetwiseNetworkSavefolders,
 
 def calculateCorrelationsInAndBetweenROIs(dataFiles,layersetwiseNetworkSavefolders,
                                       networkFiles,nLayers,timewindow,overlap,savePath=None,
-                                      nBins=100,returnCorrelations=False):
+                                      nBins=100,returnCorrelations=False,subjectIndex=None):
     """
     Starting from ROIs saved earlier by pipeline.isomorphism_classes_from_file,
     calculates the Pearson correlation coefficients between voxels in the same ROI
@@ -1432,7 +1432,10 @@ def calculateCorrelationsInAndBetweenROIs(dataFiles,layersetwiseNetworkSavefolde
     returnCorrelations: boolean, if True, lists of all in-ROI and between-ROI correlations
                         are returned in addition to the distribution; note that these lists
                         are in most cases extremely long (default = False)
-    
+    subjectIndex: int, index of the subject to be analyzed. If subject index is not None, only
+                  the subjectIndex-th dataFile and layersetwiseNetworkSaveFolder will be used.
+                  (default = None)
+
     Returns:
     --------
     correlationData: dict, contains:
@@ -1450,10 +1453,9 @@ def calculateCorrelationsInAndBetweenROIs(dataFiles,layersetwiseNetworkSavefolde
     """
     inROICorrelations = []
     betweenROICorrelations = []
-    # first, let's pick the network files to be read
-    # same layer is saved in multiple files; therefore we read only every nLayer-th file
-    # this is a hard-coded part that corresponds to the file naming system of isomorphism_classes_from_file
-    # networkFiles = [networkFiles[index] for index in range(0,len(networkFiles),nLayers)]
+    if not subjectIndex == None:
+        dataFiles = [dataFiles[subjectIndex]]
+        layersetwiseNetworkSavefolders = [layersetwiseNetowrkSavefolders[subjectIndex]]
     # looping over network_savefolders (can be over subjects but also over a single subject in multiple runs)
     initializeDistribution = True
     for dataFile, layersetwiseNetworkSavefolder in zip(dataFiles,layersetwiseNetworkSavefolders):
