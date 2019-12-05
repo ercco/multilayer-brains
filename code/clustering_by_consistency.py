@@ -1413,6 +1413,7 @@ def calculateCorrelationsInAndBetweenROIs(dataFiles,layersetwiseNetworkSavefolde
     calculates the Pearson correlation coefficients between voxels in the same ROI
     and in different ROIs and their distribution. The distributions are calculated
     using nBins equal-sized bins ranging from -1 to 1.
+    just testing...
     
     Parameters:
     -----------
