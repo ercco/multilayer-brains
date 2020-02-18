@@ -1437,7 +1437,8 @@ def calculateCorrelationsInAndBetweenROIs(dataFiles,layersetwiseNetworkSavefolde
                   the subjectIndex-th dataFile and layersetwiseNetworkSaveFolder will be used.
                   (default = None)
 
-    Returns:
+    Returns:savePath = correlationSaveFolder + '/in-between-correlations_' + clusteringMethod + '_subject' + str(subjectIndex) + '_' + runNumber + '.pkl'
+
     --------
     correlationData: dict, contains:
                               'dataFiles':dataFiles
@@ -1456,7 +1457,7 @@ def calculateCorrelationsInAndBetweenROIs(dataFiles,layersetwiseNetworkSavefolde
     betweenROICorrelations = []
     if not subjectIndex == None:
         dataFiles = [dataFiles[subjectIndex]]
-        layersetwiseNetworkSavefolders = [layersetwiseNetowrkSavefolders[subjectIndex]]
+        layersetwiseNetworkSavefolders = [layersetwiseNetworkSavefolders[subjectIndex]]
     # looping over network_savefolders (can be over subjects but also over a single subject in multiple runs)
     initializeDistribution = True
     for dataFile, layersetwiseNetworkSavefolder in zip(dataFiles,layersetwiseNetworkSavefolders):
@@ -2382,8 +2383,8 @@ def spectralNCutClustering(cfg):
     return voxelLabels,voxelCoordinates
 
 # post-clustering analysis
-    
-def calculateCorrelationsInAndBetweenROIs(dataFiles,layersetwiseNetworkSavefolders,
+# TODO: remove the following function!!!    
+def calculateCorrelationsInAndBetweenROIsOLD(dataFiles,layersetwiseNetworkSavefolders,
                                       networkFiles,nLayers,timewindow,overlap,savePath=None,
                                       nBins=100,returnCorrelations=False):
     """
