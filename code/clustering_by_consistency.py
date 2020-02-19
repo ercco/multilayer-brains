@@ -1407,13 +1407,13 @@ def calculateSpatialConsistencyPostHoc(dataFiles,layersetwiseNetworkSavefolders,
 
 def calculateCorrelationsInAndBetweenROIs(dataFiles,layersetwiseNetworkSavefolders,
                                       networkFiles,nLayers,timewindow,overlap,savePath=None,
-                                      nBins=100,returnCorrelations=False,subjectIndex=None):
+                                      nBins=100,returnCorrelations=False,subjectIndex=None,
+                                      normalizeDistributions=True):
     """
     Starting from ROIs saved earlier by pipeline.isomorphism_classes_from_file,
     calculates the Pearson correlation coefficients between voxels in the same ROI
     and in different ROIs and their distribution. The distributions are calculated
     using nBins equal-sized bins ranging from -1 to 1.
-    just testing...
     
     Parameters:
     -----------
@@ -1436,9 +1436,10 @@ def calculateCorrelationsInAndBetweenROIs(dataFiles,layersetwiseNetworkSavefolde
     subjectIndex: int, index of the subject to be analyzed. If subject index is not None, only
                   the subjectIndex-th dataFile and layersetwiseNetworkSaveFolder will be used.
                   (default = None)
+    normalizeDistributions: bool, if set to False, the number of samples in each bin is calculated 
+                            instead of normalized PDFs. (default = True)
 
-    Returns:savePath = correlationSaveFolder + '/in-between-correlations_' + clusteringMethod + '_subject' + str(subjectIndex) + '_' + runNumber + '.pkl'
-
+    Returns:
     --------
     correlationData: dict, contains:
                               'dataFiles':dataFiles
@@ -1500,9 +1501,10 @@ def calculateCorrelationsInAndBetweenROIs(dataFiles,layersetwiseNetworkSavefolde
                     inROICorrelations.extend(inCorrs)
                     betweenROICorrelations.extend(betweenCorrs)
             layerIndex += nLayers
-    # normalizing distributions
-    inROIDistribution = inROIDistribution/float(np.sum(inROIDistribution*np.abs(binEdges[0]-binEdges[1])))        
-    betweenROIDistribution = betweenROIDistribution/float(np.sum(betweenROIDistribution*np.abs(binEdges[0]-binEdges[1])))
+    if normalizeDistributions:
+        # normalizing distributions
+        inROIDistribution = inROIDistribution/float(np.sum(inROIDistribution*np.abs(binEdges[0]-binEdges[1])))        
+        betweenROIDistribution = betweenROIDistribution/float(np.sum(betweenROIDistribution*np.abs(binEdges[0]-binEdges[1])))
     binCenters = 0.5*(binEdges[:-1]+binEdges[1:])            
     correlationData = {'dataFiles':dataFiles,'layersetwiseNetworkSavefolders':layersetwiseNetworkSavefolders,
                                 'networkFiles':networkFiles,'nLayers':nLayers,'timewindow':timewindow,
