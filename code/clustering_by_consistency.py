@@ -1633,6 +1633,8 @@ def growOptimizedROIs(cfg,verbal=True):
                     for a ROI, it is entirely removed from the base of possible voxels for this ROI
                     - 'voxel-wise': no voxel is added to a ROI if its average correlation to the voxels of this
                     ROI is lower than its average correlation to some other ROI
+                    - 'maximal-voxel-wise': same as voxel-wise above but only the N strongest correlations per ROI
+                    are taken into account; for setting N see the nCorrelatiosnForThresholding parameter below
                     - 'voxel-neighbor': no voxel is added to a ROI if its average correlation to the voxels of this
                     ROI is lower than the average correlation of a voxel to its closest (6-voxel) neighborhood. This
                     threshold value is calculated as an average across all voxels before starting to build the ROIs.
@@ -1647,6 +1649,8 @@ def growOptimizedROIs(cfg,verbal=True):
                    have value 0. Template is used only if cfg[ROICentroids] == 'random' (default = None)
          nROIs: int, number of ROIs. Only used if cfg[ROICentroids] == 'random' (default = 100)
          verbal: bool, if verbal == True, more progress information is printed (default = True)
+         nCorrelationsForThresholding: int, the number of strongest correlations considered if threshold == 'maximal-voxel-wise'
+                                       (default = 5)
     
     Returns:
     --------
@@ -1685,6 +1689,11 @@ def growOptimizedROIs(cfg,verbal=True):
         verbal = cfg['verbal']
     else:
         verbal = True
+    if threshold == 'maximal-voxel-wise':
+        if 'nCorrelationsForThresholding' in cfg.keys():
+            nCorrelationsForThresholding = cfg['nCorrelationsForThresholding']
+        else:
+            nCorrelationsForThresholding = 5
     
     nVoxels = len(voxelCoordinates)
     nROIs = len(ROICentroids)
@@ -1770,11 +1779,16 @@ def growOptimizedROIs(cfg,verbal=True):
                     continue
             elif threshold == 'data-driven':
                 mask = np.ones(len(maximalMeasures))
-        elif threshold == 'voxel-wise':
+        elif threshold == 'voxel-wise' or threshold == 'maximal-voxel-wise':
+            import pdb; pdb.set_trace()
             testCorrelations = []
             tsToAdd = allVoxelTs[voxelToAdd,:]
-            for i, ROI in enumerate(ROIInfo['ROIVoxels']):
-                testCorrelations.append(np.mean([pearsonr(tsToAdd,allVoxelTs[ROIVoxel,:])[0] for ROIVoxel in ROI]))
+            if threshold == 'voxel-wise':
+                for i, ROI in enumerate(ROIInfo['ROIVoxels']):
+                    testCorrelations.append(np.mean([pearsonr(tsToAdd,allVoxelTs[ROIVoxel,:])[0] for ROIVoxel in ROI]))
+            elif threshold == 'maximal-voxel-wise':
+                for i, ROI in enumerate(ROIInfo['ROIVoxels']):
+                    testCorrelations.append(np.mean(sorted([(pearsonr(tsToAdd,allVoxelTs[ROIVoxel,:])[0]) for ROIVoxel in ROI])[(-1*nCorrelationsForThresholding)::]))
             candidateCorrelation = testCorrelations.pop(ROIToUpdate)
             thresholdValue = max(testCorrelations)
             if candidateCorrelation <= thresholdValue:
