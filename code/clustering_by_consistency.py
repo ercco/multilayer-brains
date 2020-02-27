@@ -1780,7 +1780,6 @@ def growOptimizedROIs(cfg,verbal=True):
             elif threshold == 'data-driven':
                 mask = np.ones(len(maximalMeasures))
         elif threshold == 'voxel-wise' or threshold == 'maximal-voxel-wise':
-            import pdb; pdb.set_trace()
             testCorrelations = []
             tsToAdd = allVoxelTs[voxelToAdd,:]
             if threshold == 'voxel-wise':
