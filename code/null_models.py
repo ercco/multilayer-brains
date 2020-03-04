@@ -5,11 +5,14 @@ import collections
 import os
 import pickle
 import sys
+import nibabel as nib
 
 import subgraph_classification
 import network_io
 import network_construction
 import pipeline
+import corrs_and_mask_calculations
+import clustering_by_consistency as cbc
 
 # null_models.py: Create null model random networks and find NODE-ISOMORPHIC isomorphism classes from them
 
@@ -57,7 +60,48 @@ def ER_from_net(M):
             M_null[possible_edges[index][0],possible_edges[index][1],layerpair[0],layerpair[1]] = 1
     return M_null
 
-
+def shuffle_nii(nii_path,mask_path,n_shuffles,out_path_stem):
+    """
+    Reads a NIFTI file, shuffles the voxel time series while retaining voxel locations, and saves the shuffled time series in 
+    a new NIFTI file. The shuffling does not affect the affine of the NIFTI.
+    
+    Parameters:
+    -----------
+    nii_path: str, path to the input NIFTI file
+    mask_path: str, path to a mask defining the voxel time series to shuffle (can be e.g. a gray matter or ROI mask)
+    n_shuffles: int, number of NIFTI files with shuffled time series to be produced
+    out_path_stem: str, path to which save the shuffled time series
+    
+    Returns:
+    --------
+    no direct output, saves the shuffled time series as NIFTI
+    """
+    # reading data:
+    img = nib.load(nii_path) 
+    affine = img.affine
+    imgdata = img.get_fdata()
+    n_x,n_y,n_z,n_t = imgdata.shape
+    # reading mask, masking data and finding voxel coordinates
+    mask_img = nib.load(mask_path)
+    mask_data = mask_img.get_fdata()
+    corrs_and_mask_calculations.gray_mask(imgdata,mask_data)
+    voxel_coordinates = list(zip(*np.where(np.any(imgdata != 0, 3) == True)))
+    # reading voxel time series
+    n_voxels = len(voxel_coordinates)
+    all_voxel_ts = np.zeros((n_voxels,n_t))
+    for i,voxel in enumerate(voxel_coordinates):
+        all_voxel_ts[i,:] = imgdata[voxel[0],voxel[1],voxel[2],:]
+    # shuffling the voxel time series, creating shuffled nii, and saving
+    for i in range(n_shuffles):
+        shuffled_ts = all_voxel_ts.copy()
+        np.random.shuffle(shuffled_ts)
+        shuffled_imgdata = np.zeros((n_x,n_y,n_z,n_t))
+        for voxel,ts in zip(voxel_coordinates,shuffled_ts):
+            shuffled_imgdata[voxel[0],voxel[1],voxel[2],:] = ts
+        out_path = out_path_stem + '_shuffle_' + str(i) + '.nii'
+        shuffled_img = nib.Nifti1Image(shuffled_imgdata,affine)     
+        nib.save(shuffled_img,out_path)
+        
 
 #################### Running functions #########################################
 
