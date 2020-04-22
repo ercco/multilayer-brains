@@ -243,9 +243,9 @@ def getRandomCentroids(nROIs, template):
         ROICentroids[i,:] = voxelCoordinates[index,:]
     return ROICentroids
 
-def findNeighbors(voxelCoords, resolution=1, allVoxels=[]):
+def findNeighbors(voxelCoords, resolution=1, allVoxels=[], nNeighbors=6):
     """
-    Returns the 6 closest neighbors (the ones sharing a face) of a voxel.
+    Returns the neighbors (the ones sharing a face) of a voxel.
     
     Parameters:
     -----------
@@ -255,6 +255,8 @@ def findNeighbors(voxelCoords, resolution=1, allVoxels=[]):
                 are 1 voxel away from each other).
     allVoxels: iterable, coordinates of all acceptable voxels. If allVoxels is given,
                only neighbors in allVoxels are returned (default: []).
+    nNeighbors: int, number of neighbors to return; options: 6 (those sharing faces),
+                18 (sharing faces or edges), 26 (sharing faces, edges, or corners)
                 
     Returns:
     --------    
@@ -264,12 +266,36 @@ def findNeighbors(voxelCoords, resolution=1, allVoxels=[]):
     y = voxelCoords[1]
     z = voxelCoords[2]    
     
-    neighbors = [[x+resolution,y,z],
-                 [x-resolution,y,z],
-                 [x,y+resolution,z],
-                 [x,y-resolution,z],
-                 [x,y,z+resolution],
-                 [x,y,z-resolution]]
+    if nNeighbors == 6:
+        neighbors = [[x+resolution,y,z],
+                     [x-resolution,y,z],
+                     [x,y+resolution,z],
+                     [x,y-resolution,z],
+                     [x,y,z+resolution],
+                     [x,y,z-resolution]]
+    if nNeighbors == 18:
+        neighbors.extend([[x+resolution,y+resolution,z],
+                          [x+resolution,y-resolution,z],
+                          [x-resolution,y+resolution,z],
+                          [x-resolution,y-resolution,z],
+                          [x+resolution,y,z+resolution],
+                          [x+resolution,y,z-resolution],
+                          [x-resolution,y,z+resolution],
+                          [x-resolution,y,z-resolution],
+                          [x,y+resolution,z+resolution],
+                          [x,y+resolution,z-resolution],
+                          [x,y-resolution,z+resolution],
+                          [x,y-resolution,z-resolution]])
+    if nNeighbors == 26:
+        neighbors.extend([[x+resolution,y+resolution,z+resolution],
+                          [x+resolution,y+resolution,z-resolution],
+                          [x+resolution,y-resolution,z+resolution],
+                          [x+resolution,y-resolution,z-resolution],
+                          [x+resolution,y-resolution,z-resolution],
+                          [x-resolution,y+resolution,z+resolution],
+                          [x-resolution,y+resolution,z-resolution],
+                          [x-resolution,y-resolution,z+resolution],
+                          [x-resolution,y-resolution,z-resolution]])
                          
     if not len(allVoxels) == 0:
         acceptedNeighbors = []
@@ -1039,7 +1065,54 @@ def nCutClustering(connectivity,k):
         group_img=group_img+(i+1)*eigenvec_discrete[:,i]
         
     return group_img
+
+def getKendallW(timeSeries):
+    """
+    Calculates the Kendall's coefficience of concordance (Kendall's W; Kendall & Gibbons 1990) 
+    for a bunch of time series.
+    
+    Parameters:
+    -----------
+    timeSeries: np.array (voxels x time), time series of the voxels
+    
+    Returns:
+    --------
+    W: float, Kendall's W
+    """
+    #TODO: test!!!
+    K, n = timeSeries.shape
+    rankSum = np.zeros(n)
+    for ts in timeSeries:
+        temp = ts.argsort()
+        ranks = np.empty_like(temp)
+        ranks[temp] = np.arange(len(ts))
+        rankSum = rankSum + ranks
+    meanRankSum = np.mean(rankSum)
+    W = 12*(np.sum(rankSum**2)-n*meanRankSum**2)/(K**2*(n**3-n))
+    return W
+    
   
+def calculateReHo(voxelCoordinates,nNeighbors=6,resolution=1,allVoxels=[]):
+    """
+    A function for calculating the Regional Homogeneity (Zang et al. 2004; NeuroImage)
+    of a voxel.
+    
+    Parameters:
+    -----------
+    voxelCoords: 1x3 np.array, coordinates of a voxel (either in voxels or in mm)
+    nNeighbors: int, number or neighbors used for calculating ReHo; options: 6 (faces),
+                18 (faces + edges), 26 (faces + edges + corners) (default = 6)
+    resolution: double, distance between voxels if coordinates are given in mm;
+                if coordinates are given in voxels, use the default value 1 (voxels
+                are 1 voxel away from each other).
+    allVoxels: iterable, coordinates of all acceptable voxels. If allVoxels is given,
+               only neighbors in allVoxels are returned (default: []).
+    """
+    assert nNeighbors in [6,18,26], "Bad number of neigbors; select either 6 (faces), 18 (faces + edges) or 26 (faces + edges + corners)"
+    neighbors = findNeighbors(voxelCoordinates,nNeighbors,resolution,allVoxels)
+    
+
+
     
 def updateQueue(ROIIndex, priorityQueue, targetFunction, centroidTs, allVoxelTs, ROIVoxels,
                 consistencies=[], ROISizes = [], consistencyType='pearson c',fTransform=False):
