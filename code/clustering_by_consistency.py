@@ -1079,7 +1079,6 @@ def getKendallW(timeSeries):
     --------
     W: float, Kendall's W
     """
-    #TODO: test!!!
     K, n = timeSeries.shape
     rankSum = np.zeros(n)
     for ts in timeSeries:

@@ -17,13 +17,14 @@ testFindROIlessNeighbors = False
 testUpdateROI = False
 testGrowROIs = False
 testFindROICentroids = False
-testRemoveVoxel = True
+testRemoveVoxel = False
 testFindVoxelLabels = False
 testFindROIBoundary = False
 testVoxelLabelsToROIInfo = False
 testVoxelsInClustersToROIInfo = False
-testFindInROINeighbors = True
-testIsBoundary = True
+testFindInROINeighbors = False
+testIsBoundary = False
+testGetKendallW = True
 
 # testing defSphericalROIs
 if testDefSphericalROIs: 
@@ -607,6 +608,27 @@ if testIsBoundary:
         print('isBoundary: testcase 1/1: Neighbor ROI indices OK')
     else:
         print('isBoundary: testcase 1/1: ERROR IN NEIGHBOR ROI INDICES!!!')
+        
+# testing getKendallsW
+if testGetKendallW:
+    # testcase 1: a bunch of identical time series
+    x = np.sin(np.linspace(-np.pi,np.pi,100))
+    y = np.sin(np.linspace(-np.pi,np.pi,100))
+    z = np.sin(np.linspace(-np.pi,np.pi,100))
+    W1 = cbc.getKendallW(np.array([x,y]))
+    W2 = cbc.getKendallW(np.array([x,y,z]))
+    if W1 == W2 == 1:
+        print('getKendallW: testcase 1/2: Kendall W of identical time series OK')
+    else:
+        print('getKendallW: testcase 1/2: ERROR IN KENDALL W OF IDENTICAL TIME SERIES!!!')
+    # testcase 2: time series in antisych
+    x2 = np.sin(np.linspace(0,2*np.pi,100))
+    W3 = cbc.getKendallW(np.array([x,x2]))
+    if W3 == 0:
+        print('getKendallW: testcase 2/2: Kendall W of antisynchronized time series OK')
+    else:
+        print('getKendallW: testcase 2/2: ERROR IN KENDALL W OF ANTISYNCHRONIZED TIME SERIES!!!')
+    
     
     
 
