@@ -266,13 +266,13 @@ def findNeighbors(voxelCoords, resolution=1, allVoxels=[], nNeighbors=6):
     y = voxelCoords[1]
     z = voxelCoords[2]    
     
-    if nNeighbors == 6:
-        neighbors = [[x+resolution,y,z],
-                     [x-resolution,y,z],
-                     [x,y+resolution,z],
-                     [x,y-resolution,z],
-                     [x,y,z+resolution],
-                     [x,y,z-resolution]]
+
+    neighbors = [[x+resolution,y,z],
+                [x-resolution,y,z],
+                [x,y+resolution,z],
+                [x,y-resolution,z],
+                [x,y,z+resolution],
+                [x,y,z-resolution]]
     if nNeighbors == 18:
         neighbors.extend([[x+resolution,y+resolution,z],
                           [x+resolution,y-resolution,z],
@@ -1116,9 +1116,11 @@ def calculateReHo(imgdata,voxelCoords,nNeighbors=6,resolution=1,allVoxels=[]):
     ReHo: float: Regional Homogeneity of the voxel 
     
     """
+    import pdb; pdb.set_trace() 
     assert nNeighbors in [6,18,26], "Bad number of neigbors; select either 6 (faces), 18 (faces + edges) or 26 (faces + edges + corners)"
-    neighbors = findNeighbors(voxelCoords,nNeighbors,resolution,allVoxels)
-    neighborTs = imgdata[neighbors,:]
+    neighbors = findNeighbors(voxelCoords,resolution,allVoxels,nNeighbors)
+    neighbors = np.array(neighbors)
+    neighborTs = imgdata[neighbors[:,0],neighbors[:,1],neighbors[:,2],:]
     ReHo = getKendallW(neighborTs)
     return ReHo
     
