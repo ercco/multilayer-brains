@@ -1091,7 +1091,7 @@ def getKendallW(timeSeries):
     return W
     
   
-def calculateReHo(imgdata,voxelCoords,nNeighbors=6,resolution=1,allVoxels=[]):
+def calculateReHo(params):
     """
     A function for calculating the Regional Homogeneity (Zang et al. 2004; NeuroImage)
     of a voxel (ReHo is defined as the Kendall's coefficient of condolence in voxel's
@@ -1099,30 +1099,77 @@ def calculateReHo(imgdata,voxelCoords,nNeighbors=6,resolution=1,allVoxels=[]):
     
     Parameters:
     -----------
-    imgdata: x*y*z*t np.array, fMRI measurement data to be used for the clustering.
-                  Three first dimensions correspond to voxel coordinates while the fourth is time.
-                  For voxels outside of the gray matter, all values must be set to 0.
-    voxelCoords: 1x3 np.array, coordinates of a voxel (either in voxels or in mm)
-    nNeighbors: int, number or neighbors used for calculating ReHo; options: 6 (faces),
-                18 (faces + edges), 26 (faces + edges + corners) (default = 6)
-    resolution: double, distance between voxels if coordinates are given in mm;
-                if coordinates are given in voxels, use the default value 1 (voxels
-                are 1 voxel away from each other).
-    allVoxels: iterable, coordinates of all acceptable voxels. If allVoxels is given,
-               only neighbors in allVoxels are returned (default: []).
+    params: a tupple containing:
+        voxelCoords: 1x3 np.array, coordinates of a voxel (either in voxels or in mm)
+        cfg: a dic containing
+            imgdata: x*y*z*t np.array, fMRI measurement data to be used for the clustering.
+                          Three first dimensions correspond to voxel coordinates while the fourth is time.
+                          For voxels outside of the gray matter, all values must be set to 0.
+            
+            nNeighbors: int, number or neighbors used for calculating ReHo; options: 6 (faces),
+                        18 (faces + edges), 26 (faces + edges + corners) (default = 6)
+            resolution: double, distance between voxels if coordinates are given in mm;
+                        if coordinates are given in voxels, use the default value 1 (voxels
+                        are 1 voxel away from each other).
                
     Returns:
     --------
     ReHo: float: Regional Homogeneity of the voxel 
     
     """
-    import pdb; pdb.set_trace() 
+    cfg = params[0]
+    voxelCoords = params[1]
+    imgdata = cfg['imgdata']
+    if 'nNeighbors' in cfg.keys():
+        nNeighbors = cfg['nNeighbors']
+    else:
+        nNeighbors = 6
+    if 'resolution' in cfg.keys():
+        resolution = cfg['resolution']
+    else:
+        resolution = 1
     assert nNeighbors in [6,18,26], "Bad number of neigbors; select either 6 (faces), 18 (faces + edges) or 26 (faces + edges + corners)"
+    allVoxels = list(zip(*np.where(np.any(imgdata != 0, 3) == True)))
     neighbors = findNeighbors(voxelCoords,resolution,allVoxels,nNeighbors)
     neighbors = np.array(neighbors)
     neighborTs = imgdata[neighbors[:,0],neighbors[:,1],neighbors[:,2],:]
     ReHo = getKendallW(neighborTs)
     return ReHo
+
+def findCentroidsByReHo(imgdata,nCentroids,nNeighbors=6,nCPUs=5):
+    """
+    Finds the N voxels with the largest Regional Homogeneity (Zang et al. 2004; NeuroImage)
+    to be used as ROI centroids.
+    
+    Parameters:
+    -----------
+    imgdata: x*y*z*t np.array, fMRI measurement data to be used for the clustering.
+                  Three first dimensions correspond to voxel coordinates while the fourth is time.
+                  For voxels outside of the gray matter, all values must be set to 0.
+    nCentroids: int, number of centroids to find.
+    nNeighbors: int, number or neighbors used for calculating ReHo; options: 6 (faces),
+                18 (faces + edges), 26 (faces + edges + corners) (default = 6)
+    nCPUs: int, number of CPUs used for the parallel calculation (default = 5)
+    
+    Returns:
+    --------
+    centroidCoordinates: nCentroids x 3 np.array, coordinates of a voxel (in voxels)
+    """
+    #TODO: test!!!
+    voxelCoordinates = list(zip(*np.where(np.any(imgdata != 0, 3) == True)))
+    cfg = {'imgdata':imgdata,'nNeighbors':nNeighbors}
+    if True:
+        paramSpace = [(cfg,voxelCoords) for voxelCoords in voxelCoordinates]
+        pool = Pool(maxWorkders = nCPUs)
+        ReHos = list(pool.map(calculateReHo,paramSpace,chunksize=1))
+    else: # a debugging case
+        ReHos = np.zeros(voxelCoordinates.shape[0])
+        for i, voxelCoords in enumerate(voxelCoordinates):
+            ReHos[i] = calculateReHo((cfg,voxelCoords))
+    indices = np.argsort(ReHos)
+    centroidCoordinates = voxelCoordinates[indices][0:nCentroids]
+    return centroidCoordinates
+    
     
 def updateQueue(ROIIndex, priorityQueue, targetFunction, centroidTs, allVoxelTs, ROIVoxels,
                 consistencies=[], ROISizes = [], consistencyType='pearson c',fTransform=False):
