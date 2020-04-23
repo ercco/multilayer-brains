@@ -1091,13 +1091,17 @@ def getKendallW(timeSeries):
     return W
     
   
-def calculateReHo(voxelCoordinates,nNeighbors=6,resolution=1,allVoxels=[]):
+def calculateReHo(imgdata,voxelCoords,nNeighbors=6,resolution=1,allVoxels=[]):
     """
     A function for calculating the Regional Homogeneity (Zang et al. 2004; NeuroImage)
-    of a voxel.
+    of a voxel (ReHo is defined as the Kendall's coefficient of condolence in voxel's
+    neighborhood).
     
     Parameters:
     -----------
+    imgdata: x*y*z*t np.array, fMRI measurement data to be used for the clustering.
+                  Three first dimensions correspond to voxel coordinates while the fourth is time.
+                  For voxels outside of the gray matter, all values must be set to 0.
     voxelCoords: 1x3 np.array, coordinates of a voxel (either in voxels or in mm)
     nNeighbors: int, number or neighbors used for calculating ReHo; options: 6 (faces),
                 18 (faces + edges), 26 (faces + edges + corners) (default = 6)
@@ -1106,12 +1110,17 @@ def calculateReHo(voxelCoordinates,nNeighbors=6,resolution=1,allVoxels=[]):
                 are 1 voxel away from each other).
     allVoxels: iterable, coordinates of all acceptable voxels. If allVoxels is given,
                only neighbors in allVoxels are returned (default: []).
+               
+    Returns:
+    --------
+    ReHo: float: Regional Homogeneity of the voxel 
+    
     """
     assert nNeighbors in [6,18,26], "Bad number of neigbors; select either 6 (faces), 18 (faces + edges) or 26 (faces + edges + corners)"
-    neighbors = findNeighbors(voxelCoordinates,nNeighbors,resolution,allVoxels)
-    
-
-
+    neighbors = findNeighbors(voxelCoords,nNeighbors,resolution,allVoxels)
+    neighborTs = imgdata[neighbors,:]
+    ReHo = getKendallW(neighborTs)
+    return ReHo
     
 def updateQueue(ROIIndex, priorityQueue, targetFunction, centroidTs, allVoxelTs, ROIVoxels,
                 consistencies=[], ROISizes = [], consistencyType='pearson c',fTransform=False):
