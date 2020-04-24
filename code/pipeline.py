@@ -147,7 +147,8 @@ def clustering_method_parser(image_array,timewindow,overlap,nlayers,clustering_m
         event_time_stamps = clustering_method_params.get('event_time_stamps',None)
         calculate_consistency_while_clustering = clustering_method_params.get('calculate_consistency',False)
         consistency_save_path = clustering_method_params.get('consistency_save_path',None)
-        return network_construction.yield_clustered_multilayer_network_in_layersets(image_array,nlayers,timewindow,overlap,n_clusters=nclusters,method=method,template=centroid_template_array,nanlogfile=nan_log,event_time_stamps=event_time_stamps,ROI_centroids=ROI_centroids,ROI_names=ROI_names,consistency_threshold=consistency_threshold,consistency_target_function=consistency_target_function,f_transform_consistency=False,calculate_consistency_while_clustering=calculate_consistency_while_clustering,n_consistency_iters=n_consistency_iters,n_consistency_CPUs=n_consistency_CPUs,consistency_save_path=consistency_save_path)
+        consistency_percentage_ROIs_for_thresholding = clustering_method_params.get('consistency_percentage_ROIs_for_thresholding',0)
+        return network_construction.yield_clustered_multilayer_network_in_layersets(image_array,nlayers,timewindow,overlap,n_clusters=nclusters,method=method,template=centroid_template_array,nanlogfile=nan_log,event_time_stamps=event_time_stamps,ROI_centroids=ROI_centroids,ROI_names=ROI_names,consistency_threshold=consistency_threshold,consistency_target_function=consistency_target_function,f_transform_consistency=False,calculate_consistency_while_clustering=calculate_consistency_while_clustering,n_consistency_iters=n_consistency_iters,n_consistency_CPUs=n_consistency_CPUs,consistency_save_path=consistency_save_path,consistency_percentage_ROIs_for_thresholding=consistency_percentage_ROIs_for_thresholding)
     elif method=='random_balls':
         # required params
         ROI_centroids='random'

@@ -38,6 +38,7 @@ craddock_threshold = 0.5 # the correlation threshold used by Craddock et al. 201
 use_random_seeds = False
 calculate_consistency_while_clustering = False
 consistency_save_path = '/media/onerva/KINGSTON/test-data/010/spatial_consistency_optimized_mean_weighted_consistency_nonthresholded.pkl'
+consistency_percentage_ROIs_for_thresholding = 10
 clustering_method_params = {'method':clustering_method,'consistency_target_function':consistency_target_function,'consistency_threshold':consistency_threshold,'craddock_threshold':craddock_threshold,'nclusters':nclusters,'calculate_consistency':calculate_consistency_while_clustering,'consistency_save_path':consistency_save_path,'n_consistency_CPUs':n_consistency_CPUs,'n_consistency_iters':n_consistency_iters,'use_random_seeds':use_random_seeds,'centroid_template_filename':mask_or_template_filename}
 
 # Let's look for all subgraphs of two layers, two nodes and two layers, three nodes

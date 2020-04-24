@@ -142,7 +142,7 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                                                     consistency_threshold=-1,consistency_target_function='spatialConsistency',
                                                     f_transform_consistency=False,calculate_consistency_while_clustering=False,
                                                     n_consistency_CPUs=5,consistency_save_path='spatial-consistency.pkl',
-                                                    n_consistency_iters=100):
+                                                    n_consistency_iters=100,consistency_percentage_ROIs_for_thresholding=0):
     
     """
     Consistency-related inputs:
@@ -161,7 +161,8 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                            - 'strict data-driven': similar as above but when a voxel has been found to be sub-threshold
                            for a ROI, it is entirely removed from the base of possible voxels for this ROI
                            - 'voxel-wise': no voxel is added to a ROI if its average correlation to the voxels of this
-                           ROI is lower than its average correlation to some other ROI
+                           ROI is lower than its average correlation at least consistency_percentage_ROIs_for_thresholding * n_ROIs
+                           other ROIs
                            - 'voxel-neighbor': no voxel is added to a ROI if its average correlation to the voxels of this
                            ROI is lower than the average correlation of a voxel to its closest (6-voxel) neighborhood. This
                            threshold value is calculated as an average across all voxels before starting to build the ROIs.
@@ -178,6 +179,8 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                         (default: 5)
     consistency_save_path: str, a path to which the consistency pickle will be saved (default: 'spatial_consistency.pkl')
     n_consistency_iters: int, number of random seed sets to generate if ROI_centroids == 'random' (default = 100)
+    consistency_percentage_ROIs_for_thresholding: float (from 0 to 1), used in thresholding (see above) (default = 0 that is interprested
+                                                  as 1/n_ROIs)
     """
     
     
@@ -271,7 +274,7 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
             M = pn.MultilayerNetwork(aspects=1,fullyInterconnected=False)
             previous_voxels_in_clusters = dict()
             for tw_no in layerset:
-                cfg = {'ROICentroids':ROI_centroids,'names':ROI_names,'imgdata':imgdata[:,:,:,start_times[tw_no]:end_times[tw_no]],'threshold':consistency_threshold,'targetFunction':consistency_target_function,'fTransform':f_transform_consistency,'nROIs':n_clusters,'template':template}
+                cfg = {'ROICentroids':ROI_centroids,'names':ROI_names,'imgdata':imgdata[:,:,:,start_times[tw_no]:end_times[tw_no]],'threshold':consistency_threshold,'targetFunction':consistency_target_function,'fTransform':f_transform_consistency,'nROIs':n_clusters,'template':template,'percentageROIsForThresholding':consistency_percentage_ROIs_for_thresholding}
                 if not tw_no in voxels_in_clusters_by_timewindow:
                     voxels_in_clusters = dict()
                     if ROI_centroids == 'random':
