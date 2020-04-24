@@ -1136,7 +1136,7 @@ def calculateReHo(params):
     ReHo = getKendallW(neighborTs)
     return ReHo
 
-def findCentroidsByReHo(imgdata,nCentroids,nNeighbors=6,nCPUs=5):
+def findCentroidsByReHo(imgdata,nCentroids,nNeighbors=6,nCPUs=5,minDistance=0):
     """
     Finds the N voxels with the largest Regional Homogeneity (Zang et al. 2004; NeuroImage)
     to be used as ROI centroids.
@@ -1150,6 +1150,7 @@ def findCentroidsByReHo(imgdata,nCentroids,nNeighbors=6,nCPUs=5):
     nNeighbors: int, number or neighbors used for calculating ReHo; options: 6 (faces),
                 18 (faces + edges), 26 (faces + edges + corners) (default = 6)
     nCPUs: int, number of CPUs used for the parallel calculation (default = 5)
+    minDistance: float, the minimum distance (in voxels) between two centroids (default = 0)
     
     Returns:
     --------
@@ -1167,7 +1168,23 @@ def findCentroidsByReHo(imgdata,nCentroids,nNeighbors=6,nCPUs=5):
         for i, voxelCoords in enumerate(voxelCoordinates):
             ReHos[i] = calculateReHo((cfg,voxelCoords))
     indices = np.argsort(ReHos)
-    centroidCoordinates = voxelCoordinates[indices][0:nCentroids]
+    if minDistance == 0:
+        centroidCoordinates = voxelCoordinates[indices][0:nCentroids]
+    else:
+        centroidCoordinates = []
+        sortedCoordinates = voxelCoordinates[indices]
+        i = 0
+        while len(centroidCoordinates) < nCentroids:
+            candidateCentroid = sortedCoordinates[i]
+            if len(centroidCoordinates) == 0:
+                centroidCoordinates.append(candidateCentroid)
+            else:
+                distances = [np.sqrt((centroid[0]-candidateCentroid[0])**2+(centroid[1]-candidateCentroid[1])**2+(centroid[2]-candidateCentroid[2])**2) for centroid in centroidCoordinates]
+                if np.all(distances>minDistance):
+                    centroidCoordinates.append(candidateCentroid)
+                    i = i+1
+                else:
+                    i = i+1
     return centroidCoordinates
     
     
