@@ -142,13 +142,15 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                                                     consistency_threshold=-1,consistency_target_function='spatialConsistency',
                                                     f_transform_consistency=False,calculate_consistency_while_clustering=False,
                                                     n_consistency_CPUs=5,consistency_save_path='spatial-consistency.pkl',
-                                                    n_consistency_iters=100,consistency_percentage_ROIs_for_thresholding=0):
+                                                    n_consistency_iters=100,consistency_percentage_ROIs_for_thresholding=0,
+                                                    n_ReHo_neighbors=6,percentage_min_centroid_distance=0):
     
     """
     Consistency-related inputs:
     ---------------------------
     ROI_centroids: n_ROIs x 3 np.array, coordinates (in voxels) of the ROI centroids, around which ROIs are grown in some clustering
-                   methods (default=[]). Set to 'random' to use random seeds.
+                   methods (default=[]). Set to 'random' to use random seeds and to 'ReHo' to use seeds selected by maximal Regional 
+                   Homogeneity.
     ROI_names: list of strs, names of ROIs (default=[])
     consistency_threshold: float or string. The lowest centroid-voxel correlation that leads to adding a voxel. All
                            thresholding approaches may lead to parcellation where some voxels don't belong to any ROI.
@@ -181,6 +183,10 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
     n_consistency_iters: int, number of random seed sets to generate if ROI_centroids == 'random' (default = 100)
     consistency_percentage_ROIs_for_thresholding: float (from 0 to 1), used in thresholding (see above) (default = 0 that is interprested
                                                   as 1/n_ROIs)
+    percentage_min_centroid_distance: float (from 0 to 1), the minimal distance between ReHo-based seeds is set as 
+                                   percentageMinCentroidDistance times maximal dimension of imgdata (default = 0).
+    n_ReHo_neighbors: int, number or neighbors used for calculating ReHo if ReHo-based seeds are to be used; options: 6 (faces),
+                    18 (faces + edges), 26 (faces + edges + corners) (default = 6)
     """
     
     
@@ -274,7 +280,11 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
             M = pn.MultilayerNetwork(aspects=1,fullyInterconnected=False)
             previous_voxels_in_clusters = dict()
             for tw_no in layerset:
-                cfg = {'ROICentroids':ROI_centroids,'names':ROI_names,'imgdata':imgdata[:,:,:,start_times[tw_no]:end_times[tw_no]],'threshold':consistency_threshold,'targetFunction':consistency_target_function,'fTransform':f_transform_consistency,'nROIs':n_clusters,'template':template,'percentageROIsForThresholding':consistency_percentage_ROIs_for_thresholding}
+                cfg = {'ROICentroids':ROI_centroids,'names':ROI_names,'imgdata':imgdata[:,:,:,start_times[tw_no]:end_times[tw_no]],
+                       'threshold':consistency_threshold,'targetFunction':consistency_target_function,
+                       'fTransform':f_transform_consistency,'nROIs':n_clusters,'template':template,
+                       'percentageROIsForThresholding':consistency_percentage_ROIs_for_thresholding,'nCPUs':n_consistency_CPUs,
+                       'nReHoNeighbors':n_ReHo_neighbors,'percentageMinCentroidDistance':percentage_min_centroid_distance}
                 if not tw_no in voxels_in_clusters_by_timewindow:
                     voxels_in_clusters = dict()
                     if ROI_centroids == 'random':

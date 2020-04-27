@@ -1111,6 +1111,8 @@ def calculateReHo(params):
             resolution: double, distance between voxels if coordinates are given in mm;
                         if coordinates are given in voxels, use the default value 1 (voxels
                         are 1 voxel away from each other).
+            skipNeighborless: bool, if True, ReHo of neighborless voxels (i.e. voxels, whose neighbors
+                              are outside of the brain) is set to 0 (default = False)
                
     Returns:
     --------
@@ -1128,15 +1130,23 @@ def calculateReHo(params):
         resolution = cfg['resolution']
     else:
         resolution = 1
+    if 'skipNeighborless' in cfg.keys():
+        skipNeighborless = cfg['skipNeighborless']
+    else:
+        skipNeighborless = False
     assert nNeighbors in [6,18,26], "Bad number of neigbors; select either 6 (faces), 18 (faces + edges) or 26 (faces + edges + corners)"
     allVoxels = list(zip(*np.where(np.any(imgdata != 0, 3) == True)))
     neighbors = findNeighbors(voxelCoords,resolution,allVoxels,nNeighbors)
-    neighbors = np.array(neighbors)
-    neighborTs = imgdata[neighbors[:,0],neighbors[:,1],neighbors[:,2],:]
-    ReHo = getKendallW(neighborTs)
+    if skipNeighborless and len(neighbors) == 0:
+        ReHo = 0
+    else:
+        neighbors.append(voxelCoords)
+        neighbors = np.array(neighbors)
+        neighborTs = imgdata[neighbors[:,0],neighbors[:,1],neighbors[:,2],:]
+        ReHo = getKendallW(neighborTs)
     return ReHo
 
-def findCentroidsByReHo(imgdata,nCentroids,nNeighbors=6,nCPUs=5,minDistance=0):
+def getCentroidsByReHo(imgdata,nCentroids,nNeighbors=6,nCPUs=5,minDistancePercentage=0):
     """
     Finds the N voxels with the largest Regional Homogeneity (Zang et al. 2004; NeuroImage)
     to be used as ROI centroids.
@@ -1150,29 +1160,33 @@ def findCentroidsByReHo(imgdata,nCentroids,nNeighbors=6,nCPUs=5,minDistance=0):
     nNeighbors: int, number or neighbors used for calculating ReHo; options: 6 (faces),
                 18 (faces + edges), 26 (faces + edges + corners) (default = 6)
     nCPUs: int, number of CPUs used for the parallel calculation (default = 5)
-    minDistance: float, the minimum distance (in voxels) between two centroids (default = 0)
+    minDistancePercentage: float (between 0 and 1), the minimum distance between two centroids
+                          is set as minDistancePercentage of the dimensions of imgdata (default = 0)
     
     Returns:
     --------
     centroidCoordinates: nCentroids x 3 np.array, coordinates of a voxel (in voxels)
     """
     #TODO: test!!!
+    assert 0<= minDistancePercentage <= 1, "Bad minDistancePercentage, give a float between 0 and 1"
+    minDistance = minDistancePercentage*max(imgdata.shape[0:3])
     voxelCoordinates = list(zip(*np.where(np.any(imgdata != 0, 3) == True)))
     cfg = {'imgdata':imgdata,'nNeighbors':nNeighbors}
     if True:
         paramSpace = [(cfg,voxelCoords) for voxelCoords in voxelCoordinates]
-        pool = Pool(maxWorkders = nCPUs)
+        pool = Pool(max_workers = nCPUs)
         ReHos = list(pool.map(calculateReHo,paramSpace,chunksize=1))
     else: # a debugging case
-        ReHos = np.zeros(voxelCoordinates.shape[0])
+        ReHos = np.zeros(len(voxelCoordinates))
         for i, voxelCoords in enumerate(voxelCoordinates):
             ReHos[i] = calculateReHo((cfg,voxelCoords))
     indices = np.argsort(ReHos)
     if minDistance == 0:
-        centroidCoordinates = voxelCoordinates[indices][0:nCentroids]
+        centroidCoordinates = [voxelCoordinates[index] for index in indices]
+        centroidCoordinates = centroidCoordinates[0:nCentroids]
     else:
         centroidCoordinates = []
-        sortedCoordinates = voxelCoordinates[indices]
+        sortedCoordinates = [voxelCoordinates[index] for index in indices]
         i = 0
         while len(centroidCoordinates) < nCentroids:
             candidateCentroid = sortedCoordinates[i]
@@ -1762,7 +1776,8 @@ def growOptimizedROIs(cfg,verbal=True):
     cfg: dict, contains:
          ROICentroids: nROIs x 3 np.array, coordinates of the centroids of the ROIs.
                   This can be a ROI centroid from an atlas but also any other
-                  (arbitrary) point. Set ROICentroids to 'random' to use random seeds.
+                  (arbitrary) point. Set ROICentroids to 'random' to use random seeds or 'ReHo'
+                  to use seeds selected by Regional Homogeneity.
          names: list of strs, names of the ROIs, can be e.g. the anatomical name associated with
                   the centroid. Default = ''.
          imgdata: x*y*z*t np.array, fMRI measurement data to be used for the clustering.
@@ -1801,6 +1816,11 @@ def growOptimizedROIs(cfg,verbal=True):
                                        (default = 5)
          percentageROIsForThresholding: float (from 0 to 1), in thresholding a voxel can't be added to a ROI if it's more correlated to at least
                                         percentageROIsForThresholding*nROIs other ROIs (default: 1/nROIs, i.e. to any other ROIs)
+         percentageMinCentroidDistance: float (from 0 to 1), the minimal distance between ReHo-based seeds is set as 
+                                        percentageMinCentroidDistance times maximal dimension of imgdata (default = 0).
+         nReHoNeighbors: int, number or neighbors used for calculating ReHo if ReHo-based seeds are to be used; options: 6 (faces),
+                         18 (faces + edges), 26 (faces + edges + corners) (default = 6)
+         nCPUs: int, number of CPUs used for parallel calculations (for finding the ReHo-based seeds) (default = 5)
     
     Returns:
     --------
@@ -1813,14 +1833,28 @@ def growOptimizedROIs(cfg,verbal=True):
         cfg['template'] = None
     if not 'nROIs' in cfg.keys():
         cfg['nROIs'] = 100
+    imgdata = cfg['imgdata']
+    voxelCoordinates = list(zip(*np.where(np.any(imgdata != 0, 3) == True)))
     if cfg['ROICentroids'] == 'random':
         template = cfg['template']
         nROIs = cfg['nROIs']
         ROICentroids = getRandomCentroids(nROIs,template)
+    elif cfg['ROICentroids'] == 'ReHo':
+        if 'percentageMinCentroidDistance' in cfg.keys():
+            percentageMinCentroidDistance = cfg['percentageMinCentroidDistance']
+        else:
+            percentageMinCentroidDistance = 0
+        if 'nReHoNeighbbors' in cfg.keys():
+            nReHoNeighbors = cfg['nReHoNeighbors']
+        else:
+            nReHoNeighbors = 6
+        if 'nCPUs' in cfg.keys():
+            nCPUs = cfg['nCPUs']
+        else:
+            nCPUs = 5
+        ROICentroids = getCentroidsByReHo(imgdata,cfg['nROIs'],nReHoNeighbors,nCPUs,percentageMinCentroidDistance,skipNeighborless=True)
     else:
         ROICentroids = cfg['ROICentroids']
-    imgdata = cfg['imgdata']
-    voxelCoordinates = list(zip(*np.where(np.any(imgdata != 0, 3) == True)))
     if 'threshold' in cfg.keys():
         threshold = cfg['threshold']
     else:
@@ -2014,8 +2048,11 @@ def growOptimizedROIs(cfg,verbal=True):
         
         nInQueue = sum([len(priorityQueue) for priorityQueue in priorityQueues])
     
-    spatialConsistency = calculateSpatialConsistencyInParallel(ROIInfo['ROIVoxels'],allVoxelTs,consistencyType=consistencyType,fTransform=fTransform,nCPUs=5)
-    meanConsistency = np.mean(spatialConsistency)
+    if False: # I don't know why these should be calculated here; they just take additional time. Let's bring them back later if they're needed.
+        spatialConsistency = calculateSpatialConsistencyInParallel(ROIInfo['ROIVoxels'],allVoxelTs,consistencyType=consistencyType,fTransform=fTransform,nCPUs=5)
+        meanConsistency = np.mean(spatialConsistency)
+    else:
+        meanConsistency = 0
 
     return voxelLabels, voxelCoordinates, meanConsistency
     

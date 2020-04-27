@@ -130,15 +130,19 @@ def clustering_method_parser(image_array,timewindow,overlap,nlayers,clustering_m
         # optional params
         centroid_template_filename = clustering_method_params.get('centroid_template_filename',None)
         use_random_seeds = clustering_method_params.get('use_random_seeds',True)
+        seed_selection_method = clustering_method_params.get('seed_selection_method','template')
         nclusters = clustering_method_params.get('nclusters',100) # used only if centroid template is not used (i.e. random seeds are used)
         # choose centroid acquisition method
-        if centroid_template_filename and not use_random_seeds:
+        if seed_selection_method == 'random' or use_random_seeds:
+            centroid_template_array = np.sum(np.abs(image_array),axis=3)
+            ROI_centroids = 'random'
+        elif seed_selection_method == 'ReHo':
+            centroid_template_array = np.sum(np.abs(image_array),axis=3)
+            ROI_centroids = 'ReHo'
+        elif seed_selection_method == 'template' or (centroid_template_filename and not use_random_seeds):
             centroid_template_data = nib.load(centroid_template_filename)
             centroid_template_array = centroid_template_data.get_fdata()
             ROI_centroids, _,_ = cbc.findROICentroids(centroid_template_array,fixCentroids=True)
-        elif use_random_seeds:
-            centroid_template_array = np.sum(np.abs(image_array),axis=3)
-            ROI_centroids = 'random'
         ROI_names = clustering_method_params.get('ROI_names',[])
         consistency_threshold = clustering_method_params.get('consistency_threshold',-1)
         n_consistency_iters = clustering_method_params.get('n_consistency_iters',100)
@@ -148,7 +152,21 @@ def clustering_method_parser(image_array,timewindow,overlap,nlayers,clustering_m
         calculate_consistency_while_clustering = clustering_method_params.get('calculate_consistency',False)
         consistency_save_path = clustering_method_params.get('consistency_save_path',None)
         consistency_percentage_ROIs_for_thresholding = clustering_method_params.get('consistency_percentage_ROIs_for_thresholding',0)
-        return network_construction.yield_clustered_multilayer_network_in_layersets(image_array,nlayers,timewindow,overlap,n_clusters=nclusters,method=method,template=centroid_template_array,nanlogfile=nan_log,event_time_stamps=event_time_stamps,ROI_centroids=ROI_centroids,ROI_names=ROI_names,consistency_threshold=consistency_threshold,consistency_target_function=consistency_target_function,f_transform_consistency=False,calculate_consistency_while_clustering=calculate_consistency_while_clustering,n_consistency_iters=n_consistency_iters,n_consistency_CPUs=n_consistency_CPUs,consistency_save_path=consistency_save_path,consistency_percentage_ROIs_for_thresholding=consistency_percentage_ROIs_for_thresholding)
+        n_ReHo_neighbors = clustering_method_params.get('n_ReHo_neighbors',6)
+        percentage_min_centroid_distance = clustering_method_params.get('percentage_min_centroid_distance',0)
+        return network_construction.yield_clustered_multilayer_network_in_layersets(image_array,nlayers,timewindow,overlap,
+                                                                                    n_clusters=nclusters,method=method,
+                                                                                    template=centroid_template_array,
+                                                                                    nanlogfile=nan_log,event_time_stamps=event_time_stamps,
+                                                                                    ROI_centroids=ROI_centroids,ROI_names=ROI_names,
+                                                                                    consistency_threshold=consistency_threshold,
+                                                                                    consistency_target_function=consistency_target_function,
+                                                                                    f_transform_consistency=False,calculate_consistency_while_clustering=calculate_consistency_while_clustering,
+                                                                                    n_consistency_iters=n_consistency_iters,n_consistency_CPUs=n_consistency_CPUs,
+                                                                                    consistency_save_path=consistency_save_path,
+                                                                                    consistency_percentage_ROIs_for_thresholding=consistency_percentage_ROIs_for_thresholding,
+                                                                                    n_ReHo_neighbors=n_ReHo_neighbors,
+                                                                                    percentage_min_centroid_distance=percentage_min_centroid_distance)
     elif method=='random_balls':
         # required params
         ROI_centroids='random'
