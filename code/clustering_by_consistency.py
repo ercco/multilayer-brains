@@ -1171,8 +1171,8 @@ def getCentroidsByReHo(imgdata,nCentroids,nNeighbors=6,nCPUs=5,minDistancePercen
     assert 0<= minDistancePercentage <= 1, "Bad minDistancePercentage, give a float between 0 and 1"
     minDistance = minDistancePercentage*max(imgdata.shape[0:3])
     voxelCoordinates = list(zip(*np.where(np.any(imgdata != 0, 3) == True)))
-    cfg = {'imgdata':imgdata,'nNeighbors':nNeighbors}
-    if True:
+    cfg = {'imgdata':imgdata,'nNeighbors':nNeighbors,'skipNeighborless':True}
+    if False:
         paramSpace = [(cfg,voxelCoords) for voxelCoords in voxelCoordinates]
         pool = Pool(max_workers = nCPUs)
         ReHos = list(pool.map(calculateReHo,paramSpace,chunksize=1))
@@ -1180,7 +1180,7 @@ def getCentroidsByReHo(imgdata,nCentroids,nNeighbors=6,nCPUs=5,minDistancePercen
         ReHos = np.zeros(len(voxelCoordinates))
         for i, voxelCoords in enumerate(voxelCoordinates):
             ReHos[i] = calculateReHo((cfg,voxelCoords))
-    indices = np.argsort(ReHos)
+    indices = np.argsort(ReHos)[::-1]
     if minDistance == 0:
         centroidCoordinates = [voxelCoordinates[index] for index in indices]
         centroidCoordinates = centroidCoordinates[0:nCentroids]
@@ -1189,16 +1189,16 @@ def getCentroidsByReHo(imgdata,nCentroids,nNeighbors=6,nCPUs=5,minDistancePercen
         sortedCoordinates = [voxelCoordinates[index] for index in indices]
         i = 0
         while len(centroidCoordinates) < nCentroids:
+            if i >= len(sortedCoordinates):
+                raise Exception('Cannot define all ReHo-based seeds since there are no voxels left far enough from all the seeds. Select either a smaller number of seeds or a shorter minimum distance between them.')
             candidateCentroid = sortedCoordinates[i]
             if len(centroidCoordinates) == 0:
                 centroidCoordinates.append(candidateCentroid)
             else:
                 distances = [np.sqrt((centroid[0]-candidateCentroid[0])**2+(centroid[1]-candidateCentroid[1])**2+(centroid[2]-candidateCentroid[2])**2) for centroid in centroidCoordinates]
-                if np.all(distances>minDistance):
+                if np.all(np.array(distances)>minDistance):
                     centroidCoordinates.append(candidateCentroid)
-                    i = i+1
-                else:
-                    i = i+1
+            i = i+1
     return centroidCoordinates
     
     
@@ -1852,7 +1852,7 @@ def growOptimizedROIs(cfg,verbal=True):
             nCPUs = cfg['nCPUs']
         else:
             nCPUs = 5
-        ROICentroids = getCentroidsByReHo(imgdata,cfg['nROIs'],nReHoNeighbors,nCPUs,percentageMinCentroidDistance,skipNeighborless=True)
+        ROICentroids = getCentroidsByReHo(imgdata,cfg['nROIs'],nReHoNeighbors,nCPUs,percentageMinCentroidDistance)
     else:
         ROICentroids = cfg['ROICentroids']
     if 'threshold' in cfg.keys():

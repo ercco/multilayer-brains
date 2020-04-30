@@ -30,7 +30,7 @@ density_params = {'intralayer_density':intralayer_density,'interlayer_density':i
 # clustering method params
 clustering_method = 'consistency_optimized'
 consistency_target_function = 'weighted mean consistency'
-nclusters = 246
+nclusters = 20
 n_consistency_CPUs = 5
 n_consistency_iters = 5
 consistency_threshold = 'maximal-voxel-wise' 
@@ -41,7 +41,7 @@ consistency_save_path = '/media/onerva/KINGSTON/test-data/010/spatial_consistenc
 consistency_percentage_ROIs_for_thresholding = 10
 seed_selection_method = 'ReHo'
 n_ReHo_neighbors = 6
-percentage_min_centroid_distance = 0
+percentage_min_centroid_distance = 0.1
 clustering_method_params = {'method':clustering_method,'consistency_target_function':consistency_target_function,
                             'consistency_threshold':consistency_threshold,'craddock_threshold':craddock_threshold,
                             'nclusters':nclusters,'calculate_consistency':calculate_consistency_while_clustering,
