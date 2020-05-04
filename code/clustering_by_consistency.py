@@ -1199,6 +1199,7 @@ def getCentroidsByReHo(imgdata,nCentroids,nNeighbors=6,nCPUs=5,minDistancePercen
                 if np.all(np.array(distances)>minDistance):
                     centroidCoordinates.append(candidateCentroid)
             i = i+1
+    centroidCoordinates = np.array(centroidCoordinates)
     return centroidCoordinates
     
     

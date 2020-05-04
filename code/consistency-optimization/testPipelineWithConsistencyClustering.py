@@ -30,7 +30,7 @@ density_params = {'intralayer_density':intralayer_density,'interlayer_density':i
 # clustering method params
 clustering_method = 'consistency_optimized'
 consistency_target_function = 'weighted mean consistency'
-nclusters = 20
+nclusters = 10
 n_consistency_CPUs = 5
 n_consistency_iters = 5
 consistency_threshold = 'maximal-voxel-wise' 
