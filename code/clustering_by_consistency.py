@@ -1169,9 +1169,12 @@ def getCentroidsByReHo(imgdata,nCentroids,nNeighbors=6,nCPUs=5,minDistancePercen
     """
     assert 0<= minDistancePercentage <= 1, "Bad minDistancePercentage, give a float between 0 and 1"
     voxelCoordinates = list(zip(*np.where(np.any(imgdata != 0, 3) == True)))
-    x = [voxel[0] for voxel in voxelCoordinates].sort()
-    y = [voxel[1] for voxel in voxelCoordinates].sort()
-    z = [voxel[2] for voxel in voxelCoordinates].sort()
+    x = [voxel[0] for voxel in voxelCoordinates]
+    x.sort()
+    y = [voxel[1] for voxel in voxelCoordinates]
+    y.sort()
+    z = [voxel[2] for voxel in voxelCoordinates]
+    z.sort()
     xDist = x[-1]-x[0]
     yDist = y[-1]-y[0]
     zDist = z[-1]-z[0]
