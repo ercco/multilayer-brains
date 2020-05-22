@@ -1875,7 +1875,6 @@ def growOptimizedROIs(cfg,verbal=True):
     voxelCoordinates: list (len = nVoxels) of tuples (len = 3), coordinates (in voxels) of all voxels
     meanConsistency: double, mean consistency of the final ROIs
     """
-    #import pdb; pdb.set_trace()
     # Setting up: reading parameters
     targetFunction = cfg['targetFunction'] 
     if not 'template' in cfg.keys():
