@@ -139,6 +139,7 @@ def clustering_method_parser(image_array,timewindow,overlap,nlayers,clustering_m
         elif seed_selection_method == 'ReHo':
             centroid_template_array = np.sum(np.abs(image_array),axis=3)
             ROI_centroids = 'ReHo'
+            ReHo_measure = clustering_method_params.get('ReHo_measure','ReHo')
         elif seed_selection_method == 'template' or (centroid_template_filename and not use_random_seeds):
             centroid_template_data = nib.load(centroid_template_filename)
             centroid_template_array = centroid_template_data.get_fdata()
@@ -166,7 +167,8 @@ def clustering_method_parser(image_array,timewindow,overlap,nlayers,clustering_m
                                                                                     consistency_save_path=consistency_save_path,
                                                                                     consistency_percentage_ROIs_for_thresholding=consistency_percentage_ROIs_for_thresholding,
                                                                                     n_ReHo_neighbors=n_ReHo_neighbors,
-                                                                                    percentage_min_centroid_distance=percentage_min_centroid_distance)
+                                                                                    percentage_min_centroid_distance=percentage_min_centroid_distance,
+                                                                                    ReHo_measure = ReHo_measure)
     elif method=='random_balls':
         # required params
         ROI_centroids='random'

@@ -42,13 +42,15 @@ consistency_percentage_ROIs_for_thresholding = 10
 seed_selection_method = 'ReHo'
 n_ReHo_neighbors = 6
 percentage_min_centroid_distance = 0.1
+ReHo_measure = 'spatialConsistency'
 clustering_method_params = {'method':clustering_method,'consistency_target_function':consistency_target_function,
                             'consistency_threshold':consistency_threshold,'craddock_threshold':craddock_threshold,
                             'nclusters':nclusters,'calculate_consistency':calculate_consistency_while_clustering,
                             'consistency_save_path':consistency_save_path,'n_consistency_CPUs':n_consistency_CPUs,
                             'n_consistency_iters':n_consistency_iters,'use_random_seeds':use_random_seeds,
                             'centroid_template_filename':mask_or_template_filename,'n_ReHo_neighbors':n_ReHo_neighbors,
-                            'percentage_min_centroid_distance':percentage_min_centroid_distance,'seed_selection_method':seed_selection_method}
+                            'percentage_min_centroid_distance':percentage_min_centroid_distance,'seed_selection_method':seed_selection_method,
+                            'ReHo_measure':ReHo_measure}
 
 # Let's look for all subgraphs of two layers, two nodes and two layers, three nodes
 nlayers = 2

@@ -143,7 +143,7 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                                                     f_transform_consistency=False,calculate_consistency_while_clustering=False,
                                                     n_consistency_CPUs=5,consistency_save_path='spatial-consistency.pkl',
                                                     n_consistency_iters=100,consistency_percentage_ROIs_for_thresholding=0,
-                                                    n_ReHo_neighbors=6,percentage_min_centroid_distance=0):
+                                                    n_ReHo_neighbors=6,percentage_min_centroid_distance=0,ReHo_measure='ReHo'):
     
     """
     Consistency-related inputs:
@@ -187,6 +187,7 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                                    percentageMinCentroidDistance times maximal dimension of imgdata (default = 0).
     n_ReHo_neighbors: int, number or neighbors used for calculating ReHo if ReHo-based seeds are to be used; options: 6 (faces),
                     18 (faces + edges), 26 (faces + edges + corners) (default = 6)
+    ReHoMeasure: str, the measure of the neighbourhood similarity used to pick the ReHo-based seeds, options 'ReHo', 'spatialConsistency' (default = 'ReHo')
     """
     
     
@@ -284,7 +285,8 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                        'threshold':consistency_threshold,'targetFunction':consistency_target_function,
                        'fTransform':f_transform_consistency,'nROIs':n_clusters,'template':template,
                        'percentageROIsForThresholding':consistency_percentage_ROIs_for_thresholding,'nCPUs':n_consistency_CPUs,
-                       'nReHoNeighbors':n_ReHo_neighbors,'percentageMinCentroidDistance':percentage_min_centroid_distance}
+                       'nReHoNeighbors':n_ReHo_neighbors,'percentageMinCentroidDistance':percentage_min_centroid_distance,
+                       'ReHoMeasure':ReHo_measure}
                 if not tw_no in voxels_in_clusters_by_timewindow:
                     voxels_in_clusters = dict()
                     if ROI_centroids == 'random':

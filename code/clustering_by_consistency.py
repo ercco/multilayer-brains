@@ -1113,6 +1113,12 @@ def calculateReHo(params):
                         are 1 voxel away from each other).
             skipNeighborless: bool, if True, ReHo of neighborless voxels (i.e. voxels, whose neighbors
                               are outside of the brain) is set to 0 (default = False)
+            ReHoMeasure: str, the measure of the neighbourhood similarity used to pick the centroits, options
+                         'ReHo', 'spatialConsistency' (default = 'ReHo')
+            consistencyType: str, definition of spatial consistency to be used (default: 'pearson c' 
+                             (mean Pearson correlation coefficient)); used only if ReHoMeasure == 'spatialConsistency
+            fTransform: bool, should Fisher Z transform be applied when calculating spatial consistency (default=False);
+                        used only if ReHoMeasure == 'spatialConsistency'
                
     Returns:
     --------
@@ -1136,7 +1142,20 @@ def calculateReHo(params):
         skipNeighborless = cfg['skipNeighborless']
     else:
         skipNeighborless = False
+    if 'ReHoMeasure' in cfg.keys():
+        ReHoMeasure = cfg['ReHoMeasure']
+    else:
+        ReHoMeasure = 'ReHo'
+    if 'consistencyType' in cfg.keys():
+        consistencyType = cfg['consistencyType']
+    else:
+        consistencyType = 'pearson c'
+    if 'fTransform' in cfg.keys():
+        fTransform = cfg['fTransform']
+    else:
+        fTransform = False
     assert nNeighbors in [6,18,26], "Bad number of neigbors; select either 6 (faces), 18 (faces + edges) or 26 (faces + edges + corners)"
+    assert ReHoMeasure in ['ReHo','spatialConsistency'], "Unknown ReHoMeasure, select 'ReHo' or 'spatialConsistency'"
     allVoxels = list(zip(*np.where(np.any(imgdata != 0, 3) == True)))
     neighbors = findNeighbors(voxelCoords,resolution,allVoxels,nNeighbors)
     if skipNeighborless and len(neighbors) == 0:
@@ -1145,13 +1164,19 @@ def calculateReHo(params):
         neighbors.append(voxelCoords)
         neighbors = np.array(neighbors)
         neighborTs = imgdata[neighbors[:,0],neighbors[:,1],neighbors[:,2],:]
-        ReHo = getKendallW(neighborTs)
+        if ReHoMeasure == 'ReHo':
+            ReHo = getKendallW(neighborTs)
+        elif ReHoMeasure == 'spatialConsistency':
+            indices = np.arange(len(neighbors))
+            consistencyCfg = {'allVoxelTs':neighborTs,'consistencyType':consistencyType,'fTransform':fTransform}
+            ReHo = calculateSpatialConsistency((consistencyCfg,indices))
     return ReHo
 
-def getCentroidsByReHo(imgdata,nCentroids,nNeighbors=6,nCPUs=5,minDistancePercentage=0):
+def getCentroidsByReHo(imgdata,nCentroids,nNeighbors=6,nCPUs=5,minDistancePercentage=0,ReHoMeasure='ReHo',
+                       consistencyType='pearson c',fTransform='False'):
     """
-    Finds the N voxels with the largest Regional Homogeneity (Zang et al. 2004; NeuroImage)
-    to be used as ROI centroids.
+    Finds the N voxels with the largest Regional Homogeneity (Zang et al. 2004; NeuroImage) or other
+    measure of neighbourhood similarity to be used as ROI centroids.
     
     Parameters:
     -----------
@@ -1164,12 +1189,19 @@ def getCentroidsByReHo(imgdata,nCentroids,nNeighbors=6,nCPUs=5,minDistancePercen
     nCPUs: int, number of CPUs used for the parallel calculation (default = 5)
     minDistancePercentage: float (between 0 and 1), the minimum distance between two centroids
                           is set as minDistancePercentage of the dimensions of imgdata (default = 0)
+    ReHoMeasure: str, the measure of the neighbourhood similarity used to pick the centroits, options
+                 'ReHo', 'spatialConsistency' (default = 'ReHo')
+    consistencyType: str, definition of spatial consistency to be used if 
+                     targetFunction == 'spatialConsistency' (default: 'pearson c' (mean Pearson correlation coefficient))
+    fTransform: bool, should Fisher Z transform be applied if targetFunction == 'spatialConsistency' 
+                (default=False)
     
     Returns:
     --------
     centroidCoordinates: nCentroids x 3 np.array, coordinates of a voxel (in voxels)
     """
     assert 0<= minDistancePercentage <= 1, "Bad minDistancePercentage, give a float between 0 and 1"
+    assert ReHoMeasure in ['ReHo','spatialConsistency'], "Unknown ReHoMeasure, select 'ReHo' or 'spatialConsistency'"
     voxelCoordinates = list(zip(*np.where(np.any(imgdata != 0, 3) == True)))
     x = [voxel[0] for voxel in voxelCoordinates]
     x.sort()
@@ -1182,7 +1214,8 @@ def getCentroidsByReHo(imgdata,nCentroids,nNeighbors=6,nCPUs=5,minDistancePercen
     zDist = z[-1]-z[0]
     minDistance = minDistancePercentage*max(xDist,yDist,zDist)
     
-    cfg = {'imgdata':imgdata,'nNeighbors':nNeighbors,'skipNeighborless':True}
+    cfg = {'imgdata':imgdata,'nNeighbors':nNeighbors,'skipNeighborless':True,'ReHoMeasure':ReHoMeasure,
+           'consistencyType':consistencyType,'fTransform':fTransform}
     if True:
         paramSpace = [(cfg,voxelCoords) for voxelCoords in voxelCoordinates]
         pool = Pool(max_workers = nCPUs)
@@ -1191,6 +1224,7 @@ def getCentroidsByReHo(imgdata,nCentroids,nNeighbors=6,nCPUs=5,minDistancePercen
         ReHos = np.zeros(len(voxelCoordinates))
         for i, voxelCoords in enumerate(voxelCoordinates):
             ReHos[i] = calculateReHo((cfg,voxelCoords))
+            
     indices = np.argsort(ReHos)[::-1]
     if minDistance == 0:
         centroidCoordinates = [voxelCoordinates[index] for index in indices]
@@ -1832,6 +1866,7 @@ def growOptimizedROIs(cfg,verbal=True):
                                         percentageMinCentroidDistance times maximal dimension of imgdata (default = 0).
          nReHoNeighbors: int, number or neighbors used for calculating ReHo if ReHo-based seeds are to be used; options: 6 (faces),
                          18 (faces + edges), 26 (faces + edges + corners) (default = 6)
+         ReHoMeasure: str, the measure of the neighbourhood similarity used to pick the ReHo-based seeds, options 'ReHo', 'spatialConsistency' (default = 'ReHo')
          nCPUs: int, number of CPUs used for parallel calculations (for finding the ReHo-based seeds) (default = 5)
     
     Returns:
@@ -1842,12 +1877,21 @@ def growOptimizedROIs(cfg,verbal=True):
     """
     #import pdb; pdb.set_trace()
     # Setting up: reading parameters
+    targetFunction = cfg['targetFunction'] 
     if not 'template' in cfg.keys():
         cfg['template'] = None
     if not 'nROIs' in cfg.keys():
         cfg['nROIs'] = 100
     imgdata = cfg['imgdata']
     voxelCoordinates = list(zip(*np.where(np.any(imgdata != 0, 3) == True)))
+    if 'consistencyType' in cfg.keys():
+        consistencyType = cfg['consistencyType']
+    else:
+        consistencyType = 'pearson c'
+    if 'fTransform' in cfg.keys():
+        fTransform = cfg['fTransform']
+    else:
+        fTransform = False
     if cfg['ROICentroids'] == 'random':
         template = cfg['template']
         nROIs = cfg['nROIs']
@@ -1865,23 +1909,18 @@ def growOptimizedROIs(cfg,verbal=True):
             nCPUs = cfg['nCPUs']
         else:
             nCPUs = 5
-        ROICentroids = getCentroidsByReHo(imgdata,cfg['nROIs'],nReHoNeighbors,nCPUs,percentageMinCentroidDistance)
+        if 'ReHoMeasure' in cfg.keys():
+            ReHoMeasure = cfg['ReHoMeasure']
+        else:
+            ReHoMeasure = 'ReHo'
+        ROICentroids = getCentroidsByReHo(imgdata,cfg['nROIs'],nReHoNeighbors,nCPUs,percentageMinCentroidDistance,ReHoMeasure,
+                                          consistencyType,fTransform)
     else:
         ROICentroids = cfg['ROICentroids']
     if 'threshold' in cfg.keys():
         threshold = cfg['threshold']
     else:
-        threshold = -1
-    targetFunction = cfg['targetFunction']
-    if targetFunction == 'spatialConsistency' or targetFunction == 'weighted mean consistency' or targetFunction == 'local weighted consistency':
-        if 'consistencyType' in cfg.keys():
-            consistencyType = cfg['consistencyType']
-        else:
-            consistencyType = 'pearson c'
-        if 'fTransform' in cfg.keys():
-            fTransform = cfg['fTransform']
-        else:
-            fTransform = False
+        threshold = -1       
     if 'verbal' in cfg.keys():
         verbal = cfg['verbal']
     else:
