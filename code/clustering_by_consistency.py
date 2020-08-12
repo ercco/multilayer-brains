@@ -1841,8 +1841,9 @@ def growOptimizedROIs(cfg,verbal=True):
                     for a ROI, it is entirely removed from the base of possible voxels for this ROI
                     - 'voxel-wise': no voxel is added to a ROI if its average correlation to the voxels of this
                     ROI is lower than its average correlation to at least N other ROIs. For setting N, see the
-                    percentageROIsForThresholding parameter below (default: 1/nROIs, i.e. to any other ROIs)
-                    - 'maximal-voxel-wise': same as voxel-wise above but only the N strongest correlations per ROI
+                    percentageROIsForThresholding parameter below (default: N = nROIs, i.e. a voxel is not added to a ROI
+                    if it's more correlated to any other ROI)
+                    - 'maximal-voxel-wise': same as voxel-wise above but only the N strongest average correlations per ROI
                     are taken into account; for setting N see the nCorrelationsForThresholding parameter below
                     - 'voxel-neighbor': no voxel is added to a ROI if its average correlation to the voxels of this
                     ROI is lower than the average correlation of a voxel to its closest (6-voxel) neighborhood. This
