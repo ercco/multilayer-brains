@@ -1235,7 +1235,9 @@ def getCentroidsByReHo(imgdata,nCentroids,nNeighbors=6,nCPUs=5,minDistancePercen
         i = 0
         while len(centroidCoordinates) < nCentroids:
             if i >= len(sortedCoordinates):
-                raise Exception('Cannot define all ReHo-based seeds since there are no voxels left far enough from all the seeds. Select either a smaller number of seeds or a shorter minimum distance between them.')
+                break
+                print('Cannot define all ReHo-based seeds since there are no voxels left far enough from all the seeds. Returning ' + str(len(centroidCoordinates)) + ' seeds instead. For defining ' + str(nCentroids) + ' seeds, select a shorter minimum distance.')
+                #raise Exception('Cannot define all ReHo-based seeds since there are no voxels left far enough from all the seeds. Select either a smaller number of seeds or a shorter minimum distance between them.')
             candidateCentroid = sortedCoordinates[i]
             if len(centroidCoordinates) == 0:
                 centroidCoordinates.append(candidateCentroid)
