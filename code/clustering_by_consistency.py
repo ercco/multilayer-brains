@@ -1530,7 +1530,7 @@ def calculateSpatialConsistencyPostHoc(dataFiles,layersetwiseNetworkSavefolders,
                                        savePath=None,subjectIndex=None):
     """
     Calculates spatial consistency and size of earlier-created ROIs. The ROIs should be
-    saved by pipeline.isomorphism_classes_from_file; they cant be
+    saved by pipeline.isomorphism_classes_from_file; they can be
     e.g. an outcome of consistency optimization or random chunks of voxels. 
     
     Parameters:
