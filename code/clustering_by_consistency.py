@@ -1946,7 +1946,7 @@ def growOptimizedROIs(cfg,verbal=True):
     nTime = imgdata.shape[3]
     if threshold in ['maximal-voxel-wise','voxel-wise']:
         if 'percentageROIsForThresholding' in cfg.keys() and cfg['percentageROIsForThresholding']>0:
-            nROIsForThresholding = int(np.ceil(cfg['percentageROIsForThresholding']*(nROIs-1))
+            nROIsForThresholding = int(np.ceil(cfg['percentageROIsForThresholding']*(nROIs-1)))
         else:
             nROIsForThresholding = 1
     
