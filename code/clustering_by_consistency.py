@@ -1527,7 +1527,7 @@ def calculateSpatialConsistencyInParallel(voxelIndices,allVoxelTs,consistencyTyp
 
 def calculateSpatialConsistencyPostHoc(dataFiles,layersetwiseNetworkSavefolders,networkFiles,
                                        nLayers,timewindow,overlap,consistencyType='pearson c',fTransform=False,nCPUs=5,
-                                       savePath=None,subjectIndex=None):
+                                       savePath=None,subjectIndex=None,remainder=0):
     """
     Calculates spatial consistency and size of earlier-created ROIs. The ROIs should be
     saved by pipeline.isomorphism_classes_from_file; they can be
@@ -1556,6 +1556,11 @@ def calculateSpatialConsistencyPostHoc(dataFiles,layersetwiseNetworkSavefolders,
     subjectIndex: int, index of the subject to be analyzed. If subject index is not None, only
                   the subjectIndex-th dataFile and layersetwiseNetworkSaveFolder will be used.
                   (default = None)
+    remainder: int, tells how many layers to read from the last networkFile (If same layer is saved
+               in multiple files, networkFiles may contain only each nLayers-th file. In this case,
+               it may be necessary to read some, but not all, layers from the last file. The value
+               of the remainder can be defined from n_networkFiles/nLayers = X + remainder where X is int.)
+               (default = 0, all layers of the last file are read)
     
     Returns:
     --------
@@ -1587,8 +1592,11 @@ def calculateSpatialConsistencyPostHoc(dataFiles,layersetwiseNetworkSavefolders,
         k = network_construction.get_number_of_layers(imgdata.shape,timewindow,overlap)
         startTimes,endTimes = network_construction.get_start_and_end_times(k,timewindow,overlap)
         layerIndex = 0
-        for networkFile in networkFiles:
+        for n, networkFile in enumerate(networkFiles):
             _,voxelCoordinates = readVoxelIndices(layersetwiseNetworkSavefolder+'/'+networkFile,layers='all')
+            if remainder > 0 and n == len(networkFiles) - 1:
+                voxelCoordinates = voxelCoordinates[(-1*remainder):]
+                layerIndex += (nLayers - remainder)
             for voxelCoordinatesPerLayer, startTime, endTime in zip(voxelCoordinates, startTimes[layerIndex:layerIndex+nLayers], endTimes[layerIndex:layerIndex+nLayers]):
                 roiSizesPerLayer = [len(voxelCoords) for voxelCoords in voxelCoordinatesPerLayer]
                 roiSizes.extend(roiSizesPerLayer)
