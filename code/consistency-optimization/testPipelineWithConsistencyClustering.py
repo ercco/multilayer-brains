@@ -12,11 +12,11 @@ with the consistency-optimized clustering.
 
 import pipeline
 
-nii_data_filename = '/media/onerva/KINGSTON/test-data/010/epi_STD_mask_detrend_fullreg.nii'
+nii_data_filename = '/media/onerva/0012-D687/test-data/010/epi_STD_mask_detrend_fullreg.nii'
 subj_id = '010'
 run_number = 1
 
-mask_or_template_filename = '/media/onerva/KINGSTON/test-data/group_roi_mask-30-4mm_with_subcortl_and_cerebellum.nii'
+mask_or_template_filename = '/media/onerva/0012-D687/test-data/group_roi_mask-30-4mm_with_subcortl_and_cerebellum.nii'
 mask_or_template_name = 'random'
 
 timewindow = 100
@@ -30,19 +30,20 @@ density_params = {'intralayer_density':intralayer_density,'interlayer_density':i
 # clustering method params
 clustering_method = 'consistency_optimized'
 consistency_target_function = 'weighted mean consistency'
-nclusters = 10
+nclusters = 246
 n_consistency_CPUs = 5
 n_consistency_iters = 5
-consistency_threshold = 'maximal-voxel-wise' 
+consistency_threshold = 'voxel-wise' 
 craddock_threshold = 0.5 # the correlation threshold used by Craddock et al. 2012
 use_random_seeds = False
 calculate_consistency_while_clustering = False
-consistency_save_path = '/media/onerva/KINGSTON/test-data/010/spatial_consistency_optimized_mean_weighted_consistency_nonthresholded.pkl'
-consistency_percentage_ROIs_for_thresholding = 10
+consistency_save_path = '/media/onerva/0012-D687/test-data/010/spatial_consistency_optimized_mean_weighted_consistency_nonthresholded.pkl'
+consistency_percentage_ROIs_for_thresholding = 0.2
 seed_selection_method = 'ReHo'
 n_ReHo_neighbors = 6
 percentage_min_centroid_distance = 0.1
 ReHo_measure = 'spatialConsistency'
+include_neighborhoods_in_centroids = True
 clustering_method_params = {'method':clustering_method,'consistency_target_function':consistency_target_function,
                             'consistency_threshold':consistency_threshold,'craddock_threshold':craddock_threshold,
                             'nclusters':nclusters,'calculate_consistency':calculate_consistency_while_clustering,
@@ -50,7 +51,8 @@ clustering_method_params = {'method':clustering_method,'consistency_target_funct
                             'n_consistency_iters':n_consistency_iters,'use_random_seeds':use_random_seeds,
                             'centroid_template_filename':mask_or_template_filename,'n_ReHo_neighbors':n_ReHo_neighbors,
                             'percentage_min_centroid_distance':percentage_min_centroid_distance,'seed_selection_method':seed_selection_method,
-                            'ReHo_measure':ReHo_measure}
+                            'ReHo_measure':ReHo_measure,'consistency_percentage_ROIs_for_thresholding':consistency_percentage_ROIs_for_thresholding,
+                            'include_neighborhoods_in_centroids':include_neighborhoods_in_centroids}
 
 # Let's look for all subgraphs of two layers, two nodes and two layers, three nodes
 nlayers = 2
@@ -61,7 +63,7 @@ allowed_aspects = [0]
 use_aggregated_dict = True
 use_examples_dict = True
 
-preprocess_level_folder = '/media/onerva/KINGSTON/test-data/outcome/test-pipeline/'
+preprocess_level_folder = '/media/onerva/0012-D687/test-data/outcome/test-pipeline/'
 
 # TODO: check how to define save paths for networks
 
