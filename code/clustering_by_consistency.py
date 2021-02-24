@@ -1905,7 +1905,6 @@ def growOptimizedROIs(cfg,verbal=True):
     meanConsistency: double, mean consistency of the final ROIs
     """
     # Setting up: reading parameters
-    import pdb; pdb.set_trace()
     targetFunction = cfg['targetFunction'] 
     if not 'template' in cfg.keys():
         cfg['template'] = None
