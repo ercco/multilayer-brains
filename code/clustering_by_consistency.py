@@ -2123,10 +2123,6 @@ def growOptimizedROIs(cfg,verbal=True):
         selectedMeasures.append(np.amax(maximalMeasures))
         voxelLabels[voxelToAdd] = ROIToUpdate
         
-        maxSizes.append(max(ROISizes))
-        meanSizes.append(np.mean(ROISizes))
-        corrDiffs.append(candidateCorrelation-np.sort(testCorrelations)[-1])
-        
         # Updating priority queues: adding the ROIless neighbors of the updated ROI
         neighbors = findROIlessVoxels(findNeighbors(voxelCoordinates[voxelToAdd],allVoxels=voxelCoordinates),ROIInfo)['ROIlessMap'] # Here, we search for the ROIless neighbors of the added voxel; findROIlessNeighbors() can't be used since it finds the ROIless neighbors of a ROI
         ROIlessIndices = [np.where((voxelCoordinates == neighbor).all(axis=1)==1)[0][0] for neighbor in neighbors]
