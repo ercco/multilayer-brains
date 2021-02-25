@@ -2155,8 +2155,6 @@ def growOptimizedROIs(cfg,verbal=True):
         meanConsistency = np.mean(spatialConsistency)
     else:
         meanConsistency = 0
-        
-    import pdb; pdb.set_trace()
 
     return voxelLabels, voxelCoordinates, meanConsistency
     
