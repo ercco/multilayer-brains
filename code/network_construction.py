@@ -630,7 +630,7 @@ def threshold_multilayer_network(M,intralayer_density=0.05,interlayer_density=0.
         else:
             M[edge[0],edge[1],edge[2],edge[3]] = 0
             
-    # threshold subsequent layers and intralayer networks between current layer and the previous one
+    # threshold subsequent layers and interlayer networks between current layer and the previous one
     del(layers[0])
     for layer in layers:
         ordered_edges = sorted(pn.subnet(M,M.iter_nodes(),[layer]).edges,key=lambda w:w[4],reverse=True)
