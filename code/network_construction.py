@@ -543,8 +543,12 @@ def calculate_spatial_consistency(windowdata,voxels_in_clusters,f_transform_cons
         counter = counter + len(voxels)
     consistencies = cbc.calculateSpatialConsistencyInParallel(voxel_indices, all_voxel_ts,fTransform=f_transform_consistency,nCPUs=n_consistency_CPUs)
     consistency_dict = {'consistency_type':'spatial with pearson c', 'ftransform':f_transform_consistency, 'consistencies':consistencies, 'ROI_sizes':ROI_sizes}
-    with open(consistency_save_path, 'wb') as f:
-        pickle.dump(consistency_dict, f, -1)
+    if consistency_save_path is not None:
+        with open(consistency_save_path, 'wb') as f:
+            pickle.dump(consistency_dict, f, -1)
+        return
+    else:
+        return consistency_dict
 
 
 
