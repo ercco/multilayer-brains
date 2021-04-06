@@ -395,6 +395,8 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                     else:
                         calculate_spatial_consistency(windowdata,voxels_in_clusters,f_transform_consistency,n_consistency_CPUs,consistency_save_path_final)
             del(voxels_in_clusters_by_timewindow[min(voxels_in_clusters_by_timewindow)])
+            yield M
+            del(M)
     elif method=='craddock':
         voxels_in_clusters_by_timewindow = dict()
         for layerset in layersets:
@@ -444,6 +446,7 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                         consistency_dict_aggregated[tw_no] = calculate_spatial_consistency(windowdata,voxels_in_clusters,f_transform_consistency,n_consistency_CPUs,None)
                     else:
                         calculate_spatial_consistency(windowdata,voxels_in_clusters,f_transform_consistency,n_consistency_CPUs,consistency_save_path_final)
+            del(voxels_in_clusters_by_timewindow[min(voxels_in_clusters_by_timewindow)])
             yield M
             del(M)
     else:
