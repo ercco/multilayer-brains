@@ -175,9 +175,11 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                                  'correlationWithCentroid': the Pearson correlation between the ROI centroid time series and 
                                                             voxel time series
     f_transform_consistency: boolean; if True, Fischer z transform is applied to the correlations before averaging (default: False)
-    calculate_consistency_while_clustering: boolean; if True, the consistency of each cluster is calculated and saved in a pickle
+    calculate_consistency_while_clustering: boolean or 'aggregate'; if True, the consistency of each cluster is calculated and saved in a pickle
                                             file during the clustering. Note that setting this to True doesn't change clustering
-                                            method. So, this can be applied together with 'template' or 'sklearn' methods. (default: False)
+                                            method. So, this can be applied together with 'template' or 'sklearn' methods.
+                                            If 'aggregate', a pickled dict containing the consistency dicts with timewindow numbers as keys is saved
+                                            to consistency_save_path. (default: False)
     n_consistency_CPUs: int, number of CPUs used for parallel consistency calculations if calculate_consistency_while_clustering == True.
                         (default: 5)
     consistency_save_path: str, a path to which the consistency pickle will be saved (default: 'spatial_consistency.pkl')
@@ -206,6 +208,9 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
         start_times = [0] + event_time_stamps
         end_times = event_time_stamps + [imgdata.shape[3]]
     layersets = zip(*(range(k)[ii:] for ii in range(layerset_size)))
+    
+    if calculate_consistency_while_clustering == 'aggregate':
+        consistency_dict_aggregated = dict()
     
     if method == 'sklearn':
         voxels_in_clusters_by_timewindow = dict()
@@ -246,7 +251,10 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                         consistency_save_path_final = name + '_' + str(tw_no) + '.' + extension
                     else:
                         consistency_save_path_final = name + '_' + str(tw_no) + '.pkl'
-                    calculate_spatial_consistency(windowdata,voxels_in_clusters,f_transform_consistency,n_consistency_CPUs,consistency_save_path_final)
+                    if calculate_consistency_while_clustering == 'aggregate' and tw_no not in consistency_dict_aggregated:
+                        consistency_dict_aggregated[tw_no] = calculate_spatial_consistency(windowdata,voxels_in_clusters,f_transform_consistency,n_consistency_CPUs,None)
+                    else:
+                        calculate_spatial_consistency(windowdata,voxels_in_clusters,f_transform_consistency,n_consistency_CPUs,consistency_save_path_final)
             del(voxels_in_clusters_by_timewindow[min(voxels_in_clusters_by_timewindow)])
             yield M
             del(M)
@@ -276,7 +284,10 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                         consistency_save_path_final = name + '_' + str(tw_no) + '.' + extension
                     else:
                         consistency_save_path_final = name + '_' + str(tw_no) + '.pkl'
-                    calculate_spatial_consistency(windowdata,voxels_in_clusters,f_transform_consistency,n_consistency_CPUs,consistency_save_path_final)
+                    if calculate_consistency_while_clustering == 'aggregate' and tw_no not in consistency_dict_aggregated:
+                        consistency_dict_aggregated[tw_no] = calculate_spatial_consistency(windowdata,voxels_in_clusters,f_transform_consistency,n_consistency_CPUs,None)
+                    else:
+                        calculate_spatial_consistency(windowdata,voxels_in_clusters,f_transform_consistency,n_consistency_CPUs,consistency_save_path_final)
             yield M
             del(M)
     elif method == 'consistency_optimized':
@@ -330,7 +341,10 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                         consistency_save_path_final = name + '_' + str(tw_no) + '.' + extension
                     else:
                         consistency_save_path_final = name + '_' + str(tw_no) + '.pkl'
-                    calculate_spatial_consistency(windowdata,voxels_in_clusters,f_transform_consistency,n_consistency_CPUs,consistency_save_path_final)
+                    if calculate_consistency_while_clustering == 'aggregate' and tw_no not in consistency_dict_aggregated:
+                        consistency_dict_aggregated[tw_no] = calculate_spatial_consistency(windowdata,voxels_in_clusters,f_transform_consistency,n_consistency_CPUs,None)
+                    else:
+                        calculate_spatial_consistency(windowdata,voxels_in_clusters,f_transform_consistency,n_consistency_CPUs,consistency_save_path_final)
             del(voxels_in_clusters_by_timewindow[min(voxels_in_clusters_by_timewindow)])
             yield M
             del(M)
@@ -376,7 +390,10 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                         consistency_save_path_final = name + '_' + str(tw_no) + '.' + extension
                     else:
                         consistency_save_path_final = name + '_' + str(tw_no) + '.pkl'
-                    calculate_spatial_consistency(windowdata,voxels_in_clusters,f_transform_consistency,n_consistency_CPUs,consistency_save_path_final)
+                    if calculate_consistency_while_clustering == 'aggregate' and tw_no not in consistency_dict_aggregated:
+                        consistency_dict_aggregated[tw_no] = calculate_spatial_consistency(windowdata,voxels_in_clusters,f_transform_consistency,n_consistency_CPUs,None)
+                    else:
+                        calculate_spatial_consistency(windowdata,voxels_in_clusters,f_transform_consistency,n_consistency_CPUs,consistency_save_path_final)
             del(voxels_in_clusters_by_timewindow[min(voxels_in_clusters_by_timewindow)])
     elif method=='craddock':
         voxels_in_clusters_by_timewindow = dict()
@@ -423,13 +440,20 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                         consistency_save_path_final = name + '_' + str(tw_no) + '.' + extension
                     else:
                         consistency_save_path_final = name + '_' + str(tw_no) + '.pkl'
-                    calculate_spatial_consistency(windowdata,voxels_in_clusters,f_transform_consistency,n_consistency_CPUs,consistency_save_path_final)
+                    if calculate_consistency_while_clustering == 'aggregate' and tw_no not in consistency_dict_aggregated:
+                        consistency_dict_aggregated[tw_no] = calculate_spatial_consistency(windowdata,voxels_in_clusters,f_transform_consistency,n_consistency_CPUs,None)
+                    else:
+                        calculate_spatial_consistency(windowdata,voxels_in_clusters,f_transform_consistency,n_consistency_CPUs,consistency_save_path_final)
             yield M
             del(M)
     else:
         raise NotImplementedError('Not implemented')
     
-        
+    if calculate_consistency_while_clustering == 'aggregate':
+        with open(consistency_save_path, 'wb') as f:
+            pickle.dump(consistency_dict_aggregated, f, -1)
+
+
 def make_specific_timewindows_network_sklearn(imgdata,start_times,end_times,layer_labels,n_clusters=100,nanlogfile=None):
     # start_times = vector of timewindow start times
     # end_times = vector of timewindow end times
