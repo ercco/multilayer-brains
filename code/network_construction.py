@@ -245,6 +245,7 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                         M[str(previous_voxels_in_clusters[previous_cluster_number]),tw_no-1][str(voxels_in_clusters[cluster_number]),tw_no] = cluster_overlap
                 previous_voxels_in_clusters = voxels_in_clusters # reference to the same object
                 if calculate_consistency_while_clustering: # calculating spatial consistency of formed clusters
+                    assert consistency_save_path != None, 'Path for saving spatial consistency is not defined. Please give a path as the consistency_save_path parameter (or set calculate_consistency to False).'
                     windowdata = imgdata[:,:,:,start_times[tw_no]:end_times[tw_no]]
                     if '.' in consistency_save_path:
                         name,extension = consistency_save_path.split('.')
@@ -279,6 +280,7 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                             else:
                                 print('NaN correlation at nodes '+node1+', '+node2+' at timewindow '+str(tw_no)+'\n')
                 if calculate_consistency_while_clustering: #calculating spatial consistency of formed clusters
+                    assert consistency_save_path != None, 'Path for saving spatial consistency is not defined. Please give a path as the consistency_save_path parameter (or set calculate_consistency to False).'
                     windowdata = imgdata[:,:,:,start_times[tw_no]:end_times[tw_no]]
                     if '.' in consistency_save_path:
                         name,extension = consistency_save_path.split('.')
@@ -337,6 +339,7 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                         M[str(previous_voxels_in_clusters[previous_cluster_number]),tw_no-1][str(voxels_in_clusters[cluster_number]),tw_no] = cluster_overlap
                 previous_voxels_in_clusters = voxels_in_clusters
                 if calculate_consistency_while_clustering:
+                    assert consistency_save_path != None, 'Path for saving spatial consistency is not defined. Please give a path as the consistency_save_path parameter (or set calculate_consistency to False).'
                     windowdata = imgdata[:,:,:,start_times[tw_no]:end_times[tw_no]]
                     if '.' in consistency_save_path:
                         name,extension = consistency_save_path.split('.')
@@ -387,6 +390,7 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                         M[str(previous_voxels_in_clusters[previous_cluster_number]),tw_no-1][str(voxels_in_clusters[cluster_number]),tw_no] = cluster_overlap
                 previous_voxels_in_clusters = voxels_in_clusters
                 if calculate_consistency_while_clustering:
+                    assert consistency_save_path != None, 'Path for saving spatial consistency is not defined. Please give a path as the consistency_save_path parameter (or set calculate_consistency to False).'
                     windowdata = imgdata[:,:,:,start_times[tw_no]:end_times[tw_no]]
                     if '.' in consistency_save_path:
                         name,extension = consistency_save_path.split('.')
@@ -440,6 +444,7 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                         M[str(previous_voxels_in_clusters[previous_cluster_number]),tw_no-1][str(voxels_in_clusters[cluster_number]),tw_no] = cluster_overlap
                 previous_voxels_in_clusters = voxels_in_clusters
                 if calculate_consistency_while_clustering:
+                    assert consistency_save_path != None, 'Path for saving spatial consistency is not defined. Please give a path as the consistency_save_path parameter (or set calculate_consistency to False).'
                     windowdata = imgdata[:,:,:,start_times[tw_no]:end_times[tw_no]]
                     if '.' in consistency_save_path:
                         name,extension = consistency_save_path.split('.')
