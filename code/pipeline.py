@@ -110,7 +110,7 @@ def clustering_method_parser(image_array,timewindow,overlap,nlayers,clustering_m
         template_array = template_data.get_fdata()
         # optional params
         nan_log = clustering_method_params.get('nan_log_savename',None)
-        calculate_consistency_while_clustering = clustering_method_params.get('calculate_consistency',False)
+        calculate_consistency_while_clustering = clustering_method_params.get('calculate_consistency_while_clustering',False)
         consistency_save_path = clustering_method_params.get('consistency_save_path',None)
         n_consistency_CPUs = clustering_method_params.get('n_consistency_CPUs',5)
         return network_construction.yield_clustered_multilayer_network_in_layersets(image_array,nlayers,timewindow,overlap,n_clusters=-1,method=method,template=template_array,nanlogfile=nan_log,calculate_consistency_while_clustering=calculate_consistency_while_clustering,consistency_save_path=consistency_save_path,n_consistency_CPUs=n_consistency_CPUs)
@@ -120,7 +120,7 @@ def clustering_method_parser(image_array,timewindow,overlap,nlayers,clustering_m
         # optional params
         nan_log = clustering_method_params.get('nan_log_savename',None)
         event_time_stamps = clustering_method_params.get('event_time_stamps',None)
-        calculate_consistency_while_clustering = clustering_method_params.get('calculate_consistency',False)
+        calculate_consistency_while_clustering = clustering_method_params.get('calculate_consistency_while_clustering',False)
         consistency_save_path = clustering_method_params.get('consistency_save_path',None)
         n_consistency_CPUs = clustering_method_params.get('n_consistency_CPUs',5)
         return network_construction.yield_clustered_multilayer_network_in_layersets(image_array,nlayers,timewindow,overlap,n_clusters=nclusters,method=method,template=None,nanlogfile=nan_log,event_time_stamps=event_time_stamps,calculate_consistency_while_clustering=calculate_consistency_while_clustering,consistency_save_path=consistency_save_path,n_consistency_CPUs=n_consistency_CPUs)
@@ -151,7 +151,7 @@ def clustering_method_parser(image_array,timewindow,overlap,nlayers,clustering_m
         n_consistency_CPUs = clustering_method_params.get('n_consistency_CPUs',5)
         nan_log = clustering_method_params.get('nan_log_savename',None)
         event_time_stamps = clustering_method_params.get('event_time_stamps',None)
-        calculate_consistency_while_clustering = clustering_method_params.get('calculate_consistency',False)
+        calculate_consistency_while_clustering = clustering_method_params.get('calculate_consistency_while_clustering',False)
         consistency_save_path = clustering_method_params.get('consistency_save_path',None)
         consistency_percentage_ROIs_for_thresholding = clustering_method_params.get('consistency_percentage_ROIs_for_thresholding',0)
         n_ReHo_neighbors = clustering_method_params.get('n_ReHo_neighbors',6)
@@ -179,7 +179,7 @@ def clustering_method_parser(image_array,timewindow,overlap,nlayers,clustering_m
         template_data = nib.load(template_filename)
         template_array = template_data.get_fdata()
         # optional params
-        calculate_consistency_while_clustering = clustering_method_params.get('calculate_consistency',False)
+        calculate_consistency_while_clustering = clustering_method_params.get('calculate_consistency_while_clustering',False)
         consistency_save_path = clustering_method_params.get('consistency_save_path',None)
         n_consistency_CPUs = clustering_method_params.get('n_consistency_CPUs',5)
         nan_log = clustering_method_params.get('nan_log_savename',None)
@@ -190,7 +190,7 @@ def clustering_method_parser(image_array,timewindow,overlap,nlayers,clustering_m
         nclusters=clustering_method_params['nclusters']
         craddock_threshold = clustering_method_params['craddock_threshold']
         # optional params
-        calculate_consistency_while_clustering = clustering_method_params.get('calculate_consistency',False)
+        calculate_consistency_while_clustering = clustering_method_params.get('calculate_consistency_while_clustering',False)
         consistency_save_path = clustering_method_params.get('consistency_save_path',None)
         n_consistency_CPUs = clustering_method_params.get('n_consistency_CPUs',5)
         nan_log = clustering_method_params.get('nan_log_savename',None)
