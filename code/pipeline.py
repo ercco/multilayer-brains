@@ -127,6 +127,7 @@ def clustering_method_parser(image_array,timewindow,overlap,nlayers,clustering_m
     elif method == 'consistency_optimized':
         # required params
         consistency_target_function = clustering_method_params['consistency_target_function']
+        consistency_size_exp = clustering_method_params.get('consistency_size_exp',1)
         # optional params
         centroid_template_filename = clustering_method_params.get('centroid_template_filename',None)
         use_random_seeds = clustering_method_params.get('use_random_seeds',True)
@@ -163,14 +164,15 @@ def clustering_method_parser(image_array,timewindow,overlap,nlayers,clustering_m
                                                                                     ROI_centroids=ROI_centroids,ROI_names=ROI_names,
                                                                                     consistency_threshold=consistency_threshold,
                                                                                     consistency_target_function=consistency_target_function,
-                                                                                    f_transform_consistency=False,calculate_consistency_while_clustering=calculate_consistency_while_clustering,
+                                                                                    f_transform_consistency=False,consistency_size_exp=consistency_size_exp,
+                                                                                    calculate_consistency_while_clustering=calculate_consistency_while_clustering,
                                                                                     n_consistency_iters=n_consistency_iters,n_consistency_CPUs=n_consistency_CPUs,
                                                                                     consistency_save_path=consistency_save_path,
                                                                                     consistency_percentage_ROIs_for_thresholding=consistency_percentage_ROIs_for_thresholding,
                                                                                     n_ReHo_neighbors=n_ReHo_neighbors,
                                                                                     percentage_min_centroid_distance=percentage_min_centroid_distance,
                                                                                     ReHo_measure = ReHo_measure,
-                                                                                    include_neighborhoods_in_centroids=include_neighborhoods_in_centroids)
+                                                                                    include_neighborhoods_in_centroids=include_neighborhoods_in_centroids,)
     elif method=='random_balls':
         # required params
         ROI_centroids='random'

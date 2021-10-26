@@ -140,7 +140,7 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                                                     method='sklearn',template=None,nanlogfile=None,
                                                     event_time_stamps=None,ROI_centroids=[],ROI_names=[],
                                                     consistency_threshold=-1,consistency_target_function='spatialConsistency',
-                                                    f_transform_consistency=False,calculate_consistency_while_clustering=False,
+                                                    f_transform_consistency=False,consistency_size_exp=1,calculate_consistency_while_clustering=False,
                                                     n_consistency_CPUs=5,consistency_save_path='spatial-consistency.pkl',
                                                     n_consistency_iters=100,consistency_percentage_ROIs_for_thresholding=0,
                                                     n_ReHo_neighbors=6,percentage_min_centroid_distance=0,ReHo_measure='ReHo',
@@ -174,7 +174,10 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                                                        the candidate voxel (the default option)
                                  'correlationWithCentroid': the Pearson correlation between the ROI centroid time series and 
                                                             voxel time series
+                                 TODO: add the missing descriptions
     f_transform_consistency: boolean; if True, Fischer z transform is applied to the correlations before averaging (default: False)
+    consistency_size_exp: float; exponent of size used for weighting consistency if consistency_target_function = 'weighted mean consistency'.
+                          (default = 1)
     calculate_consistency_while_clustering: boolean or 'aggregate'; if True, the consistency of each cluster is calculated and saved in a pickle
                                             file during the clustering. Note that setting this to True doesn't change clustering
                                             method. So, this can be applied together with 'template' or 'sklearn' methods.
@@ -303,7 +306,8 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                 cfg = {'ROICentroids':ROI_centroids,'names':ROI_names,'imgdata':imgdata[:,:,:,start_times[tw_no]:end_times[tw_no]],
                        'threshold':consistency_threshold,'targetFunction':consistency_target_function,
                        'fTransform':f_transform_consistency,'nROIs':n_clusters,'template':template,
-                       'percentageROIsForThresholding':consistency_percentage_ROIs_for_thresholding,'nCPUs':n_consistency_CPUs,
+                       'percentageROIsForThresholding':consistency_percentage_ROIs_for_thresholding,
+                       'sizeExp':consistency_size_exp,'nCPUs':n_consistency_CPUs,
                        'nReHoNeighbors':n_ReHo_neighbors,'percentageMinCentroidDistance':percentage_min_centroid_distance,
                        'ReHoMeasure':ReHo_measure,'includeNeighborhoodsInCentroids':include_neighborhoods_in_centroids}
                 if not tw_no in voxels_in_clusters_by_timewindow:

@@ -1874,10 +1874,13 @@ def growOptimizedROIs(cfg,verbal=True):
                     threshold value is calculated as an average across all voxels before starting to build the ROIs.
          targetFunction: str, measure that will be optimized (options: correlationWithCentroid, spatialConsistency, weighted
                          mean consistency, local weighted consistency)
+         TODO: add descriptions of param options for targetFunction
          consistencyType: str, definition of spatial consistency to be used if 
                           targetFunction == 'spatialConsistency' (default: 'pearson c' (mean Pearson correlation coefficient))
          fTransform: bool, should Fisher Z transform be applied if targetFunction == 'spatialConsistency' 
                      (default=False)
+         sizeExp: float, exponent of size used for weighting the consistency if targetFunction = 'weighted mean consistency'. 
+                  (default=1)
          template: 3D numpy array where each element corresponds to a voxel. The value of voxels included in the analysis should
                    be >0 (e.g. the index of the ROI the voxel belongs to). Voxels outside of ROIs (= outside of the gray matter) 
                    have value 0. Template is used only if cfg[ROICentroids] == 'random' (default = None)
@@ -1920,6 +1923,10 @@ def growOptimizedROIs(cfg,verbal=True):
         fTransform = cfg['fTransform']
     else:
         fTransform = False
+    if 'sizeExp' in cfg.keys():
+        sizeExp = cfg['sizeExp']
+    else:
+        sizeExp = 1
     if cfg['ROICentroids'] == 'random':
         template = cfg['template']
         nROIs = cfg['nROIs']
@@ -2032,7 +2039,7 @@ def growOptimizedROIs(cfg,verbal=True):
             for j, voxel in enumerate(priorityQueue):
                 voxelIndices = np.concatenate((ROI,np.array([voxel])))
                 tempConsistencies[i] = calculateSpatialConsistency(({'allVoxelTs':allVoxelTs,'consistencyType':consistencyType,'fTransform':fTransform},voxelIndices))
-                priorityMeasures[j] = sum([tempConsistency*tempSize for tempConsistency,tempSize in zip(tempConsistencies,tempSizes)])/sum(tempSizes) 
+                priorityMeasures[j] = sum([tempConsistency*tempSize**sizeExp for tempConsistency,tempSize in zip(tempConsistencies,tempSizes)])/sum([size**sizeExp for size in tempSizes]) 
         elif targetFunction == 'local weighted consistency':
             priorityMeasures = np.zeros(len(priorityQueue))
             for j, voxel in enumerate(priorityQueue):
