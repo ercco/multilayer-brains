@@ -170,11 +170,14 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                            ROI is lower than the average correlation of a voxel to its closest (6-voxel) neighborhood. This
                            threshold value is calculated as an average across all voxels before starting to build the ROIs.
     consistency_target_function: str, homogeneity  measure that will be optimized. Options: 
-                                 'spatialConsistency': the mean Pearson correlation coefficient of the voxels already in the ROI and 
-                                                       the candidate voxel (the default option)
-                                 'correlationWithCentroid': the Pearson correlation between the ROI centroid time series and 
-                                                            voxel time series
-                                 TODO: add the missing descriptions
+                           Options:
+                           - 'correlationWithCentroid': the Pearson correlation between the ROI centroid time series and 
+                           voxel time series
+                           - 'spatialConsistency': the mean Pearson correlation coefficient of the voxels already in the ROI and 
+                           the candidate voxel
+                           - 'weighted mean consistency': the mean consistency (mean Pearson correlation coefficient of the voxels)
+                           over all ROIs, weighted by ROI size (for setting the power of ROI size used for weighting, use the 
+                           sizeExp parameter)
     f_transform_consistency: boolean; if True, Fischer z transform is applied to the correlations before averaging (default: False)
     consistency_size_exp: float; exponent of size used for weighting consistency if consistency_target_function = 'weighted mean consistency'.
                           (default = 1)

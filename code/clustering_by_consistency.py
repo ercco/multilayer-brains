@@ -1276,9 +1276,15 @@ def updateQueue(ROIIndex, priorityQueue, targetFunction, centroidTs, allVoxelTs,
     ROIIndex: int, index of the ROI whose priority queue will be updated
     priorityQueue: list of ints, elements of the queue are indices that refer to
                    rows of allVoxelTs.
-    targetFunction: str, the priority value function. Options: 'correlationWithCentroid',
-                    'spatialConsistency', 'weighted mean consistency'
-                    TODO: add descriptions
+    targetFunction: str, the priority value function.
+                    options:
+                         - 'correlationWithCentroid': the Pearson correlation between the ROI centroid time series and 
+                         voxel time series
+                         - 'spatialConsistency': the mean Pearson correlation coefficient of the voxels already in the ROI and 
+                         the candidate voxel
+                         - 'weighted mean consistency': the mean consistency (mean Pearson correlation coefficient of the voxels)
+                         over all ROIs, weighted by ROI size (for setting the power of ROI size used for weighting, use the 
+                         sizeExp parameter)
     centroidTs: nTimepoints np.array, time series of the ROI centroid
     allVoxelTs: nVoxels x nTimepoints np.array, time series of all voxels
     ROIVoxels: list of ROISizes x 1 np.array, indices of the voxels belonging
@@ -1836,7 +1842,8 @@ def growOptimizedROIs(cfg,verbal=True):
     Possible measures are:
         1) the correlation between the ROI centroid time series and voxel time series
         2) the spatial consistency (mean Pearson correlation coefficient) of the voxels
-           already in the ROI and the candidate voxel
+           already in the ROI and the candidate voxel, possibly weighted by ROI size
+        3) the mean spatial consistency of all ROIs, possibly weighted by ROI size
     
     Parameters:
     -----------
