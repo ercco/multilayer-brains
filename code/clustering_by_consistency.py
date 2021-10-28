@@ -2067,6 +2067,8 @@ def growOptimizedROIs(cfg,verbal=True):
     mask = np.ones(len(maximalMeasures))
     if threshold == 'voxel-neighborhood':
         thresholdValue = calculateVoxelNeighborhoodCorrelation(voxelCoordinates,allVoxelTs)
+    if threshold in ['voxel-wise','maximal-voxel-wise','voxel-neighborhood']:
+        excludedVoxels = {}
 
     # Actual optimization takes place inside the while loop: 
     while nInQueue>0:
@@ -2092,6 +2094,7 @@ def growOptimizedROIs(cfg,verbal=True):
         elif threshold == 'voxel-wise' or threshold == 'maximal-voxel-wise':
             testCorrelations = []
             tsToAdd = allVoxelTs[voxelToAdd,:]
+            # TODO: check with the voxel-wise and maximal-voxel-wise cases could be combined
             if threshold == 'voxel-wise':
                 for i, ROI in enumerate(ROIInfo['ROIVoxels']):
                     testCorrelations.append(np.mean([pearsonr(tsToAdd,allVoxelTs[ROIVoxel,:])[0] for ROIVoxel in ROI]))
@@ -2099,10 +2102,11 @@ def growOptimizedROIs(cfg,verbal=True):
                 for i, ROI in enumerate(ROIInfo['ROIVoxels']):
                     testCorrelations.append(np.mean(sorted([(pearsonr(tsToAdd,allVoxelTs[ROIVoxel,:])[0]) for ROIVoxel in ROI])[(-1*nCorrelationsForThresholding)::]))
             candidateCorrelation = testCorrelations.pop(ROIToUpdate)
-            thresholdValue = np.sort(testCorrelations)[-1*nROIsForThresholding]#max(testCorrelations)
+            thresholdValue = np.sort(testCorrelations)[-1*nROIsForThresholding]
             if candidateCorrelation <= thresholdValue:
                 priorityQueues[ROIToUpdate].remove(voxelToAdd)
                 nInQueue = nInQueue - 1
+                excludedVoxels[voxelToAdd] = ROIToUpdate
                 if len(priorityQueues[ROIToUpdate]) > 0:
                     consistencies = np.array([calculateSpatialConsistency(({'allVoxelTs':allVoxelTs,'consistencyType':consistencyType,'fTransform':fTransform},ROI)) for ROI in ROIVoxels])
                     ROISizes = np.array([len(ROI) for ROI in ROIInfo['ROIVoxels']])
@@ -2118,10 +2122,10 @@ def growOptimizedROIs(cfg,verbal=True):
             if candidateCorrelation <= thresholdValue:
                 priorityQueues[ROIToUpdate].remove(voxelToAdd)
                 nInQueue = nInQueue - 1
+                excludedVoxels[voxelToAdd] = ROIToUpdate
                 if len(priorityQueues[ROIToUpdate]) > 0:
                     consistencies = np.array([calculateSpatialConsistency(({'allVoxelTs':allVoxelTs,'consistencyType':consistencyType,'fTransform':fTransform},ROI)) for ROI in ROIVoxels])
                     ROISizes = np.array([len(ROI) for ROI in ROIInfo['ROIVoxels']])
-                    #import pdb; pdb.set_trace()
                     additionCandidate, maximalMeasure = updateQueue(ROIToUpdate,priorityQueues[ROIToUpdate],targetFunction,centroidTs[ROIToUpdate],allVoxelTs,ROIInfo['ROIVoxels'],consistencies,ROISizes,consistencyType,fTransform)
                     additionCandidates[ROIToUpdate] = additionCandidate
                     maximalMeasures[ROIToUpdate] = maximalMeasure  
@@ -2166,6 +2170,16 @@ def growOptimizedROIs(cfg,verbal=True):
                     maximalMeasures[i] = -1
         
         nInQueue = sum([len(priorityQueue) for priorityQueue in priorityQueues])
+        
+        # Adding back to priority queues voxels that had been removed in thresholding;
+        if threshold in ['voxel-wise','maximal-voxel-wise','voxel-neighborhood']:
+            for voxel, ROI in excludedVoxels.items():
+                priorityQueues[ROI].append(voxel)
+        # Updating the queues where vosels where added back
+        for ROI in np.unique(excludedVoxels.values()):
+            additionCandidate, maximalMeasure = updateQueue(ROI,priorityQueues[ROI],targetFunction,centroidTs[ROI],allVoxelTs,ROIInfo['ROIVoxels'],consistencies,ROISizes,consistencyType,fTransform)
+            additionCandidates[ROI] = additionCandidate
+            maximalMeasures[ROI] = maximalMeasure
     
     if False: # I don't know why these should be calculated here; they just take additional time. Let's bring them back later if they're needed.
         spatialConsistency = calculateSpatialConsistencyInParallel(ROIInfo['ROIVoxels'],allVoxelTs,consistencyType=consistencyType,fTransform=fTransform,nCPUs=5)
