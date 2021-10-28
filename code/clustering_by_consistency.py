@@ -1324,7 +1324,7 @@ def updateQueue(ROIIndex, priorityQueue, targetFunction, centroidTs, allVoxelTs,
         for j, voxel in enumerate(priorityQueue):
             voxelIndices = np.concatenate((ROIVoxels[ROIIndex],np.array([voxel])))
             tempConsistencies[ROIIndex] = calculateSpatialConsistency(({'allVoxelTs':allVoxelTs,'consistencyType':consistencyType,'fTransform':fTransform},voxelIndices))
-            priorityMeasures[j] = sum([tempConsistency*tempSize**sizeExp for tempConsistency,tempSize in zip(tempConsistencies,tempSizes)])/sum([tempSize**sizeExp for tempsize in tempSizes]) 
+            priorityMeasures[j] = sum([tempConsistency*tempSize**sizeExp for tempConsistency,tempSize in zip(tempConsistencies,tempSizes)])/sum([tempSize**sizeExp for tempSize in tempSizes]) 
     additionCandidate = priorityQueue[np.argmax(priorityMeasures)]
     maximalMeasure = np.amax(priorityMeasures)
     
@@ -1827,7 +1827,6 @@ def growSphericalROIs(ROICentroids, imgdata, nROIs=246, template=None, equalSize
                 distanceMask[:,neighbor] = 0 # masking away voxels that have already been added to a ROI
         radius = radius + 1
     voxelLabels = np.array([int(label) for label in voxelLabels])
-    #import pdb; pdb.set_trace()            
     return voxelLabels, voxelCoordinates, radius
     
 # Optimization
@@ -2171,7 +2170,7 @@ def growOptimizedROIs(cfg,verbal=True):
         
         nInQueue = sum([len(priorityQueue) for priorityQueue in priorityQueues])
         
-        # Adding back to priority queues voxels that had been removed in thresholding;
+        # Adding back to priority queues voxels that had been removed in thresholding
         if threshold in ['voxel-wise','maximal-voxel-wise','voxel-neighborhood']:
             for voxel, ROI in excludedVoxels.items():
                 priorityQueues[ROI].append(voxel)
