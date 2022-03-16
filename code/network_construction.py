@@ -318,7 +318,7 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                     if ROI_centroids == 'random':
                         voxel_labels, voxel_coordinates = cbc.growOptimizedROIsInParallel(cfg,n_consistency_iters,n_consistency_CPUs)
                     else:
-                        voxel_labels, voxel_coordinates, _ = cbc.growOptimizedROIs(cfg)
+                        voxel_labels, voxel_coordinates = cbc.growOptimizedROIs(cfg)
                     for ii, label in enumerate(voxel_labels):
                         voxels_in_clusters.setdefault(label,[]).append(voxel_coordinates[ii]) # voxels_in_clusters will contain label:[voxels with label] pairs; here, coordinates of each voxel are added to the correct list
                     if -1 in voxels_in_clusters:
