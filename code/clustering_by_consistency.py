@@ -2020,7 +2020,8 @@ def growOptimizedROIs(cfg,verbal=True):
     else:
         ROIMaps = [np.array(centroid) for centroid in ROICentroids]
         ROIVoxels = [np.array(np.where((voxelCoordinates==centroid).all(axis=1)==1)[0]) for centroid in ROICentroids]
-    ROIInfo = {'ROIMaps':ROIMaps,'ROIVoxels':ROIVoxels,'ROISizes':np.ones(nROIs,dtype=int),'ROINames':cfg['names']}
+    ROIInfo = {'ROIMaps':ROIMaps,'ROIVoxels':ROIVoxels,'ROISizes':np.array([len(voxels) for voxels in ROIVoxels],dtype=int),
+               'ROINames':cfg['names']}
     priorityQueues = [findROIlessNeighbors(i,voxelCoordinates,{'ROIMaps':ROIMaps})['ROIlessIndices'].tolist() for i in range(nROIs)] # priority queues change so it's better to keep them as lists
     centroidTs = np.zeros((nROIs,nTime))
     voxelLabels = np.zeros(nVoxels,dtype=int) - 1
@@ -2037,9 +2038,11 @@ def growOptimizedROIs(cfg,verbal=True):
     
     if targetFunction == 'weighted mean consistency':
         consistencies = [calculateSpatialConsistency(({'allVoxelTs':allVoxelTs,'consistencyType':consistencyType,'fTransform':fTransform},ROI)) for ROI in ROIVoxels]
+        # if neighbourhoods are not included, consistency is always 1, so thsi is calculated only for including the neighbourhoods. Add a case?
         
     if not targetFunction == 'correlationWithCentroid':
         ROISizes = [len(ROI) for ROI in ROIVoxels]
+        # same here: ROI size is always one if neighbourhoods are not included; add case
     
     for i,(priorityQueue,centroid,ROI) in enumerate(zip(priorityQueues,centroidTs,ROIInfo['ROIVoxels'])):
         if targetFunction == 'correlationWithCentroid':
@@ -2111,6 +2114,7 @@ def growOptimizedROIs(cfg,verbal=True):
                 excludedVoxels[voxelToAdd] = ROIToUpdate
                 if len(priorityQueues[ROIToUpdate]) > 0:
                     consistencies = np.array([calculateSpatialConsistency(({'allVoxelTs':allVoxelTs,'consistencyType':consistencyType,'fTransform':fTransform},ROI)) for ROI in ROIVoxels])
+                    # TODO: why to recalculate the consistencies here; couldn't they be kept in memory?
                     ROISizes = np.array([len(ROI) for ROI in ROIInfo['ROIVoxels']])
                     additionCandidate, maximalMeasure = updateQueue(ROIToUpdate,priorityQueues[ROIToUpdate],targetFunction,centroidTs[ROIToUpdate],allVoxelTs,ROIInfo['ROIVoxels'],consistencies,ROISizes,consistencyType,fTransform)
                     additionCandidates[ROIToUpdate] = additionCandidate
@@ -2127,6 +2131,7 @@ def growOptimizedROIs(cfg,verbal=True):
                 excludedVoxels[voxelToAdd] = ROIToUpdate
                 if len(priorityQueues[ROIToUpdate]) > 0:
                     consistencies = np.array([calculateSpatialConsistency(({'allVoxelTs':allVoxelTs,'consistencyType':consistencyType,'fTransform':fTransform},ROI)) for ROI in ROIVoxels])
+                    # TODO: same here: couldn't the consistencies be kept in memory instead of recalculating?
                     ROISizes = np.array([len(ROI) for ROI in ROIInfo['ROIVoxels']])
                     additionCandidate, maximalMeasure = updateQueue(ROIToUpdate,priorityQueues[ROIToUpdate],targetFunction,centroidTs[ROIToUpdate],allVoxelTs,ROIInfo['ROIVoxels'],consistencies,ROISizes,consistencyType,fTransform)
                     additionCandidates[ROIToUpdate] = additionCandidate
@@ -2155,6 +2160,7 @@ def growOptimizedROIs(cfg,verbal=True):
         
         # Updating priority queues: removing the added voxel from all priority queues and updating the candidate voxels and maximal measures of the queues that changed        
         if targetFunction == 'weighted mean consistency' or targetFunction == 'spatialConsistency':
+            # TODO: here, again, consider if all consistencies need to be recalculated
             consistencies = np.array([calculateSpatialConsistency(({'allVoxelTs':allVoxelTs,'consistencyType':consistencyType,'fTransform':fTransform},ROI)) for ROI in ROIVoxels])
             ROISizes = np.array([len(ROI) for ROI in ROIInfo['ROIVoxels']])
         else:
@@ -2170,6 +2176,9 @@ def growOptimizedROIs(cfg,verbal=True):
                     maximalMeasures[i] = maximalMeasure
                 else:
                     maximalMeasures[i] = -1
+                    
+        # TODO: the maximalMeasures of ALL priority queues should be updated: they depend on the mean (weighted) consistency
+        # that has changed when the target voxel was added to the ROI to update
         
         # TODO: uncomment the following lines to add voxels back to priority queues (this makes the calculation slower)
         # Adding back to priority queues voxels that had been removed in thresholding
