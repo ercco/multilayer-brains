@@ -2291,160 +2291,163 @@ def growOptimizedROIs(cfg,verbal=True):
         
             nInQueue = sum([len(priorityQueue) for priorityQueue in priorityQueues])
             
-        else: # this is new code
-            if targetFunction in ['spatialConsistency', 'weighted mean consistency'] and includeNeighborhoods:
-                consistencies = [calculateSpatialConsistency(({'allVoxelTs':allVoxelTs,'consistencyType':consistencyType,'fTransform':fTransform},ROI)) for ROI in ROIVoxels]
-            else:
-                consistencies = [1 for i in range(nROIs)]
+    else: # this is new code
+        import pdb; pdb.set_trace()
+        if targetFunction in ['spatialConsistency', 'weighted mean consistency'] and includeNeighborhoods:
+            consistencies = [calculateSpatialConsistency(({'allVoxelTs':allVoxelTs,'consistencyType':consistencyType,'fTransform':fTransform},ROI)) for ROI in ROIVoxels]
+        else:
+            consistencies = [1 for i in range(nROIs)]
         
-            if targetFunction in ['spatialConsistency', 'weighted mean consistency'] and includeNeighborhoods:
-                ROISizes = [len(ROI) for ROI in ROIVoxels]
+        if targetFunction in ['spatialConsistency', 'weighted mean consistency'] and includeNeighborhoods:
+            ROISizes = [len(ROI) for ROI in ROIVoxels]
+        else:
+            ROISizes = [1 for i in range(nROIs)]
+                    
+        centroidTs = np.zeros((nROIs,nTime))
+        voxelLabels = np.zeros(nVoxels,dtype=int) - 1
+        for i, ROIIndex in enumerate(ROIVoxels):
+            centroidTs[i,:] = allVoxelTs[ROIIndex[0],:]
+            if includeNeighborhoods:
+                for index in ROIIndex:
+                    voxelLabels[index] = i
             else:
-                ROISizes = [1 for i in range(nROIs)]
+                voxelLabels[ROIIndex[0]] = i
+              
+        if threshold == 'voxel-neighborhood':
+            thresholdValue = calculateVoxelNeighborhoodCorrelation(voxelCoordinates,allVoxelTs)
+        if threshold in ['voxel-wise','maximal-voxel-wise','voxel-neighborhood']:
+            excludedVoxels = {}
+
+        priorityQueue = [] # initializing the priority queue
+        forbiddenVoxels = [] # this is a list of ROI - voxel pairs that have failed thresholding and won't therefore considered for updating (related to data-driven and strict data-driven thresholding)
+
+        for ROIIndex, (ROI, centroid, consistency, size) in enumerate(zip(ROIInfo['ROIVoxels'], centroidTs, consistencies, ROISizes)):
+            neighbors = findROIlessNeighbors(ROIIndex,voxelCoordinates,{'ROIMaps':ROIMaps})['ROIlessIndices']
+            for voxelIndex in neighbors:
+                # priority measures are multiplied by -1 to match the minheap used by heapq
+                priorityMeasure = -1*calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, ROI, centroid, consistencies,
+                                                       ROISizes, consistencyType, fTransform, sizeExp)
+
+                heapq.heappush(priorityQueue,(priorityMeasure,(ROIIndex,voxelIndex))) # adding the measure - voxel pair to the priority queue
                     
-            centroidTs = np.zeros((nROIs,nTime))
-            voxelLabels = np.zeros(nVoxels,dtype=int) - 1
-            for i, ROIIndex in enumerate(ROIVoxels):
-                centroidTs[i,:] = allVoxelTs[ROIIndex[0],:]
-                if includeNeighborhoods:
-                    for index in ROIIndex:
-                        voxelLabels[index] = i
-                else:
-                    voxelLabels[ROIIndex[0]] = i
-               
-            if threshold == 'voxel-neighborhood':
-                thresholdValue = calculateVoxelNeighborhoodCorrelation(voxelCoordinates,allVoxelTs)
-            if threshold in ['voxel-wise','maximal-voxel-wise','voxel-neighborhood']:
-                excludedVoxels = {}
-
-            priorityQueue = [] # initializing the priority queue
-            forbiddenVoxels = [] # this is a list of ROI - voxel pairs that have failed thresholding and won't therefore considered for updating (related to data-driven and strict data-driven thresholding)
-
-            for ROIIndex, (ROI, centroid, consistency, size) in enumerate(zip(ROIInfo['ROIVoxels'], centroidTs, consistencies, ROISizes)):
-                neighbors = findROIlessNeighbors(i,voxelCoordinates,{'ROIMaps':ROIMaps})['ROIlessIndices']
-                for voxelIndex in neighbors:
-                    # priority measures are multiplied by -1 to match the minheap used by heapq
-                    priorityMeasure = -1*calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, ROI, centroid, consistencies,
-                                                           ROISizes, consistencyType, fTransform, sizeExp)
-
-                    heapq.heappush(priorityQueue,(priorityMeasure,(i,neighbor))) # adding the measure - voxel pair to the priority queue
-                    
-            selectedMeasures = []
+        selectedMeasures = []
             
-            # Actual optimization takes place inside the while loop:
-            while len(priorityQueue) > 0:
-                # Selecting the ROI to be updated and voxel to be added to that ROI (based on the priority measure)
-                priorityMeasure, (ROIToUpdate, voxelToAdd) = heapq.heappop(priorityQueue)
+        # Actual optimization takes place inside the while loop:
+        while len(priorityQueue) > 0:
+            # Selecting the ROI to be updated and voxel to be added to that ROI (based on the priority measure)
+            priorityMeasure, (ROIToUpdate, voxelToAdd) = heapq.heappop(priorityQueue)
                 
-                # Checking that adding the voxel doesn't yield sub-threshold consistencies
-                if threshold in ['data-driven','strict data-driven']:
-                    testVoxels = list(ROIInfo['ROIVoxels'])
-                    testVoxels[ROIToUpdate] = np.concatenate((testVoxels[ROIToUpdate],np.array([voxelToAdd])))
-                    thresholdValue = calculateDataDrivenThreshold(testVoxels,allVoxelTs,ROIToUpdate)
-                    if verbal:
-                        print('Threshold value: ' + str(thresholdValue))
-                    candidateConsistency = updateSpatialConsistency(allVoxelTs,voxelToAdd,ROIVoxels[ROIToUpdate],
-                                                                    consistencies[ROIToUpdate],ROISizes[ROIToUpdate],
-                                                                    consistencyType,fTransform)
-                    if candidateConsistency <= thresholdValue:
-                        forbiddenVoxels.append((ROIToUpdate, voxelToAdd))
-                        if len(priorityQueue) == 0: # this happens if all ROI - voxel pairs have already been tested and none of them passes the thresholding
-                            break
-                        else:
-                            continue
-                    elif threshold == 'data-driven':
-                        # some ROI got updated, so the data-driven thresholding again considers all ROI - voxel pairs for updating,
-                        # and everything removed from the priority queue because of thresholding is added back
-                        for ROIIndex, voxelIndex in forbiddenVoxels:
-                            priorityMeasure = -1*calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, 
-                                                                   ROIInfo['ROIVoxels'][ROIIndex], centroidTs[ROIIndex],
-                                                                   consistencies, ROISizes, consistencyType, fTransform,
-                                                                   sizeExp)
-                            heapq.heappush((priorityMeasure,(ROIIndex,voxelIndex)))
-                            forbiddenVoxels = []
-                        
-                elif threshold in ['voxel-wise','maximal-voxel-wise']:
-                    testCorrelations = np.zeros(nROIs)
-                    tsToAdd = allVoxelTs[voxelToAdd,:]
-                    if threshold == 'voxel-wise':
-                        for i, ROI in enumerate(ROIInfo['ROIVoxels']):
-                            testCorrelations[i] = np.mean(pearsonr(tsToAdd,allVoxelTs[ROIVoxel,:])[0] for ROIVoxel in ROI)
-                    else:
-                        for i, ROI in enumerate(ROIInfo['ROIVoxels']):
-                            testCorrelations[i] = np.mean(sorted([(pearsonr(tsToAdd,allVoxelTs[ROIVoxel,:])[0]) for ROIVoxel in ROI])[(-1*nCorrelationsForThresholding)::])
-                    candidateCorrelation = testCorrelations.pop(ROIToUpdate)
-                    thresholdValue = np.sort(testCorrelations)[-1*nROIsForThresholding]
-                    if candidateCorrelation <= thresholdValue:
-                        excludedVoxels[voxelToAdd] = ROIToUpdate
-                        continue
-                elif threshold == 'voxel-neighborhood':
-                    tsToAdd = allVoxelTs[voxelToAdd]
-                    candidateCorrelation = np.mean([pearsonr(tsToAdd,allVoxelTs[ROIVoxel,:])[0] for ROIVoxel in ROIInfo['ROIVoxels'][ROIToUpdate]])
-                    if candidateCorrelation <= thresholdValue: # here, the threshold value doesn't depend on ROIs and has been calculated before the optimization
-                        excludedVoxels[voxelToAdd] = ROIToUpdate
-                        continue
-                elif priorityMeasure <= threshold: # this is thresholding by a fixed numeric threshold
-                    break
-                    
-                    
-                # Adding the voxel to the ROI
-                ROIInfo = addVoxel(ROIToUpdate,voxelToAdd,ROIInfo,voxelCoordinates)
-                selectedMeasures.append(priorityMeasure)
-                voxelLabels[voxelToAdd] = ROIToUpdate
-                updatedConsistency = updateSpatialConsistency(allVoxelTs, voxelToAdd, ROIInfo['ROIVoxels'][ROIToUpdate],
-                                                              consistencies[ROIToUpdate], ROISizes[ROIToUpdate], consistencyType,
-                                                              fTransform)
-                consistencies[ROIToUpdate] = updatedConsistency
-                ROISizes[ROIToUpdate] += 1
-                
-                # finding and removing elements where voxelToAdd is to be added to another ROI:
-                # a voxel can't belong to more than one ROI
-                elementsToRemoveFromQueue = []
-                for element in priorityQueue:
-                    if element[1][1] == voxelToAdd:
-                        elementsToRemoveFromQueue.append(element)
-                for elementToRemove in elementsToRemoveFromQueue:
-                    priorityQueue.remove(elementToRemove)
-                
-                # updating priority values of all remaining elements of the priority queue:
-                # these may have changed when consistency of ROIToUpdate changed
-                if targetFunction in ['spatialConsistency', 'weighted mean consistency']:
-                    for i, (priorityValue, (ROIIndex, voxelIndex)) in enumerate(priorityQueue):
-                        updatedPriorityValue = calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, 
-                                                                 ROIInfo['ROIVoxels'][ROIIndex], centroidTs, consistencies, ROISizes,
-                                                                 consistencyType, fTransform, sizeExp)
-                        priorityQueue[i] = (updatedPriorityValue, (ROIIndex, voxelIndex))
-                    
-                heapq.heapify(priorityQueue) # heapify to fix the queue order after removing and updating elements
-                
-                # Updating priority queues: adding the ROIless neighbors of the updated ROI
-                pairsInQueue = [element[1] for element in priorityQueue]
-                neighbors = findROIlessVoxels(findNeighbors(voxelCoordinates[voxelToAdd],allVoxels=voxelCoordinates),ROIInfo)['ROIlessMap'] # Here, we search for the ROIless neighbors of the added voxel; findROIlessNeighbors() can't be used since it finds the ROIless neighbors of a ROI
-                ROIlessIndices = [np.where((voxelCoordinates == neighbor).all(axis=1)==1)[0][0] for neighbor in neighbors]
-                for ROIlessIndex in ROIlessIndices:
-                    if not (ROIToUpdate, ROIlessIndex) in forbiddenVoxels and not (ROIToUpdate, ROIlessIndex) in pairsInQueue:
-                        # NOTE: the pairsInQueue check ensures that the same ROI - voxel pair is not added with multiple
-                        # priority values. Such addition doesn't break the optimization but may slow it down (the length of
-                        # the queue increases unnecessarily). So, if the check is very slow, it can be removed.
-                        priorityValue = calculatePriority(ROIToUpdate, ROIlessIndex, targetFunction, allVoxelTs,
-                                                          ROIInfo['ROIVoxels'][ROIToUpdate], centroidTs, consistencies, ROISizes,
-                                                          consistencyType, fTransform, sizeExp)
-                        heapq.heappush((priorityValue, (ROIToUpdate, ROIlessIndex)))
-                        
-                # Adding voxels excluded in thresholding back to the priority queue
-                if returnExcludedToQueue:
-                    if threshold in ['voxel-wise','maximal-voxel-wise','voxel-neighborhood']:
-                        for (ROIIndex, voxelIndex) in excludedVoxels:
-                            if not voxelIndex == voxelToAdd: # if the voxel has already been added to a ROI, it won't be added back to the queue
-                                priorityValue = calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs,
-                                                                 ROIInfo['ROIVoxels'][ROIIndex], centroidTs, consistencies, ROISizes,
-                                                                 consistencyType, fTransform, sizeExp)
-                                heapq.heappush((priorityValue, (ROIIndex, voxelIndex)))
-                            
+            # Checking that adding the voxel doesn't yield sub-threshold consistencies
+            if threshold in ['data-driven','strict data-driven']:
+                testVoxels = list(ROIInfo['ROIVoxels'])
+                testVoxels[ROIToUpdate] = np.concatenate((testVoxels[ROIToUpdate],np.array([voxelToAdd])))
+                thresholdValue = calculateDataDrivenThreshold(testVoxels,allVoxelTs,ROIToUpdate)
                 if verbal:
-                    print(str(len(priorityQueue)) + ' voxels in priority queues')
-                    totalROISize = sum(len(ROIVox) for ROIVox in ROIInfo['ROIVoxels'])
-                    print(str(totalROISize) + ' voxels in ROIs')
+                    print('Threshold value: ' + str(thresholdValue))
+                candidateConsistency = updateSpatialConsistency(allVoxelTs,voxelToAdd,ROIVoxels[ROIToUpdate],
+                                                                consistencies[ROIToUpdate],ROISizes[ROIToUpdate],
+                                                                consistencyType,fTransform)
+                if candidateConsistency <= thresholdValue:
+                    forbiddenVoxels.append((ROIToUpdate, voxelToAdd))
+                    if len(priorityQueue) == 0: # this happens if all ROI - voxel pairs have already been tested and none of them passes the thresholding
+                        break
+                    else:
+                        continue
+                elif threshold == 'data-driven':
+                    # some ROI got updated, so the data-driven thresholding again considers all ROI - voxel pairs for updating,
+                    # and everything removed from the priority queue because of thresholding is added back
+                    for ROIIndex, voxelIndex in forbiddenVoxels:
+                        priorityMeasure = -1*calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, 
+                                                               ROIInfo['ROIVoxels'][ROIIndex], centroidTs[ROIIndex],
+                                                               consistencies, ROISizes, consistencyType, fTransform,
+                                                               sizeExp)
+                        heapq.heappush((priorityMeasure,(ROIIndex,voxelIndex)))
+                        forbiddenVoxels = []
+                        
+            elif threshold in ['voxel-wise','maximal-voxel-wise']:
+                testCorrelations = [] # testCorrelations is a list since this allows using the pop method; otherwise using an np.zeros might be faster
+                tsToAdd = allVoxelTs[voxelToAdd,:]
+                if threshold == 'voxel-wise':
+                    for i, ROI in enumerate(ROIInfo['ROIVoxels']):
+                        testCorrelations.append(np.mean([pearsonr(tsToAdd,allVoxelTs[ROIVoxel,:])[0] for ROIVoxel in ROI]))
+                else:
+                    for i, ROI in enumerate(ROIInfo['ROIVoxels']):
+                        testCorrelations.append(np.mean(sorted([(pearsonr(tsToAdd,allVoxelTs[ROIVoxel,:])[0]) for ROIVoxel in ROI])[(-1*nCorrelationsForThresholding)::]))
+                candidateCorrelation = testCorrelations.pop(ROIToUpdate)
+                thresholdValue = np.sort(testCorrelations)[-1*nROIsForThresholding]
+                if candidateCorrelation <= thresholdValue:
+                    excludedVoxels[voxelToAdd] = ROIToUpdate
+                    continue
+            elif threshold == 'voxel-neighborhood':
+               tsToAdd = allVoxelTs[voxelToAdd]
+               candidateCorrelation = np.mean([pearsonr(tsToAdd,allVoxelTs[ROIVoxel,:])[0] for ROIVoxel in ROIInfo['ROIVoxels'][ROIToUpdate]])
+               if candidateCorrelation <= thresholdValue: # here, the threshold value doesn't depend on ROIs and has been calculated before the optimization
+                    excludedVoxels[voxelToAdd] = ROIToUpdate
+                    continue
+            elif priorityMeasure <= threshold: # this is thresholding by a fixed numeric threshold
+                break
+                    
+                    
+            # Adding the voxel to the ROI
+            updatedConsistency = updateSpatialConsistency(allVoxelTs, voxelToAdd, ROIInfo['ROIVoxels'][ROIToUpdate],
+                                                          consistencies[ROIToUpdate], ROISizes[ROIToUpdate], consistencyType,
+                                                          fTransform)
+            ROIInfo = addVoxel(ROIToUpdate,voxelToAdd,ROIInfo,voxelCoordinates)
+            selectedMeasures.append(priorityMeasure)
+            voxelLabels[voxelToAdd] = ROIToUpdate
+            consistencies[ROIToUpdate] = updatedConsistency
+            ROISizes[ROIToUpdate] += 1
+                
+            # finding and removing elements where voxelToAdd is to be added to another ROI:
+            # a voxel can't belong to more than one ROI
+            elementsToRemoveFromQueue = []
+            for element in priorityQueue:
+                if element[1][1] == voxelToAdd:
+                    elementsToRemoveFromQueue.append(element)
+            for elementToRemove in elementsToRemoveFromQueue:
+                priorityQueue.remove(elementToRemove)
+                
+            # updating priority values of all remaining elements of the priority queue:
+            # these may have changed when consistency of ROIToUpdate changed
+            if targetFunction in ['spatialConsistency', 'weighted mean consistency']:
+                for i, (priorityValue, (ROIIndex, voxelIndex)) in enumerate(priorityQueue):
+                    # priority values are multiplied by -1 since heapq uses minheap
+                    updatedPriorityValue = -1*calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, 
+                                                             ROIInfo['ROIVoxels'][ROIIndex], centroidTs, consistencies, ROISizes,
+                                                             consistencyType, fTransform, sizeExp)
+                    priorityQueue[i] = (updatedPriorityValue, (ROIIndex, voxelIndex))
+                    
+            heapq.heapify(priorityQueue) # heapify to fix the queue order after removing and updating elements
+                
+            # Updating priority queues: adding the ROIless neighbors of the updated ROI
+            pairsInQueue = [element[1] for element in priorityQueue]
+            neighbors = findROIlessVoxels(findNeighbors(voxelCoordinates[voxelToAdd],allVoxels=voxelCoordinates),ROIInfo)['ROIlessMap'] # Here, we search for the ROIless neighbors of the added voxel; findROIlessNeighbors() can't be used since it finds the ROIless neighbors of a ROI
+            ROIlessIndices = [np.where((voxelCoordinates == neighbor).all(axis=1)==1)[0][0] for neighbor in neighbors]
+            for ROIlessIndex in ROIlessIndices:
+                if not (ROIToUpdate, ROIlessIndex) in forbiddenVoxels and not (ROIToUpdate, ROIlessIndex) in pairsInQueue:
+                    # NOTE: the pairsInQueue check ensures that the same ROI - voxel pair is not added with multiple
+                    # priority values. Such addition doesn't break the optimization but may slow it down (the length of
+                    # the queue increases unnecessarily). So, if the check is very slow, it can be removed.
+                    # Priority value is multiplied by -1 since heapq uses minheap.
+                    priorityValue = -1*calculatePriority(ROIToUpdate, ROIlessIndex, targetFunction, allVoxelTs,
+                                                      ROIInfo['ROIVoxels'][ROIToUpdate], centroidTs, consistencies, ROISizes,
+                                                      consistencyType, fTransform, sizeExp)
+                    heapq.heappush(priorityQueue,(priorityValue, (ROIToUpdate, ROIlessIndex)))
+                        
+            # Adding voxels excluded in thresholding back to the priority queue
+            if returnExcludedToQueue:
+               if threshold in ['voxel-wise','maximal-voxel-wise','voxel-neighborhood']:
+                    for (ROIIndex, voxelIndex) in excludedVoxels:
+                        if not voxelIndex == voxelToAdd: # if the voxel has already been added to a ROI, it won't be added back to the queue
+                           priorityValue = calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs,
+                                                             ROIInfo['ROIVoxels'][ROIIndex], centroidTs, consistencies, ROISizes,
+                                                             consistencyType, fTransform, sizeExp)
+                           heapq.heappush((priorityValue, (ROIIndex, voxelIndex)))
+                            
+            if verbal:
+                print(str(len(priorityQueue)) + ' voxels in priority queues')
+                totalROISize = sum(len(ROIVox) for ROIVox in ROIInfo['ROIVoxels'])
+                print(str(totalROISize) + ' voxels in ROIs')
 
     return voxelLabels, voxelCoordinates
     
