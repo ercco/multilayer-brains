@@ -1725,7 +1725,7 @@ def updateSpatialConsistency(allVoxelTs, voxelIndex, ROIVoxels, previousConsiste
             # TODO: add a case for updating the consistency if fTransform has been used
             spatialConsistency = 0
         else:
-            spatialConsistency = (previousSize-1)/(previousSize+1)*previousConsistency + 2/(previousSize*(previousSize+1))*sum(newCorrelations)
+            spatialConsistency = (previousSize-1)/float(previousSize+1)*previousConsistency + 2.0/(previousSize*(previousSize+1))*sum(newCorrelations)
     else:
         spatialConsistency = 0
     return spatialConsistency
@@ -2117,7 +2117,7 @@ def growOptimizedROIs(cfg,verbal=True):
     ROIInfo = {'ROIMaps':ROIMaps,'ROIVoxels':ROIVoxels,'ROISizes':np.array([len(voxels) for voxels in ROIVoxels],dtype=int),
                'ROINames':cfg['names']}
     
-    if True: # old code to be replaced with the heapq implementation, for now kept here for backwards compatibility (after debugging, delete this case)
+    if False: # old code to be replaced with the heapq implementation, for now kept here for backwards compatibility (after debugging, delete this case)
         priorityQueues = [findROIlessNeighbors(i,voxelCoordinates,{'ROIMaps':ROIMaps})['ROIlessIndices'].tolist() for i in range(nROIs)] # priority queues change so it's better to keep them as lists
         centroidTs = np.zeros((nROIs,nTime))
         voxelLabels = np.zeros(nVoxels,dtype=int) - 1
@@ -2292,7 +2292,6 @@ def growOptimizedROIs(cfg,verbal=True):
             nInQueue = sum([len(priorityQueue) for priorityQueue in priorityQueues])
             
     else: # this is new code
-        import pdb; pdb.set_trace()
         if targetFunction in ['spatialConsistency', 'weighted mean consistency'] and includeNeighborhoods:
             consistencies = [calculateSpatialConsistency(({'allVoxelTs':allVoxelTs,'consistencyType':consistencyType,'fTransform':fTransform},ROI)) for ROI in ROIVoxels]
         else:
@@ -2333,6 +2332,7 @@ def growOptimizedROIs(cfg,verbal=True):
         selectedMeasures = []
             
         # Actual optimization takes place inside the while loop:
+        #import pdb; pdb.set_trace()
         while len(priorityQueue) > 0:
             # Selecting the ROI to be updated and voxel to be added to that ROI (based on the priority measure)
             priorityMeasure, (ROIToUpdate, voxelToAdd) = heapq.heappop(priorityQueue)
@@ -2448,7 +2448,6 @@ def growOptimizedROIs(cfg,verbal=True):
                 print(str(len(priorityQueue)) + ' voxels in priority queues')
                 totalROISize = sum(len(ROIVox) for ROIVox in ROIInfo['ROIVoxels'])
                 print(str(totalROISize) + ' voxels in ROIs')
-
     return voxelLabels, voxelCoordinates
     
 def growOptimizedROIsInParallel(cfg, nIter=100, nCPUs=5):
