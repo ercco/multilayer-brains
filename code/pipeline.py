@@ -140,12 +140,12 @@ def clustering_method_parser(image_array,timewindow,overlap,nlayers,clustering_m
         elif seed_selection_method == 'ReHo':
             centroid_template_array = np.sum(np.abs(image_array),axis=3)
             ROI_centroids = 'ReHo'
-            ReHo_measure = clustering_method_params.get('ReHo_measure','ReHo')
-            include_neighborhoods_in_centroids = clustering_method_params.get('include_neighborhoods_in_centroids', False)
         elif seed_selection_method == 'template' or (centroid_template_filename and not use_random_seeds):
             centroid_template_data = nib.load(centroid_template_filename)
             centroid_template_array = centroid_template_data.get_fdata()
             ROI_centroids, _,_ = cbc.findROICentroids(centroid_template_array,fixCentroids=True)
+        ReHo_measure = clustering_method_params.get('ReHo_measure','ReHo')
+        include_neighborhoods_in_centroids = clustering_method_params.get('include_neighborhoods_in_centroids', False)
         ROI_names = clustering_method_params.get('ROI_names',[])
         consistency_threshold = clustering_method_params.get('consistency_threshold',-1)
         n_consistency_iters = clustering_method_params.get('n_consistency_iters',100)
