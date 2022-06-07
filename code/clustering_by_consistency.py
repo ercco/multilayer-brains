@@ -1382,6 +1382,8 @@ def calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, ROIVoxel
                          - 'weighted mean consistency': the mean consistency (mean Pearson correlation coefficient of the voxels)
                          over all ROIs, weighted by ROI size (for setting the power of ROI size used for weighting, use the 
                          sizeExp parameter)
+                         - 'meanConsistencyOverSizeStd': the mean consistency (mean Pearson correlation coefficient of the voxels)
+                         over all ROIs, divided by the standard deviation of the ROI size distribution (+ 1)
     allVoxelTs: np.array, nVoxels x nTimepoints, time series of all voxels
     ROIVoxels: ROISize x 1 np.array, indices of voxels belonging to the ROI where the voxel would be added (not including the 
                index of the voxel to be added). These indices refer to the rows of the allVoxelTs array.
@@ -1405,7 +1407,7 @@ def calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, ROIVoxel
     elif targetFunction == 'spatialConsistency':
         priorityMeasure = updateSpatialConsistency(allVoxelTs, voxelIndex, ROIVoxels, consistencies[ROIIndex],
                                                    ROISizes[ROIIndex], consistencyType, fTransform) * (ROISizes[ROIIndex] + 1)**sizeExp
-    elif targetFunction == 'weighted mean consistency':
+    elif targetFunction in ['weighted mean consistency','meanConsistencyOverSizeStd']:
         # TODO: check if there's an easier formula for updating the weighted mean consistency (similarly as there is for consistency)
         tempConsistencies = list(consistencies)
         tempSizes = list(ROISizes)
@@ -1413,8 +1415,12 @@ def calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, ROIVoxel
                                                       ROISizes[ROIIndex], consistencyType, fTransform) 
         tempConsistencies[ROIIndex] = updatedConsistency
         tempSizes[ROIIndex] += 1
-        priorityMeasure = sum([tempConsistency*tempSize**sizeExp for tempConsistency,tempSize 
-                               in zip(tempConsistencies,tempSizes)])/sum([size**sizeExp for size in tempSizes])
+        if targetFunction == 'weighted mean consistency':
+            priorityMeasure = sum([tempConsistency*tempSize**sizeExp for tempConsistency,tempSize 
+                                   in zip(tempConsistencies,tempSizes)])/sum([size**sizeExp for size in tempSizes])
+        elif targetFunction == 'meanConsistencyOverSizeStd':
+            sizeStd = np.std(tempSizes)
+            priorityMeasure = np.mean(tempConsistencies)/(sizeStd + 1)   
     return priorityMeasure
 
 def checkFlipValidity(flip,ROIVoxels,voxelCoordinates,voxelLabels):
@@ -1960,6 +1966,8 @@ def growOptimizedROIs(cfg,verbal=True):
         2) the spatial consistency (mean Pearson correlation coefficient) of the voxels
            already in the ROI and the candidate voxel, possibly weighted by ROI size
         3) the mean spatial consistency of all ROIs, possibly weighted by ROI size
+        4) the mean spatial consistency of all ROIs divided by the standard deviation
+           of ROI size + 1
     
     Parameters:
     -----------
@@ -2001,9 +2009,12 @@ def growOptimizedROIs(cfg,verbal=True):
                          - 'weighted mean consistency': the mean consistency (mean Pearson correlation coefficient of the voxels)
                          over all ROIs, weighted by ROI size (for setting the power of ROI size used for weighting, use the 
                          sizeExp parameter)
-         consistencyType: str, definition of spatial consistency to be used if 
-                          targetFunction == 'spatialConsistency' (default: 'pearson c' (mean Pearson correlation coefficient))
-         fTransform: bool, should Fisher Z transform be applied if targetFunction == 'spatialConsistency' 
+                         - 'meanConsistencyOverSizeStd': the mean consistency (mean Pearson correlation coefficient of the voxels)
+                         over all ROIs, divided by the standard deviation of the ROI size distribution + 1 (the + 1 term is 
+                         needed to ensure that the divider > 0)
+         consistencyType: str, definition of spatial consistency to be used 
+                          (default: 'pearson c' (mean Pearson correlation coefficient))
+         fTransform: bool, should Fisher Z transform be applied when calculating the spatial consistency 
                      (default=False)
          sizeExp: float, exponent of size used for weighting the consistency if targetFunction = 'weighted mean consistency' or
                   'spatialConsistency'. (default=1 for 'weighted mean consistency' and 0 for 'spatialConsistency')
@@ -2026,7 +2037,8 @@ def growOptimizedROIs(cfg,verbal=True):
                                           if targetFunction == correlationWithCentroid, includeNeighborhoodsInCentroids must be
                                           set to False.
          returnExcludedToQueue: boolean, should ROI - voxel pairs once excluded because of thresholding be considered again later 
-                          (used when targetFunction in ['spatialConsistency', 'weightedMeanConsistency']). (default = False)
+                          (used when targetFunction in ['spatialConsistency', 'weightedMeanConsistency', 'meanConsistencyOverSizeStd]). 
+                          (default = False)
          nCPUs: int, number of CPUs used for parallel calculations (for finding the ReHo-based seeds) (default = 5)
     
     Returns:
@@ -2143,12 +2155,12 @@ def growOptimizedROIs(cfg,verbal=True):
     ROIInfo = {'ROIMaps':ROIMaps,'ROIVoxels':ROIVoxels,'ROISizes':np.array([len(voxels) for voxels in ROIVoxels],dtype=int),
                'ROINames':cfg['names']}
             
-    if targetFunction in ['spatialConsistency', 'weighted mean consistency'] and includeNeighborhoods:
+    if targetFunction in ['spatialConsistency', 'weighted mean consistency','meanConsistencyOverSizeStd'] and includeNeighborhoods:
         consistencies = [calculateSpatialConsistency(({'allVoxelTs':allVoxelTs,'consistencyType':consistencyType,'fTransform':fTransform},ROI)) for ROI in ROIVoxels]
     else:
         consistencies = [1 for i in range(nROIs)]
         
-    if targetFunction in ['spatialConsistency', 'weighted mean consistency'] and includeNeighborhoods:
+    if targetFunction in ['spatialConsistency', 'weighted mean consistency','meanConssitencyOverSizeStd'] and includeNeighborhoods:
         ROISizes = [len(ROI) for ROI in ROIVoxels]
     else:
         ROISizes = [1 for i in range(nROIs)]
@@ -2257,7 +2269,7 @@ def growOptimizedROIs(cfg,verbal=True):
                 
         # updating priority values of all remaining elements of the priority queue:
         # these may have changed when consistency of ROIToUpdate changed
-        if targetFunction in ['spatialConsistency', 'weighted mean consistency']:
+        if targetFunction in ['spatialConsistency', 'weighted mean consistency', 'meanConsistencyOverSizeStd']:
             for i, (priorityValue, (ROIIndex, voxelIndex)) in enumerate(priorityQueue):
                 # priority values are multiplied by -1 since heapq uses minheap
                 updatedPriorityValue = -1*calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, 
