@@ -2226,7 +2226,8 @@ def growOptimizedROIs(cfg,verbal=True):
                 forbiddenPairs = []
                         
         elif threshold in ['voxel-wise','maximal-voxel-wise']:
-            testCorrelations = [] # testCorrelations is a list since this allows using the pop method; otherwise using an np.zeros might be faster             tsToAdd = allVoxelTs[voxelToAdd,:]
+            testCorrelations = [] # testCorrelations is a list since this allows using the pop method; otherwise using an np.zeros might be faster 
+            tsToAdd = allVoxelTs[voxelToAdd,:]
             if threshold == 'voxel-wise':
                 for i, ROI in enumerate(ROIInfo['ROIVoxels']):
                     testCorrelations.append(np.mean([pearsonr(tsToAdd,allVoxelTs[ROIVoxel,:])[0] for ROIVoxel in ROI]))
