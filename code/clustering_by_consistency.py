@@ -1395,8 +1395,9 @@ def calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, ROIVoxel
     consistencyType: str, definition of spatial consistency to be used if 
                      targetFunction == 'spatialConsistency' (default: 'pearson c' (mean Pearson correlation coefficient))
     fTransform: bool, should Fisher Z transform be applied if targetFunction == 'spatialConsistency' (default=False)
-    sizeExp: float, exponent of size used for weighting if targetFunction == 'spatialConsistency' or 'weighted mean consistency'
-             (default=1 for 'weighted mean consistency', 0 for 'spatialConsistency')
+    sizeExp: float, exponent of size if targetFunction == 'spatialConsistency' or 'weighted mean consistency' and 
+             size std if targetFunction == 'meanConsistencyOverSizeStd'
+             (default=1 for 'weighted mean consistency' and 'meanConsistencyOverSizeStd', 0 for 'spatialConsistency'). 
              
     Returns:
     --------
@@ -1420,7 +1421,7 @@ def calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, ROIVoxel
                                    in zip(tempConsistencies,tempSizes)])/sum([size**sizeExp for size in tempSizes])
         elif targetFunction == 'meanConsistencyOverSizeStd':
             sizeStd = np.std(tempSizes)
-            priorityMeasure = np.mean(tempConsistencies)/(sizeStd + 1)   
+            priorityMeasure = np.mean(tempConsistencies)/(sizeStd**sizeExp + 1)   
     return priorityMeasure
 
 def checkFlipValidity(flip,ROIVoxels,voxelCoordinates,voxelLabels):
@@ -2016,8 +2017,9 @@ def growOptimizedROIs(cfg,verbal=True):
                           (default: 'pearson c' (mean Pearson correlation coefficient))
          fTransform: bool, should Fisher Z transform be applied when calculating the spatial consistency 
                      (default=False)
-         sizeExp: float, exponent of size used for weighting the consistency if targetFunction = 'weighted mean consistency' or
-                  'spatialConsistency'. (default=1 for 'weighted mean consistency' and 0 for 'spatialConsistency')
+         sizeExp: float, exponent of size if targetFunction = 'weighted mean consistency' or
+                  'spatialConsistency' and size std if targetFunction == 'meanConsistencyOverSizeStd'. (default=1 for 'weighted mean consistency'
+                   and 'meanConsistencyOverSizeStd' and 0 for 'spatialConsistency')
          template: 3D numpy array where each element corresponds to a voxel. The value of voxels included in the analysis should
                    be >0 (e.g. the index of the ROI the voxel belongs to). Voxels outside of ROIs (= outside of the gray matter) 
                    have value 0. Template is used only if cfg[ROICentroids] == 'random' (default = None)
