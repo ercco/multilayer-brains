@@ -19,7 +19,7 @@ import heapq
 import network_io, network_construction
 
 from scipy import io, matrix
-from scipy.stats import binned_statistic
+from scipy.stats import binned_statistic, moment
 from scipy.stats.stats import pearsonr
 from scipy.sparse import csc_matrix
 from concurrent.futures import ProcessPoolExecutor as Pool
@@ -1008,8 +1008,8 @@ def makeLocalConnectivity(imdat, thresh):
             sparse_i=np.append(sparse_i,ondx1d[nzndx]-1,0)
             sparse_j=np.append(sparse_j,(ondx1d[nndx]-1)*np.ones(len(nzndx)))
             sparse_w=np.append(sparse_w,R[nzndx],0) # The axis here used to be 1, which raided an error, so I changed it to 0
-            
-    # concatenate the i, j and w_ij into a single vector	
+
+    # concatenate the i, j and w_ij into a single vector
     localConnectivity=sparse_i
     localConnectivity=np.append(localConnectivity,sparse_j)
     localConnectivity=np.append(localConnectivity,sparse_w)
@@ -1042,7 +1042,7 @@ def nCutClustering(connectivity,k):
     n=len(connectivity)/3
     # reshape the 1D vector read in from infile in to a 3xN array
     a=np.reshape(connectivity,(3,n))
-    m=max(max(a[0,:]),max(a[1,:]))+1
+    m=int(max(max(a[0,:]),max(a[1,:]))+1)
     # make the sparse matrix, CSC format is supposedly efficient for matrix
     # arithmetic
     W=csc_matrix((a[2,:],(a[0,:],a[1,:])), shape=(m,m))
@@ -1363,7 +1363,7 @@ def updateQueue(ROIIndex, priorityQueue, targetFunction, centroidTs, allVoxelTs,
         
 def calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, ROIVoxels,
                       centroidTs=[], consistencies=[], ROISizes=[], consistencyType='pearson c',
-                      fTransform=False,sizeExp=1):
+                      fTransform=False,sizeExp=1,sizeMomentExp=2):
     """
     Calculates the priority value of a given ROI - voxel pair. A helper function
     for growOptimizedROIs. Note: this function returns maxheap prioritites; for using the priority measures for minheap, they
@@ -1398,11 +1398,14 @@ def calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, ROIVoxel
     sizeExp: float, exponent of size if targetFunction == 'spatialConsistency' or 'weighted mean consistency' and 
              size std if targetFunction == 'meanConsistencyOverSizeStd'
              (default=1 for 'weighted mean consistency' and 'meanConsistencyOverSizeStd', 0 for 'spatialConsistency'). 
+    sizeMomentOrder: int, the order of the size distribution moment used for weighting if targetFunction == 
+                     'meanConsistencyOverSizeStd' (default = 2, corresponding to variance)
              
     Returns:
     --------
     priorityMeasure: float, the priority measure
-    """    
+    """ 
+    # TODO: update documentation related to sizeMomentOrder
     if targetFunction == 'correlationWithCentroid':
         priorityMeasure = np.corrcoef(centroidTs[ROIIndex],allVoxelTs[voxelIndex])[0][1]
     elif targetFunction == 'spatialConsistency':
@@ -1420,8 +1423,13 @@ def calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, ROIVoxel
             priorityMeasure = sum([tempConsistency*tempSize**sizeExp for tempConsistency,tempSize 
                                    in zip(tempConsistencies,tempSizes)])/sum([size**sizeExp for size in tempSizes])
         elif targetFunction == 'meanConsistencyOverSizeStd':
-            sizeStd = np.std(tempSizes)
-            priorityMeasure = np.mean(tempConsistencies)/(sizeStd**sizeExp + 1)   
+            # TODO: if using the moment order makes sense, update this function to take it as an input parameter and
+            # fix the following lines accordingly
+            sizeMomentOrder = sizeExp
+            sizeMoment = moment(tempSizes,moment=sizeMomentOrder)
+            priorityMeasure = np.mean(tempConsistencies)/(sizeMoment + 1)
+            #sizeStd = np.std(tempSizes)
+            #priorityMeasure = np.mean(tempConsistencies)/((sizeStd + 1)**sizeExp)   
     return priorityMeasure
 
 def checkFlipValidity(flip,ROIVoxels,voxelCoordinates,voxelLabels):
@@ -2302,7 +2310,8 @@ def growOptimizedROIs(cfg,verbal=True):
            if threshold in ['voxel-wise','maximal-voxel-wise','voxel-neighborhood']:
                for (ROIIndex, voxelIndex) in excludedVoxels:
                    if not voxelIndex == voxelToAdd: # if the voxel has already been added to a ROI, it won't be added back to the queue
-                       priorityValue = calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs,
+                       # Priority value is multiplied by -1 since heapq uses minheap
+                       priorityValue = -1*calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs,
                                                          ROIInfo['ROIVoxels'][ROIIndex], centroidTs, consistencies, ROISizes,
                                                          consistencyType, fTransform, sizeExp)
                        heapq.heappush((priorityValue, (ROIIndex, voxelIndex)))
