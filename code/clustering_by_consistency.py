@@ -948,10 +948,11 @@ def makeLocalConnectivity(imdat, thresh):
     print m, '# of non-zero voxels in the mask'
     
     # reshape fmri data to a num_voxels x num_timepoints array	
+    # now we have 1D vector for each timepoint
     sz = imdat.shape
     imdat=np.reshape(imdat,(np.prod(sz[:3]),sz[3]))
     
-    # construct a sparse matrix from the mask
+    # construct a sparse matrix from the mask with numbers where there are non zero entries in image
     msk=csc_matrix((range(1,m+1),(iv,np.zeros(m))),shape=(np.prod(sz[:-1]),1))
     sparse_i=[]
     sparse_j=[]
@@ -964,21 +965,31 @@ def makeLocalConnectivity(imdat, thresh):
         if i % 1000 == 0: print 'voxel #', i
         # calculate the voxels that are in the 3D neighborhood
         # of the center voxel
+        # ?not clear what it does
         ndx3d=indx_1dto3d(iv[i],sz[:-1])+neighbors
         ndx1d=indx_3dto1d(ndx3d,sz[:-1])
         
         # restrict the neigborhood using the mask
-        ondx1d=msk[ndx1d].todense()
+        if i==4100 :
+            print 'matrix shape is:',msk.shape,' index is:',ndx1d
+        try:
+            ondx1d=msk[ndx1d].todense()
+        except:
+            print 'Error: matrix shape is:',msk.shape,' index is:',ndx1d, 'i is',i
+        #ondx1d=msk[ndx1d].todense()
         ndx1d=ndx1d[np.nonzero(ondx1d)[0]]
         ndx1d=ndx1d.flatten()
         ondx1d=np.array(ondx1d[np.nonzero(ondx1d)[0]])
         ondx1d=ondx1d.flatten()
 
         # determine the index of the seed voxel in the neighborhood
+        # you calculate the corrcoeff to it
         nndx=np.nonzero(ndx1d==iv[i])[0]
 
         # exctract the timecourses for all of the voxels in the 
         # neighborhood
+        # (ndx1d is a mask to select neighbours in the fMRI data?)
+        # (matrix doesn't work in new code)
         tc=matrix(imdat[ndx1d,:])
 	 
         # make sure that the "seed" has variance, if not just
@@ -988,6 +999,7 @@ def makeLocalConnectivity(imdat, thresh):
 
         # calculate the correlation between all of the voxel TCs
         R=np.corrcoef(tc)
+        # np.rank is ndim
         if np.rank(R) == 0:
             R=np.reshape(R,(1,1))
 
@@ -1040,14 +1052,17 @@ def nCutClustering(connectivity,k):
     import python_ncut_lib as ncut
     # calculate the number of non-zero weights in the connectivity matrix
     n=len(connectivity)/3
+    print n,' number of non-zero weights in the connectivity matrix'
     # reshape the 1D vector read in from infile in to a 3xN array
     a=np.reshape(connectivity,(3,n))
+    # max number+1 between x and y rows
     m=int(max(max(a[0,:]),max(a[1,:]))+1)
     # make the sparse matrix, CSC format is supposedly efficient for matrix
     # arithmetic
     W=csc_matrix((a[2,:],(a[0,:],a[1,:])), shape=(m,m))
     
-    # calculating the eigendecomposition of the Laplacian 
+    # calculating the eigendecomposition of the Laplacian
+    # read ncut paper for more
     eigenval,eigenvec = ncut.ncut(W,k)
     
     # clustering
@@ -1056,7 +1071,7 @@ def nCutClustering(connectivity,k):
 
     # transform the discretised eigenvectors into a single vector
     # where the value corresponds to the cluster # of the corresponding
-    # voxel (each voxel belongs to excactly one cluster)
+    # voxel (each voxel belongs to exactly one cluster)
     group_img=eigenvec_discrete[:,0]
     for i in range(1,k):
         group_img=group_img+(i+1)*eigenvec_discrete[:,i]
@@ -1363,6 +1378,7 @@ def updateQueue(ROIIndex, priorityQueue, targetFunction, centroidTs, allVoxelTs,
         
 def calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, ROIVoxels,
                       centroidTs=[], consistencies=[], ROISizes=[], consistencyType='pearson c',
+                      regularization=None,regExp=2,
                       fTransform=False,sizeExp=1,sizeMomentExp=2):
     """
     Calculates the priority value of a given ROI - voxel pair. A helper function
@@ -1430,6 +1446,12 @@ def calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, ROIVoxel
             priorityMeasure = np.mean(tempConsistencies)/(sizeMoment + 1)
             #sizeStd = np.std(tempSizes)
             #priorityMeasure = np.mean(tempConsistencies)/((sizeStd + 1)**sizeExp)   
+
+    #TODO implement regularization to add to priority measure
+    #############################temporary implementation
+    if regularization:
+        priorityMeasure+= regularization*pow(len(ROIVoxels),regExp)
+    
     return priorityMeasure
 
 def checkFlipValidity(flip,ROIVoxels,voxelCoordinates,voxelLabels):
@@ -2004,6 +2026,7 @@ def growOptimizedROIs(cfg,verbal=True):
                     ROI is lower than its average correlation to at least N other ROIs. For setting N, see the
                     percentageROIsForThresholding parameter below (default: N = nROIs, i.e. a voxel is not added to a ROI
                     if it's more correlated to any other ROI)
+                    #check if higher consistency with non touching clusters
                     - 'maximal-voxel-wise': same as voxel-wise above but only the N strongest average correlations per ROI
                     are taken into account; for setting N see the nCorrelationsForThresholding parameter below
                     - 'voxel-neighbor': no voxel is added to a ROI if its average correlation to the voxels of this
@@ -2023,6 +2046,8 @@ def growOptimizedROIs(cfg,verbal=True):
                          needed to ensure that the divider > 0)
          consistencyType: str, definition of spatial consistency to be used 
                           (default: 'pearson c' (mean Pearson correlation coefficient))
+         regularization: float, the weight for the regularization to control size (default=None)
+         regExp: float, the exponent for the reg function, used only if regularization (above) is used (default=2)
          fTransform: bool, should Fisher Z transform be applied when calculating the spatial consistency 
                      (default=False)
          sizeExp: float, exponent of size if targetFunction = 'weighted mean consistency' or
@@ -2037,6 +2062,7 @@ def growOptimizedROIs(cfg,verbal=True):
                                        (default = 5)
          percentageROIsForThresholding: float (from 0 to 1), in thresholding a voxel can't be added to a ROI if it's more correlated to at least
                                         percentageROIsForThresholding*nROIs other ROIs (default: 1/nROIs, i.e. to any other ROIs)
+                                        #lower= easier to be added
          percentageMinCentroidDistance: float (from 0 to 1), the minimal distance between ReHo-based seeds is set as 
                                         percentageMinCentroidDistance times maximal dimension of imgdata (default = 0).
          nReHoNeighbors: int, number or neighbors used for calculating ReHo if ReHo-based seeds are to be used; options: 6 (faces),
@@ -2055,7 +2081,7 @@ def growOptimizedROIs(cfg,verbal=True):
     --------
     voxelLabels: nVoxels x 1 np.array, ROI labels of all voxels. Voxels that don't belong to any ROI have label -1.
     voxelCoordinates: list (len = nVoxels) of tuples (len = 3), coordinates (in voxels) of all voxels
-    meanConsistency: double, mean consistency of the final ROIs
+    meanConsistency: double, mean consistency of the final ROIs (#all ROIs)
     """
     # Setting up: reading parameters
     if cfg['targetFunction'] == 'local weighted consistency': # this is a case for backward compatibility; the 'local weighted consistency' option should not be used
@@ -2066,8 +2092,14 @@ def growOptimizedROIs(cfg,verbal=True):
         cfg['template'] = None
     if not 'nROIs' in cfg.keys():
         cfg['nROIs'] = 100
+    if not 'names' in cfg.keys():
+        cfg['names']= ''
     imgdata = cfg['imgdata']
     voxelCoordinates = list(zip(*np.where(np.any(imgdata != 0, 3) == True)))
+    if 'regularization' in cfg.keys():
+        regularization= cfg['regularization']
+        if 'regExp' in cfg.keys():
+            regExp= cfg['regExp']
     if 'consistencyType' in cfg.keys():
         consistencyType = cfg['consistencyType']
     else:
@@ -2150,15 +2182,20 @@ def growOptimizedROIs(cfg,verbal=True):
 
     # Setting up: defining initial priority queues, priority measures (centroid-voxel correlations) and candidate voxels to be added per ROI
     if includeNeighborhoods:
+        #coordinates to 4d array
         ROIMaps = []
+        #coordinates to 2d array (positions are flattened)
         ROIVoxels = []
+        # list of centroids and neighbours in 4 coordinates
         for centroid, neighborhood in zip(ROICentroids, centroidNeighborhoods):
             ROIMaps.append(np.vstack((np.array(neighborhood),centroid)))
             indices = np.zeros(len(neighborhood)+1,dtype=int)
             indices[0] = np.where((voxelCoordinates==centroid).all(axis=1)==1)[0]
+            #2d coordinates
             for i,neighbor in enumerate(neighborhood):
                 indices[i+1] = np.where((voxelCoordinates==neighbor).all(axis=1)==1)[0]
             ROIVoxels.append(indices)
+    #same without neighbours
     else:
         ROIMaps = [np.array(centroid) for centroid in ROICentroids]
         ROIVoxels = [np.array(np.where((voxelCoordinates==centroid).all(axis=1)==1)[0]) for centroid in ROICentroids]
@@ -2166,6 +2203,7 @@ def growOptimizedROIs(cfg,verbal=True):
                'ROINames':cfg['names']}
             
     if targetFunction in ['spatialConsistency', 'weighted mean consistency','meanConsistencyOverSizeStd'] and includeNeighborhoods:
+        #Consistencies of just neighbours
         consistencies = [calculateSpatialConsistency(({'allVoxelTs':allVoxelTs,'consistencyType':consistencyType,'fTransform':fTransform},ROI)) for ROI in ROIVoxels]
     else:
         consistencies = [1 for i in range(nROIs)]
@@ -2174,7 +2212,8 @@ def growOptimizedROIs(cfg,verbal=True):
         ROISizes = [len(ROI) for ROI in ROIVoxels]
     else:
         ROISizes = [1 for i in range(nROIs)]
-                    
+
+    #initialize centroids and voxel labels                
     centroidTs = np.zeros((nROIs,nTime))
     voxelLabels = np.zeros(nVoxels,dtype=int) - 1
     for i, ROIIndex in enumerate(ROIVoxels):
@@ -2193,19 +2232,25 @@ def growOptimizedROIs(cfg,verbal=True):
     priorityQueue = [] # initializing the priority queue
     forbiddenPairs = [] # this is a list of ROI - voxel pairs that have failed thresholding and won't therefore considered for updating (related to data-driven and strict data-driven thresholding)
 
+    #search for touching voxels not in ROIs and calculate target function
     for ROIIndex, (ROI, centroid, consistency, size) in enumerate(zip(ROIInfo['ROIVoxels'], centroidTs, consistencies, ROISizes)):
         neighbors = findROIlessNeighbors(ROIIndex,voxelCoordinates,{'ROIMaps':ROIMaps})['ROIlessIndices']
         for voxelIndex in neighbors:
             # priority measures are multiplied by -1 to match the minheap used by heapq
             priorityMeasure = -1*calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, ROI, centroid, consistencies,
-                                                   ROISizes, consistencyType, fTransform, sizeExp)
+                                                   ROISizes, consistencyType,regularization,regExp, fTransform, sizeExp)
 
             heapq.heappush(priorityQueue,(priorityMeasure,(ROIIndex,voxelIndex))) # adding the measure - voxel pair to the priority queue
                     
     selectedMeasures = []
     # Actual optimization takes place inside the while loop:
+    counter=False
     while len(priorityQueue) > 0:
+        if counter:
+            print('len priority: ',len(priorityQueue))
+            #counter=counter+1
         # Selecting the ROI to be updated and voxel to be added to that ROI (based on the priority measure)
+        # we select best (globally)voxel on the border of a ROI each time
         priorityMeasure, (ROIToUpdate, voxelToAdd) = heapq.heappop(priorityQueue)
                 
         # Checking that adding the voxel doesn't yield sub-threshold consistencies
@@ -2230,8 +2275,9 @@ def growOptimizedROIs(cfg,verbal=True):
                 for ROIIndex, voxelIndex in forbiddenPairs:
                     priorityMeasure = -1*calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, 
                                                            ROIInfo['ROIVoxels'][ROIIndex], centroidTs[ROIIndex],
-                                                           consistencies, ROISizes, consistencyType, fTransform,
-                                                           sizeExp)
+                                                           consistencies, ROISizes, consistencyType,
+                                                           regularization,regExp,
+                                                            fTransform,sizeExp)
                     heapq.heappush(priorityQueue,(priorityMeasure,(ROIIndex,voxelIndex)))
                 forbiddenPairs = []
                         
@@ -2256,10 +2302,11 @@ def growOptimizedROIs(cfg,verbal=True):
                 excludedVoxels[voxelToAdd] = ROIToUpdate
                 continue
         elif priorityMeasure <= threshold: # this is thresholding by a fixed numeric threshold
+                print('breaking because of threshold')
                 break
                     
                     
-        # Adding the voxel to the ROI
+        # Adding the voxel to the ROI and updating its consistency
         updatedConsistency = updateSpatialConsistency(allVoxelTs, voxelToAdd, ROIInfo['ROIVoxels'][ROIToUpdate],
                                                       consistencies[ROIToUpdate], ROISizes[ROIToUpdate], consistencyType,
                                                       fTransform)
@@ -2270,7 +2317,7 @@ def growOptimizedROIs(cfg,verbal=True):
         ROISizes[ROIToUpdate] += 1
                 
         # finding and removing elements where voxelToAdd is to be added to another ROI:
-        # a voxel can't belong to more than one ROI
+        # a voxel can't belong to more than one ROI (voxels are not unique in the queue)
         elementsToRemoveFromQueue = []
         for element in priorityQueue:
             if element[1][1] == voxelToAdd:
@@ -2285,12 +2332,12 @@ def growOptimizedROIs(cfg,verbal=True):
                 # priority values are multiplied by -1 since heapq uses minheap
                 updatedPriorityValue = -1*calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, 
                                                             ROIInfo['ROIVoxels'][ROIIndex], centroidTs, consistencies, ROISizes,
-                                                            consistencyType, fTransform, sizeExp)
+                                                            consistencyType,regularization,regExp,fTransform, sizeExp)
                 priorityQueue[i] = (updatedPriorityValue, (ROIIndex, voxelIndex))
                     
         heapq.heapify(priorityQueue) # heapify to fix the queue order after removing and updating elements
                 
-        # Updating priority queues: adding the ROIless neighbors of the updated ROI
+        # Updating priority queues: adding the ROIless neighbors of the updated ROI (basically updating the borders of the ROIs)
         pairsInQueue = [element[1] for element in priorityQueue]
         neighbors = findROIlessVoxels(findNeighbors(voxelCoordinates[voxelToAdd],allVoxels=voxelCoordinates),ROIInfo)['ROIlessMap'] # Here, we search for the ROIless neighbors of the added voxel; findROIlessNeighbors() can't be used since it finds the ROIless neighbors of a ROI
         ROIlessIndices = [np.where((voxelCoordinates == neighbor).all(axis=1)==1)[0][0] for neighbor in neighbors]
@@ -2302,7 +2349,7 @@ def growOptimizedROIs(cfg,verbal=True):
                 # Priority value is multiplied by -1 since heapq uses minheap.
                 priorityValue = -1*calculatePriority(ROIToUpdate, ROIlessIndex, targetFunction, allVoxelTs,
                                                      ROIInfo['ROIVoxels'][ROIToUpdate], centroidTs, consistencies, ROISizes,
-                                                     consistencyType, fTransform, sizeExp)
+                                                     consistencyType,regularization,regExp, fTransform, sizeExp)
                 heapq.heappush(priorityQueue,(priorityValue, (ROIToUpdate, ROIlessIndex)))
                         
         # Adding voxels excluded in thresholding back to the priority queue
@@ -2313,7 +2360,7 @@ def growOptimizedROIs(cfg,verbal=True):
                        # Priority value is multiplied by -1 since heapq uses minheap
                        priorityValue = -1*calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs,
                                                          ROIInfo['ROIVoxels'][ROIIndex], centroidTs, consistencies, ROISizes,
-                                                         consistencyType, fTransform, sizeExp)
+                                                         consistencyType,regularization,regExp, fTransform, sizeExp)
                        heapq.heappush((priorityValue, (ROIIndex, voxelIndex)))
                             
         if verbal:
@@ -2837,13 +2884,17 @@ def spectralNCutClustering(cfg):
     voxelLabels: nVoxels x 1 np.array, ROI labels of all voxels. Voxels that don't belong to any ROI have label -1.
     voxelCoordinates: list (len = nVoxels) of tuples (len = 3), coordinates (in voxels) of all voxels
     """
+    #setting up params
     imgdata = cfg['imgdata']
     thres = cfg['threshold']
     nClusters = cfg['nROIs']
+    #read above, some magic code...
     voxelCoordinates = list(zip(*np.where(np.any(imgdata != 0, 3) == True)))
     
+    #actually making the parcellation
     localConnectivity = makeLocalConnectivity(imgdata,thres)
     voxelLabels = nCutClustering(localConnectivity,nClusters)
+    #some stuff to get it to the right form
     voxelLabels = np.squeeze(np.array(voxelLabels.todense())).astype(int)
     
     # fixing the gaps in cluster labeling (because of the clustering method, some labels may be missing)
