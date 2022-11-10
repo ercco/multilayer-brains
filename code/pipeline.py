@@ -70,6 +70,7 @@ def isomorphism_classes_from_file(filename,data_mask_filename,
     # load data
     data = nib.load(filename)
     image_array = data.get_fdata()
+    print image_array[0,0,0,0], image_array[0,0,0,1], image_array[0,0,0,2],image_array[0,0,0,3]
     # mask data
     if data_mask_filename:
         maskdata = nib.load(data_mask_filename)

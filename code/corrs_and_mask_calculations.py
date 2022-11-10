@@ -72,6 +72,7 @@ def make_adjacency_matrix(imgdata,exclude_masked=True):
 
 def gray_mask(imgdata,gray_matter_mask):
     # Modifies imgdata in-place
+    #try to put wrong mask
     assert imgdata.shape[0:3] == gray_matter_mask.shape
     timeseries_length = imgdata.shape[3]
     for ii in range(gray_matter_mask.shape[0]):
