@@ -1390,7 +1390,7 @@ def calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, ROIVoxel
     centroidTs: np.array, nTimepoints x 1, time series of the ROI centroid. Used if targetFunction == 'correlationWithCentroid'
     consistencies: iterable (len(consistencies) = nROIs), spatial consistencies of all ROIs. Used if
                    targetFunction == 'weighted mean consistency'
-    ROISizes: iterable (len(consistencies = nROIs)), sizes of all ROIs. Used if targetFunction == 'weighted mean consistency' 
+    ROISizes: iterable (len(ROISizes) = nROIs), sizes of all ROIs. Used if targetFunction == 'weighted mean consistency' 
     or 'spatialConsistency'
     consistencyType: str, definition of spatial consistency to be used if 
                      targetFunction == 'spatialConsistency' (default: 'pearson c' (mean Pearson correlation coefficient))
