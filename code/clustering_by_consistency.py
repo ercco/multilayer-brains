@@ -1450,7 +1450,16 @@ def calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, ROIVoxel
     #TODO implement regularization to add to priority measure
     #############################temporary implementation
     if regularization:
-        priorityMeasure+= regularization*pow(len(ROIVoxels),regExp)
+        #priorityMeasure+= regularization*pow(len(ROIVoxels),regExp)
+        tempSizes = list(ROISizes)
+        tempSizes[ROIIndex] += 1
+        ROI_size_reg=0
+        #old implementation without normalization
+        for i in range(0,len(tempSizes)):
+            ROI_size_reg+=pow(tempSizes[i],regExp)
+        priorityMeasure+= regularization*ROI_size_reg
+        #normalization
+        #priorityMeasure+= regularization*ROI_size_reg/(pow(sum(tempSizes),regExp))
     
     return priorityMeasure
 
@@ -2095,6 +2104,7 @@ def growOptimizedROIs(cfg,verbal=True):
     if not 'names' in cfg.keys():
         cfg['names']= ''
     imgdata = cfg['imgdata']
+    #?????
     voxelCoordinates = list(zip(*np.where(np.any(imgdata != 0, 3) == True)))
     if 'regularization' in cfg.keys():
         regularization= cfg['regularization']
@@ -2182,9 +2192,9 @@ def growOptimizedROIs(cfg,verbal=True):
 
     # Setting up: defining initial priority queues, priority measures (centroid-voxel correlations) and candidate voxels to be added per ROI
     if includeNeighborhoods:
-        #coordinates to 4d array
+        #coordinates to 3d array
         ROIMaps = []
-        #coordinates to 2d array (positions are flattened)
+        #coordinates to 1d array (positions are flattened)
         ROIVoxels = []
         # list of centroids and neighbours in 4 coordinates
         for centroid, neighborhood in zip(ROICentroids, centroidNeighborhoods):
@@ -2198,6 +2208,9 @@ def growOptimizedROIs(cfg,verbal=True):
     #same without neighbours
     else:
         ROIMaps = [np.array(centroid) for centroid in ROICentroids]
+    #got some problems with this line if I use template (bool got no attribute .all)
+        #return indices in 1D space of the centroid voxels
+        ROICentroids=np.array(ROICentroids)
         ROIVoxels = [np.array(np.where((voxelCoordinates==centroid).all(axis=1)==1)[0]) for centroid in ROICentroids]
     ROIInfo = {'ROIMaps':ROIMaps,'ROIVoxels':ROIVoxels,'ROISizes':np.array([len(voxels) for voxels in ROIVoxels],dtype=int),
                'ROINames':cfg['names']}
