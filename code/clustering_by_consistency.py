@@ -15,6 +15,7 @@ import nibabel as nib
 import decimal
 import random
 import heapq
+import time
 
 import network_io, network_construction
 
@@ -1379,7 +1380,7 @@ def updateQueue(ROIIndex, priorityQueue, targetFunction, centroidTs, allVoxelTs,
 def calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, ROIVoxels,
                       centroidTs=[], consistencies=[], ROISizes=[], consistencyType='pearson c',
                       regularization=None,regExp=2,
-                      fTransform=False,sizeExp=1,sizeMomentExp=2):
+                      fTransform=False,sizeExp=1,norm_denominator=0,sizeMomentExp=2):
     """
     Calculates the priority value of a given ROI - voxel pair. A helper function
     for growOptimizedROIs. Note: this function returns maxheap prioritites; for using the priority measures for minheap, they
@@ -1447,19 +1448,22 @@ def calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, ROIVoxel
             #sizeStd = np.std(tempSizes)
             #priorityMeasure = np.mean(tempConsistencies)/((sizeStd + 1)**sizeExp)   
 
-    #TODO implement regularization to add to priority measure
+    #regularization to add to priority measure
     #############################temporary implementation
     if regularization:
         #priorityMeasure+= regularization*pow(len(ROIVoxels),regExp)
         tempSizes = list(ROISizes)
         tempSizes[ROIIndex] += 1
         ROI_size_reg=0
-        #old implementation without normalization
         for i in range(0,len(tempSizes)):
             ROI_size_reg+=pow(tempSizes[i],regExp)
-        priorityMeasure+= regularization*ROI_size_reg
+        #without normalization
+        #priorityMeasure+= regularization*ROI_size_reg
         #normalization
         #priorityMeasure+= regularization*ROI_size_reg/(pow(sum(tempSizes),regExp))
+        #normalization_fixed_den
+        #norm_denominator=pow(allVoxelTs.shape[0],regExp)
+        priorityMeasure+= regularization*ROI_size_reg/norm_denominator
     
     return priorityMeasure
 
@@ -2245,13 +2249,14 @@ def growOptimizedROIs(cfg,verbal=True):
     priorityQueue = [] # initializing the priority queue
     forbiddenPairs = [] # this is a list of ROI - voxel pairs that have failed thresholding and won't therefore considered for updating (related to data-driven and strict data-driven thresholding)
 
+    norm_denominator=pow(allVoxelTs.shape[0],regExp)
     #search for touching voxels not in ROIs and calculate target function
     for ROIIndex, (ROI, centroid, consistency, size) in enumerate(zip(ROIInfo['ROIVoxels'], centroidTs, consistencies, ROISizes)):
         neighbors = findROIlessNeighbors(ROIIndex,voxelCoordinates,{'ROIMaps':ROIMaps})['ROIlessIndices']
         for voxelIndex in neighbors:
             # priority measures are multiplied by -1 to match the minheap used by heapq
             priorityMeasure = -1*calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, ROI, centroid, consistencies,
-                                                   ROISizes, consistencyType,regularization,regExp, fTransform, sizeExp)
+                                                   ROISizes, consistencyType,regularization,regExp, fTransform, sizeExp,norm_denominator)
 
             heapq.heappush(priorityQueue,(priorityMeasure,(ROIIndex,voxelIndex))) # adding the measure - voxel pair to the priority queue
                     
@@ -2259,6 +2264,9 @@ def growOptimizedROIs(cfg,verbal=True):
     # Actual optimization takes place inside the while loop:
     counter=False
     while len(priorityQueue) > 0:
+
+        start_time=time.time()
+
         if counter:
             print('len priority: ',len(priorityQueue))
             #counter=counter+1
@@ -2290,7 +2298,7 @@ def growOptimizedROIs(cfg,verbal=True):
                                                            ROIInfo['ROIVoxels'][ROIIndex], centroidTs[ROIIndex],
                                                            consistencies, ROISizes, consistencyType,
                                                            regularization,regExp,
-                                                            fTransform,sizeExp)
+                                                            fTransform,sizeExp,norm_denominator)
                     heapq.heappush(priorityQueue,(priorityMeasure,(ROIIndex,voxelIndex)))
                 forbiddenPairs = []
                         
@@ -2345,7 +2353,7 @@ def growOptimizedROIs(cfg,verbal=True):
                 # priority values are multiplied by -1 since heapq uses minheap
                 updatedPriorityValue = -1*calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, 
                                                             ROIInfo['ROIVoxels'][ROIIndex], centroidTs, consistencies, ROISizes,
-                                                            consistencyType,regularization,regExp,fTransform, sizeExp)
+                                                            consistencyType,regularization,regExp,fTransform, sizeExp,norm_denominator)
                 priorityQueue[i] = (updatedPriorityValue, (ROIIndex, voxelIndex))
                     
         heapq.heapify(priorityQueue) # heapify to fix the queue order after removing and updating elements
@@ -2362,7 +2370,7 @@ def growOptimizedROIs(cfg,verbal=True):
                 # Priority value is multiplied by -1 since heapq uses minheap.
                 priorityValue = -1*calculatePriority(ROIToUpdate, ROIlessIndex, targetFunction, allVoxelTs,
                                                      ROIInfo['ROIVoxels'][ROIToUpdate], centroidTs, consistencies, ROISizes,
-                                                     consistencyType,regularization,regExp, fTransform, sizeExp)
+                                                     consistencyType,regularization,regExp, fTransform, sizeExp,norm_denominator)
                 heapq.heappush(priorityQueue,(priorityValue, (ROIToUpdate, ROIlessIndex)))
                         
         # Adding voxels excluded in thresholding back to the priority queue
@@ -2373,13 +2381,16 @@ def growOptimizedROIs(cfg,verbal=True):
                        # Priority value is multiplied by -1 since heapq uses minheap
                        priorityValue = -1*calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs,
                                                          ROIInfo['ROIVoxels'][ROIIndex], centroidTs, consistencies, ROISizes,
-                                                         consistencyType,regularization,regExp, fTransform, sizeExp)
+                                                         consistencyType,regularization,regExp, fTransform, sizeExp,norm_denominator)
                        heapq.heappush((priorityValue, (ROIIndex, voxelIndex)))
                             
         if verbal:
             print(str(len(priorityQueue)) + ' voxels in priority queues')
             totalROISize = sum(len(ROIVox) for ROIVox in ROIInfo['ROIVoxels'])
             print(str(totalROISize) + ' voxels in ROIs')
+            end_time=time.time()
+            iteration_time=end_time-start_time
+            print('this iteration took:',iteration_time,'seconds')
     return voxelLabels, voxelCoordinates
     
 def growOptimizedROIsInParallel(cfg, nIter=100, nCPUs=5):
