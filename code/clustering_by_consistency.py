@@ -1451,12 +1451,14 @@ def calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, ROIVoxel
     #TODO implement regularization to add to priority measure
     #############################temporary implementation
     if regularization:
+        #print('inside regularization:',regularization)
         tempSizes = list(ROISizes)
         tempSizes[ROIIndex] += 1
         ROI_size_reg=0
         for i in range(0,len(tempSizes)):
             ROI_size_reg+=pow(tempSizes[i],regExp)
-        priorityMeasure+= regularization*ROI_size_reg/(41434969.0)   
+        priorityMeasure+= regularization*ROI_size_reg/(41434969.0)
+        #priorityMeasure+= regularization*ROI_size_reg
         #priorityMeasure+= regularization*pow(len(ROIVoxels),regExp)
     
     return priorityMeasure
@@ -2252,11 +2254,14 @@ def growOptimizedROIs(cfg,verbal=True):
     selectedMeasures = []
     # Actual optimization takes place inside the while loop:
     end_timer=time.time()
+    '''COUNTER=0
+    DEBUG=False'''
     while len(priorityQueue) > 0:
         
         start_time=time.time()
-        if (start_time-end_timer)>800:
-            exit()
+        #if (start_time-end_timer)>800:
+        #   exit()
+
         # Selecting the ROI to be updated and voxel to be added to that ROI (based on the priority measure)
         # we select best (globally)voxel on the border of a ROI each time
         priorityMeasure, (ROIToUpdate, voxelToAdd) = heapq.heappop(priorityQueue)
@@ -2315,6 +2320,14 @@ def growOptimizedROIs(cfg,verbal=True):
                     
                     
         # Adding the voxel to the ROI and updating its consistency
+        '''if DEBUG:
+            DEBUG=False
+            print('REGULARIZATION:',regularization)
+            pkl_dict={'xmatrix':allVoxelTs[voxelToAdd],'ymatrix':allVoxelTs[ROIInfo['ROIVoxels'][ROIToUpdate]]}
+            #print('x matrix to Pearson',allVoxelTs[voxelToAdd])
+            #print('y matrix to Pearson',allVoxelTs[ROIInfo['ROIVoxels'][ROIToUpdate]])
+            with open('/scratch/cs/networks/delucp1/growing_alex_80/debug_dict_vwth'+str(COUNTER)+'.pkl', 'wb') as f:
+                pickle.dump(pkl_dict, f, -1)'''
         updatedConsistency = updateSpatialConsistency(allVoxelTs, voxelToAdd, ROIInfo['ROIVoxels'][ROIToUpdate],
                                                       consistencies[ROIToUpdate], ROISizes[ROIToUpdate], consistencyType,
                                                       fTransform)
@@ -2378,6 +2391,11 @@ def growOptimizedROIs(cfg,verbal=True):
             end_time=time.time()
             iteration_time=end_time-start_time
             print('this iteration took:',iteration_time,'seconds')
+        '''
+        if totalROISize == 586 or totalROISize ==587 or totalROISize ==588:
+            DEBUG=True
+            print('DEBUG=',DEBUG)
+            COUNTER+=1'''
             
     return voxelLabels, voxelCoordinates
     
