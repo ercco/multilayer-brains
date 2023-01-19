@@ -1306,7 +1306,44 @@ def getCentroidsByReHo(imgdata,nCentroids,nNeighbors=6,nCPUs=5,minDistancePercen
     else:
         return centroidCoordinates
     
-    
+
+#ReHo test function definition
+
+def constrainedReHoSearch(imgdata,template,nCentroids,nNeighbors=6,nCPUs=5,ReHoMeasure='ReHo',
+                       consistencyType='pearson c',fTransform=False):
+    '''in this version we search for ReHos only inside ROI boundaries,
+    it's ok if the voxel is in a border of the ROI and ReHo it's calculated also with neigbours
+    outside the ROI'''
+
+    #template has already been masked and has only nonzero voxels
+
+    ROIIndices = list(np.unique(template))
+    ROIIndices.remove(0)
+    centroidCoordinates=[]
+    if (nCentroids != len(ROIIndices)):
+        raise Exception("number of ROIs wanted it's different than number in template")
+
+    for ROIInd in ROIIndices:
+        #gives a list with the coordinates of every voxel in a ROI
+        ROIVoxels = np.transpose(np.array(np.where(template == ROIInd)))
+        #parameters
+        cfg = {'imgdata':imgdata,'nNeighbors':nNeighbors,'skipNeighborless':True,'ReHoMeasure':ReHoMeasure,
+           'consistencyType':consistencyType,'fTransform':fTransform}
+        #list for pool
+        paramSpace = [(cfg,voxelCoords) for voxelCoords in ROIVoxels]
+        pool = Pool(max_workers = nCPUs)
+        #we calculate ReHos only for a single ROI at a time
+        ReHos = list(pool.map(calculateReHo,paramSpace,chunksize=1))
+        maxReHoIndex=ReHos.index(max(ReHos))
+        #indices of the voxels in order of highest ReHo
+        #indices = np.argsort(ReHos)[::-1] #probably can be faster using max()
+        #coordinate of ROI centroid (highest ReHo)
+        ROIcentroid=ROIVoxels[maxReHoIndex]
+        centroidCoordinates.append(ROIcentroid)
+    centroidCoordinates=np.array(centroidCoordinates)
+    return centroidCoordinates
+
+
 def updateQueue(ROIIndex, priorityQueue, targetFunction, centroidTs, allVoxelTs, ROIVoxels,
                 consistencies=[], ROISizes = [], consistencyType='pearson c',fTransform=False,sizeExp=1,
                 verbal=False):
