@@ -1310,7 +1310,7 @@ def getCentroidsByReHo(imgdata,nCentroids,nNeighbors=6,nCPUs=5,minDistancePercen
 #ReHo test function definition
 
 def constrainedReHoSearch(imgdata,template,nCentroids,nNeighbors=6,nCPUs=5,ReHoMeasure='ReHo',
-                       consistencyType='pearson c',fTransform=False):
+                       consistencyType='pearson c',fTransform=False,saveRehoValuePath=''):
     '''in this version we search for ReHos only inside template ROIs boundaries,
     it's ok if the voxel is in a border of the ROI and ReHo it's calculated also with neigbours
     outside the ROI'''
@@ -1320,9 +1320,11 @@ def constrainedReHoSearch(imgdata,template,nCentroids,nNeighbors=6,nCPUs=5,ReHoM
     ROIIndices = list(np.unique(template))
     ROIIndices.remove(0)
     centroidCoordinates=[]
+    centroidRehos=[]
     if (nCentroids != len(ROIIndices)):
         raise Exception("number of ROIs wanted it's different than number in template")
 
+    savepath=saveRehoValuePath
     for ROIInd in ROIIndices:
         #gives a list with the coordinates of every voxel in a ROI
         ROIVoxels = np.transpose(np.array(np.where(template == ROIInd)))
@@ -1340,7 +1342,13 @@ def constrainedReHoSearch(imgdata,template,nCentroids,nNeighbors=6,nCPUs=5,ReHoM
         #coordinate of ROI centroid (highest ReHo)
         ROIcentroid=ROIVoxels[maxReHoIndex]
         centroidCoordinates.append(ROIcentroid)
+        centroidRehos.append(max(ReHos))
     centroidCoordinates=np.array(centroidCoordinates)
+    centroidRehos=np.array(centroidRehos)
+    if savepath:
+        print('saving centroids rego at ',savepath)
+        with open(savepath, 'wb') as f:
+            pickle.dump(centroidRehos, f, -1)
     return centroidCoordinates
 
 
