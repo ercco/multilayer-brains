@@ -1311,7 +1311,7 @@ def getCentroidsByReHo(imgdata,nCentroids,nNeighbors=6,nCPUs=5,minDistancePercen
 
 def constrainedReHoSearch(imgdata,template,nCentroids,nNeighbors=6,nCPUs=5,ReHoMeasure='ReHo',
                        consistencyType='pearson c',fTransform=False):
-    '''in this version we search for ReHos only inside ROI boundaries,
+    '''in this version we search for ReHos only inside template ROIs boundaries,
     it's ok if the voxel is in a border of the ROI and ReHo it's calculated also with neigbours
     outside the ROI'''
 
@@ -1465,7 +1465,7 @@ def calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, ROIVoxel
     elif targetFunction == 'spatialConsistency':
         priorityMeasure = updateSpatialConsistency(allVoxelTs, voxelIndex, ROIVoxels, consistencies[ROIIndex],
                                                    ROISizes[ROIIndex], consistencyType, fTransform) * (ROISizes[ROIIndex] + 1)**sizeExp
-    elif targetFunction in ['weighted mean consistency','meanConsistencyOverSizeStd']:
+    elif targetFunction in ['weighted mean consistency','meanConsistencyOverSizeStd','min consistency']:
         # TODO: check if there's an easier formula for updating the weighted mean consistency (similarly as there is for consistency)
         tempConsistencies = list(consistencies)
         tempSizes = list(ROISizes)
@@ -1476,6 +1476,8 @@ def calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, ROIVoxel
         if targetFunction == 'weighted mean consistency':
             priorityMeasure = sum([tempConsistency*tempSize**sizeExp for tempConsistency,tempSize 
                                    in zip(tempConsistencies,tempSizes)])/sum([size**sizeExp for size in tempSizes])
+        elif targetFunction == 'min consistency':
+            priorityMeasure = minCorr(allVoxelTs, voxelIndex, ROIVoxels)
         elif targetFunction == 'meanConsistencyOverSizeStd':
             # TODO: if using the moment order makes sense, update this function to take it as an input parameter and
             # fix the following lines accordingly
@@ -1485,16 +1487,16 @@ def calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, ROIVoxel
             #sizeStd = np.std(tempSizes)
             #priorityMeasure = np.mean(tempConsistencies)/((sizeStd + 1)**sizeExp)   
 
-    #TODO implement regularization to add to priority measure
     #############################temporary implementation
     if regularization:
         #print('inside regularization:',regularization)
         tempSizes = list(ROISizes)
         tempSizes[ROIIndex] += 1
         ROI_size_reg=0
-        for i in range(0,len(tempSizes)):
-            ROI_size_reg+=pow(tempSizes[i],regExp)
-        priorityMeasure+= regularization*ROI_size_reg/norm_denominator
+        #for i in range(0,len(tempSizes)):
+        #    ROI_size_reg+=pow(tempSizes[i],regExp)
+        ROI_size_reg=sum(i**regExp for i in tempSizes)
+        priorityMeasure+= regularization*ROI_size_reg/(norm_denominator)
         #priorityMeasure+= regularization*ROI_size_reg/(41434969.0)
         #priorityMeasure+= regularization*ROI_size_reg
         #priorityMeasure+= regularization*pow(len(ROIVoxels),regExp)
@@ -1839,7 +1841,25 @@ def updateSpatialConsistency(allVoxelTs, voxelIndex, ROIVoxels, previousConsiste
     else:
         spatialConsistency = 0
     return spatialConsistency
+
+def minCorr(allVoxelTs, voxelIndex, ROIVoxels):
+    """
+    Calculate minimum Pearson Correlation between a voxel and the voxels inside the ROI.
     
+    Parameters:
+    -----------
+    allVoxelTs: nVoxels x nTime np.array containing voxel time series
+    voxelIndex: int, index of the voxel to be added in allVoxelTs
+    ROIVoxels: list (or other iterable) of ints, indices of the ROI's voxels in allVoxelTs
+
+    Returns:
+    --------
+    min_corr_value: float, value of minimum correlation
+    """
+    newCorrelations = calculatePearsonR(allVoxelTs[voxelIndex], allVoxelTs[ROIVoxels]).flatten()
+    min_corr_value=min(newCorrelations)
+    return min_corr_value
+
 def calculateCorrelationsInAndBetweenROIs(dataFiles,layersetwiseNetworkSavefolders,
                                       networkFiles,nLayers,timewindow,overlap,savePath=None,
                                       nBins=100,returnCorrelations=False,subjectIndex=None,
@@ -2253,13 +2273,13 @@ def growOptimizedROIs(cfg,verbal=True):
     ROIInfo = {'ROIMaps':ROIMaps,'ROIVoxels':ROIVoxels,'ROISizes':np.array([len(voxels) for voxels in ROIVoxels],dtype=int),
                'ROINames':cfg['names']}
             
-    if targetFunction in ['spatialConsistency', 'weighted mean consistency','meanConsistencyOverSizeStd'] and includeNeighborhoods:
+    if targetFunction in ['spatialConsistency', 'weighted mean consistency','meanConsistencyOverSizeStd','min consistency'] and includeNeighborhoods:
         #Consistencies of just neighbours
         consistencies = [calculateSpatialConsistency(({'allVoxelTs':allVoxelTs,'consistencyType':consistencyType,'fTransform':fTransform},ROI)) for ROI in ROIVoxels]
     else:
         consistencies = [1 for i in range(nROIs)]
         
-    if targetFunction in ['spatialConsistency', 'weighted mean consistency','meanConssitencyOverSizeStd'] and includeNeighborhoods:
+    if targetFunction in ['spatialConsistency', 'weighted mean consistency','meanConssitencyOverSizeStd','min consistency'] and includeNeighborhoods:
         ROISizes = [len(ROI) for ROI in ROIVoxels]
     else:
         ROISizes = [1 for i in range(nROIs)]
