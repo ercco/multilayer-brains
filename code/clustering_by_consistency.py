@@ -1310,7 +1310,7 @@ def getCentroidsByReHo(imgdata,nCentroids,nNeighbors=6,nCPUs=5,minDistancePercen
 #ReHo test function definition
 
 def constrainedReHoSearch(imgdata,template,nCentroids,nNeighbors=6,nCPUs=5,ReHoMeasure='ReHo',
-                       consistencyType='pearson c',fTransform=False,saveRehoValuePath=''):
+                       consistencyType='pearson c',fTransform=False,saveRehoValues=False):
     '''in this version we search for ReHos only inside template ROIs boundaries,
     it's ok if the voxel is in a border of the ROI and ReHo it's calculated also with neigbours
     outside the ROI'''
@@ -1324,7 +1324,6 @@ def constrainedReHoSearch(imgdata,template,nCentroids,nNeighbors=6,nCPUs=5,ReHoM
     if (nCentroids != len(ROIIndices)):
         raise Exception("number of ROIs wanted it's different than number in template")
 
-    savepath=saveRehoValuePath
     for ROIInd in ROIIndices:
         #gives a list with the coordinates of every voxel in a ROI
         ROIVoxels = np.transpose(np.array(np.where(template == ROIInd)))
@@ -1345,10 +1344,10 @@ def constrainedReHoSearch(imgdata,template,nCentroids,nNeighbors=6,nCPUs=5,ReHoM
         centroidRehos.append(max(ReHos))
     centroidCoordinates=np.array(centroidCoordinates)
     centroidRehos=np.array(centroidRehos)
-    if savepath:
-        print('saving centroids rego at ',savepath)
-        with open(savepath, 'wb') as f:
-            pickle.dump(centroidRehos, f, -1)
+
+    if saveRehoValues:
+        return centroidCoordinates,centroidRehos
+    
     return centroidCoordinates
 
 
@@ -1505,6 +1504,7 @@ def calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, ROIVoxel
         #    ROI_size_reg+=pow(tempSizes[i],regExp)
         ROI_size_reg=sum(i**regExp for i in tempSizes)
         priorityMeasure+= regularization*ROI_size_reg/(norm_denominator)
+        priorityMeasure+=regularization*ROI_size_reg/(sum(ROISizes)**regExp)
         #priorityMeasure+= regularization*ROI_size_reg/(41434969.0)
         #priorityMeasure+= regularization*ROI_size_reg
         #priorityMeasure+= regularization*pow(len(ROIVoxels),regExp)
