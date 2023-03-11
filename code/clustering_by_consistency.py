@@ -1503,8 +1503,11 @@ def calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, ROIVoxel
         #for i in range(0,len(tempSizes)):
         #    ROI_size_reg+=pow(tempSizes[i],regExp)
         ROI_size_reg=sum(i**regExp for i in tempSizes)
-        priorityMeasure+= regularization*ROI_size_reg/(norm_denominator)
-        priorityMeasure+=regularization*ROI_size_reg/(sum(ROISizes)**regExp)
+        #priorityMeasure+= regularization*ROI_size_reg/(norm_denominator)
+        reg_term=regularization*ROI_size_reg/((sum(tempSizes))**regExp)
+        print(reg_term)
+        exit()
+        priorityMeasure+=reg_term
         #priorityMeasure+= regularization*ROI_size_reg/(41434969.0)
         #priorityMeasure+= regularization*ROI_size_reg
         #priorityMeasure+= regularization*pow(len(ROIVoxels),regExp)
@@ -2343,10 +2346,10 @@ def growOptimizedROIs(cfg,verbal=True):
         
         #save parameters at each step
         if regularization:
-            ROI_size_reg=sum(i**regExp for i in list(ROISizes))
-            reg_term=regularization*ROI_size_reg/(sum(ROISizes)**regExp)
             tempConsistencies = list(consistencies)
             tempSizes = list(ROISizes)
+            ROI_size_reg=sum(i**regExp for i in tempSizes)
+            reg_term=regularization*ROI_size_reg/((sum(tempSizes))**regExp)
             consist_term = sum([tempConsistency*tempSize**sizeExp for tempConsistency,tempSize 
                                    in zip(tempConsistencies,tempSizes)])/sum([size**sizeExp for size in tempSizes])
             reg_array.append(reg_term)
