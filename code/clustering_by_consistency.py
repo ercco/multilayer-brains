@@ -2326,6 +2326,11 @@ def growOptimizedROIs(cfg,verbal=True):
     end_timer=time.time()
     '''COUNTER=0
     DEBUG=False'''
+
+    if regularization:
+        reg_array=[]
+        consist_array=[]
+
     while len(priorityQueue) > 0:
         
         start_time=time.time()
@@ -2335,7 +2340,19 @@ def growOptimizedROIs(cfg,verbal=True):
         # Selecting the ROI to be updated and voxel to be added to that ROI (based on the priority measure)
         # we select best (globally)voxel on the border of a ROI each time
         priorityMeasure, (ROIToUpdate, voxelToAdd) = heapq.heappop(priorityQueue)
-                
+        
+        #save parameters at each step
+        if regularization:
+            ROI_size_reg=sum(i**regExp for i in list(ROISizes))
+            reg_term=regularization*ROI_size_reg/(sum(ROISizes)**regExp)
+            tempConsistencies = list(consistencies)
+            tempSizes = list(ROISizes)
+            consist_term = sum([tempConsistency*tempSize**sizeExp for tempConsistency,tempSize 
+                                   in zip(tempConsistencies,tempSizes)])/sum([size**sizeExp for size in tempSizes])
+            reg_array.append(reg_term)
+            consist_array.append(consist_term)
+
+
         # Checking that adding the voxel doesn't yield sub-threshold consistencies
         if threshold in ['data-driven','strict data-driven']:
             testVoxels = list(ROIInfo['ROIVoxels'])
@@ -2466,7 +2483,17 @@ def growOptimizedROIs(cfg,verbal=True):
             DEBUG=True
             print('DEBUG=',DEBUG)
             COUNTER+=1'''
-            
+    
+    if regularization:
+        terms_path='/scratch/cs/networks/delucp1/thesis_pkls/reg_consist_terms_log\{method}_thr-{thr}_reg{reg}_newreg.pkl'.format(method='GROWING',thr=cfg['percentageROIsForThresholding'],reg=regularization)
+        print('saving parameters of clustering at each step at',terms_path)
+        terms_dict={'reg_terms':reg_array,'consist_terms':consist_array}
+        with open(terms_path, 'wb') as f:
+            try:
+                pickle.dump(terms_dict, f, -1)
+            except:
+                print('growing consistency not saved because no dict')
+
     return voxelLabels, voxelCoordinates
     
 def growOptimizedROIsInParallel(cfg, nIter=100, nCPUs=5):
