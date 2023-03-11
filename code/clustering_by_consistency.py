@@ -2485,7 +2485,7 @@ def growOptimizedROIs(cfg,verbal=True):
             COUNTER+=1'''
     
     if regularization:
-        terms_path='/scratch/cs/networks/delucp1/thesis_pkls/reg_consist_terms_log\{method}_thr-{thr}_reg{reg}_newreg.pkl'.format(method='GROWING',thr=cfg['percentageROIsForThresholding'],reg=regularization)
+        terms_path='/scratch/cs/networks/delucp1/thesis_pkls/reg_consist_terms_log\params_log_{method}_thr-{thr}_reg{reg}.pkl'.format(method='GROWING',thr=cfg['percentageROIsForThresholding'],reg=regularization)
         print('saving parameters of clustering at each step at',terms_path)
         terms_dict={'reg_terms':reg_array,'consist_terms':consist_array}
         with open(terms_path, 'wb') as f:
