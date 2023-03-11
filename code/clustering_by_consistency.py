@@ -1504,7 +1504,7 @@ def calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, ROIVoxel
         #    ROI_size_reg+=pow(tempSizes[i],regExp)
         ROI_size_reg=sum(i**regExp for i in tempSizes)
         #priorityMeasure+= regularization*ROI_size_reg/(norm_denominator)
-        reg_term=regularization*ROI_size_reg/((sum(tempSizes))**regExp)
+        reg_term=float(regularization*ROI_size_reg)/((sum(tempSizes))**regExp)
         priorityMeasure+=reg_term
         #priorityMeasure+= regularization*ROI_size_reg/(41434969.0)
         #priorityMeasure+= regularization*ROI_size_reg
@@ -2347,7 +2347,7 @@ def growOptimizedROIs(cfg,verbal=True):
             tempConsistencies = list(consistencies)
             tempSizes = list(ROISizes)
             ROI_size_reg=sum(i**regExp for i in tempSizes)
-            reg_term=regularization*ROI_size_reg/((sum(tempSizes))**regExp)
+            reg_term=float(regularization*ROI_size_reg)/((sum(tempSizes))**regExp)
             consist_term = sum([tempConsistency*tempSize**sizeExp for tempConsistency,tempSize 
                                    in zip(tempConsistencies,tempSizes)])/sum([size**sizeExp for size in tempSizes])
             reg_array.append(reg_term)
