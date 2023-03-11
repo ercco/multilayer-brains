@@ -1505,8 +1505,6 @@ def calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, ROIVoxel
         ROI_size_reg=sum(i**regExp for i in tempSizes)
         #priorityMeasure+= regularization*ROI_size_reg/(norm_denominator)
         reg_term=regularization*ROI_size_reg/((sum(tempSizes))**regExp)
-        print(reg_term)
-        exit()
         priorityMeasure+=reg_term
         #priorityMeasure+= regularization*ROI_size_reg/(41434969.0)
         #priorityMeasure+= regularization*ROI_size_reg
