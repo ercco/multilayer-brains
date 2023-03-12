@@ -1503,8 +1503,8 @@ def calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, ROIVoxel
         #for i in range(0,len(tempSizes)):
         #    ROI_size_reg+=pow(tempSizes[i],regExp)
         ROI_size_reg=sum(i**regExp for i in tempSizes)
-        #priorityMeasure+= regularization*ROI_size_reg/(norm_denominator)
         reg_term=float(regularization*ROI_size_reg)/((sum(tempSizes))**regExp)
+        #reg_term= float(regularization*ROI_size_reg)/(norm_denominator)
         priorityMeasure+=reg_term
         #priorityMeasure+= regularization*ROI_size_reg/(41434969.0)
         #priorityMeasure+= regularization*ROI_size_reg
@@ -2328,9 +2328,9 @@ def growOptimizedROIs(cfg,verbal=True):
     '''COUNTER=0
     DEBUG=False'''
 
-    if regularization:
-        reg_array=[]
-        consist_array=[]
+    #used to log parameters
+    reg_array=[]
+    consist_array=[]
 
     while len(priorityQueue) > 0:
         
@@ -2343,15 +2343,18 @@ def growOptimizedROIs(cfg,verbal=True):
         priorityMeasure, (ROIToUpdate, voxelToAdd) = heapq.heappop(priorityQueue)
         
         #save parameters at each step
-        if regularization:
-            tempConsistencies = list(consistencies)
-            tempSizes = list(ROISizes)
-            ROI_size_reg=sum(i**regExp for i in tempSizes)
-            reg_term=float(regularization*ROI_size_reg)/((sum(tempSizes))**regExp)
-            consist_term = sum([tempConsistency*tempSize**sizeExp for tempConsistency,tempSize 
-                                   in zip(tempConsistencies,tempSizes)])/sum([size**sizeExp for size in tempSizes])
-            reg_array.append(reg_term)
-            consist_array.append(consist_term)
+
+        #TODO add option to skip log
+        tempConsistencies = list(consistencies)
+        tempSizes = list(ROISizes)
+        ROI_size_reg=sum(i**regExp for i in tempSizes)
+        #reg_term=float(regularization*ROI_size_reg)/((sum(tempSizes))**regExp)
+        reg_term=float(ROI_size_reg)/((sum(tempSizes))**regExp)
+        #reg_term=float(ROI_size_reg)/(norm_denominator)
+        consist_term = sum([tempConsistency*tempSize**sizeExp for tempConsistency,tempSize 
+                                in zip(tempConsistencies,tempSizes)])/sum([size**sizeExp for size in tempSizes])
+        reg_array.append(reg_term)
+        consist_array.append(consist_term)
 
 
         # Checking that adding the voxel doesn't yield sub-threshold consistencies
@@ -2485,17 +2488,11 @@ def growOptimizedROIs(cfg,verbal=True):
             print('DEBUG=',DEBUG)
             COUNTER+=1'''
     
-    if regularization:
-        terms_path='/scratch/cs/networks/delucp1/thesis_pkls/reg_consist_terms_log/params_log_{method}_thr-{thr}_reg{reg}.pkl'.format(method='GROWING',thr=cfg['percentageROIsForThresholding'],reg=regularization)
-        print('saving parameters of clustering at each step at',terms_path)
-        terms_dict={'reg_terms':reg_array,'consist_terms':consist_array}
-        with open(terms_path, 'wb') as f:
-            try:
-                pickle.dump(terms_dict, f, -1)
-            except:
-                print('growing consistency not saved because no dict')
 
-    return voxelLabels, voxelCoordinates
+        print('saving parameters of clustering at each step')
+        terms_dict={'reg_terms':reg_array,'consist_terms':consist_array}
+
+    return voxelLabels, voxelCoordinates,terms_dict
     
 def growOptimizedROIsInParallel(cfg, nIter=100, nCPUs=5):
     """
