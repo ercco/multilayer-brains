@@ -1390,7 +1390,7 @@ def calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, ROIVoxel
     centroidTs: np.array, nTimepoints x 1, time series of the ROI centroid. Used if targetFunction == 'correlationWithCentroid'
     consistencies: iterable (len(consistencies) = nROIs), spatial consistencies of all ROIs. Used if
                    targetFunction == 'weighted mean consistency'
-    ROISizes: iterable (len(consistencies = nROIs)), sizes of all ROIs. Used if targetFunction == 'weighted mean consistency' 
+    ROISizes: iterable (len(ROISizes) = nROIs), sizes of all ROIs. Used if targetFunction == 'weighted mean consistency' 
     or 'spatialConsistency'
     consistencyType: str, definition of spatial consistency to be used if 
                      targetFunction == 'spatialConsistency' (default: 'pearson c' (mean Pearson correlation coefficient))
@@ -2000,10 +2000,10 @@ def growOptimizedROIs(cfg,verbal=True):
                     of any other ROI. However, the same voxel can be considered again later.
                     - 'strict data-driven': similar as above but when a voxel has been found to be sub-threshold
                     for a ROI, it is entirely removed from the base of possible voxels for this ROI
-                    - 'voxel-wise': no voxel is added to a ROI if its average correlation to the voxels of this
-                    ROI is lower than its average correlation to at least N other ROIs. For setting N, see the
-                    percentageROIsForThresholding parameter below (default: N = nROIs, i.e. a voxel is not added to a ROI
-                    if it's more correlated to any other ROI)
+                    - 'voxel-wise': no voxel is added to a ROI if the average correlation between the voxel and all
+                    voxels of this ROI is not among the N strongest average correlations between the voxel and all
+                    voxels of any ROI. For setting N, see the percentageROIsForThresholding parameter below 
+                    (default: N = 1, i.e. a voxel is not added to a ROI if it's more correlated to any other ROI)
                     - 'maximal-voxel-wise': same as voxel-wise above but only the N strongest average correlations per ROI
                     are taken into account; for setting N see the nCorrelationsForThresholding parameter below
                     - 'voxel-neighbor': no voxel is added to a ROI if its average correlation to the voxels of this
@@ -2035,8 +2035,10 @@ def growOptimizedROIs(cfg,verbal=True):
          verbal: bool, if verbal == True, more progress information is printed (default = True)
          nCorrelationsForThresholding: int, the number of strongest correlations considered if threshold == 'maximal-voxel-wise'
                                        (default = 5)
-         percentageROIsForThresholding: float (from 0 to 1), in thresholding a voxel can't be added to a ROI if it's more correlated to at least
-                                        percentageROIsForThresholding*nROIs other ROIs (default: 1/nROIs, i.e. to any other ROIs)
+         percentageROIsForThresholding: float (from 0 to 1), in thresholding a voxel can't be added to a ROI if its correlation
+                                        to this ROI is not among the percentageROIsForThresholding*nROIs strongest correlations
+                                        of this voxel to any ROI (default: 1/nROIs, i.e. the correlation to this ROI must be
+                                        stronger than to any other ROI). Note: if value 0 is given, 1/nROIs is used instead.
          percentageMinCentroidDistance: float (from 0 to 1), the minimal distance between ReHo-based seeds is set as 
                                         percentageMinCentroidDistance times maximal dimension of imgdata (default = 0).
          nReHoNeighbors: int, number or neighbors used for calculating ReHo if ReHo-based seeds are to be used; options: 6 (faces),
