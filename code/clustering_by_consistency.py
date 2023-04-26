@@ -206,7 +206,7 @@ def readVoxelIndices(path, voxelCoordinates=[], layers=all):
         for node in nodes:
             voxelIndicesPerROI = []
             voxels = eval(node)
-            readVoxelCoordinatesPerLayer.append(voxels)
+            readVoxelCoordinatesPerLayer.append(np.array(voxels))
             if len(voxelCoordinates)>0:
                 for voxel in voxels:
                     voxelIndicesPerROI.append(np.where((voxelCoordinates==voxel).all(axis=1))[0][0])
