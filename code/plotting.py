@@ -342,3 +342,35 @@ def ni_to_nli(compinv_timeseries_dict_list,invdicts):
                 mapped_complete_invariant_timeseries_dict[nl_complete_invariant][tw] = mapped_complete_invariant_timeseries_dict[nl_complete_invariant].get(tw,0) + complete_invariant_timeseries_dict[complete_invariant][tw]
         mapped_compinv_timeseries_dict_list.append(mapped_complete_invariant_timeseries_dict)
     return mapped_compinv_timeseries_dict_list,invariants,mapped_invdicts
+
+#################### Visualization of voxel-level correlation matrices #####################################################################
+    
+def visualize_roi_ordered_correlation_matrix(correlations, n_voxels, ROI_onsets, save_path):
+    """
+    Visualizes as a heatmap the voxel-level correlation where voxels are ordered
+    by their ROI identity.
+    
+    Parameters:
+    -----------
+    correlations: 1D np.array, the upper-triangle values of the correlation matrix
+    n_voxels: int, the number of voxels
+    ROI_onsets: 1D np.array, the row/column index of the first voxel of each ROI in the correlation matrix
+    save_path: str, path to which to save the visualization
+    
+    Output:
+    -------
+    saves the visualization as .pdf
+    """
+    correlation_matrix = np.eye(n_voxels)
+    triu_indices = np.triu_indices(n_voxels, k=1)
+    for correlation, triu_index in zip(correlations, triu_indices):
+        correlation_matrix(triu_index) = correlation
+    plt.imshow(correlation_matrix)
+    for ROI_onset in ROI_onsets:
+        x = [ROI_onset - 0.5] * (n_voxels + 2)
+        y = np.arange(-0.5, n_voxels + 1.5)
+        plt.plot(x, y)
+        plt.plot(y, x)
+    plt.tight_layout()
+    plt.savefig(save_path,format='pdf',bbox_inches='tight')
+

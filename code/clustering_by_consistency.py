@@ -1882,6 +1882,97 @@ def calculateCorrelationsInAndBetweenROIs(dataFiles,layersetwiseNetworkSavefolde
             pickle.dump(correlationData, f, -1)
             
     return correlationData
+
+def constructROIOrderedCorrelationMatrix(dataFiles,layersetwiseNetworkSavefolders,
+                                         networkFiles,nLayers,timewindow,overlap,
+                                         subjectIndex=None, maxTWIndex=None, savePath=None):
+    """
+    Orders voxel time series by ROIs and calculates the voxel-level correlation matrix;
+    the ordering places correlations inside ROIs as blogs at the diagonal.
+    
+    Parameters:
+    -----------
+    dataFiles: lists of strs, paths to the .nii files used for calculating the correlations
+    layersetwiseNetworksSavefolders: list of strs, paths to the folders where
+                                       networks created by pipeline.isomorphism_classes_from_file
+                                       (and related ROI information) have been saved. Must be of
+                                       the same length as data_files.
+    networkFiles: list of strs, names of all network files saved in layersetwise_networks_savefolder
+                   (should be the same for all savefolders)
+    nLayers: int, number of layers used for constructing networks in isomorphism_classes_from file
+              (used for reading data)
+    timewindow: int, length of time window used in isomorphism_classes_from_file
+    overlap: int, time window overlap used in isomorphism_classes_from_file
+    subjectIndex: int, index of the subject to be analyzed. If subject index is not None, only
+                  the subjectIndex-th dataFile and layersetwiseNetworkSaveFolder will be used.
+                  (default = None)
+    maxTWIndex: int, index of the last time window to be analyzed. If maxTWIndex is not None, correlations are
+                calculated only for time windows from 0 to maxTWIndex. (default = None)
+    savePath: str, path to which to save the correlation matrix (if None, the matrix is returned instead of saving)
+    
+    Returns:
+    --------
+    correlationData: dict, contains:
+                              'dataFiles':dataFiles
+                              'layersetwiseNetworkSavefolders':layersetwiseNetworkSavefolders
+                              'networkFiles':networkFiles
+                              'nLayers': nLayers
+                              'timewindow': timewindow
+                              'overlap': overlap
+                              'correlations': list of np.arrays, the voxel level correlations per datafile and 
+                              time window; the upper-triangle values of the correlation matrix are returned as a 1D np.array
+                              'nVoxels': list of lists of ints, the number of voxels in each data file and time window; nVoxels and 
+                              np.triu_indices can be used to transform correlations into a correlation matrix
+                              'ROIOnsets': list of lists of np.arrays, row/column index of the first voxel of each ROI in 
+                              the correlation matrix per datafile and time window
+    """
+    if not subjectIndex == None:
+        dataFiles = [dataFiles[subjectIndex]]
+        layersetwiseNetworkSavefolders = [layersetwiseNetworkSavefolders[subjectIndex]]
+    correlations = [[] for dataFile in dataFiles]
+    nVoxels = [[] for dataFiel in dataFiles]
+    ROIOnsets = [[] for dataFile in dataFiles]
+    for i, dataFile, layersetwiseNetworkSavefolder in enumerate(zip(dataFiles, layersetwiseNetworkSavefolders)):
+        img = nib.load(dataFile)
+        imgdata = img.get_data()
+        nTime = imgdata.shape[-1]
+        k = network_construction.get_number_of_layers(imgdata.shape,timewindow,overlap)
+        startTimes,endTimes = network_construction.get_start_and_end_times(k,timewindow,overlap)
+        if not maxTWIndex == None:
+            startTimes = startTimes[0: maxTWIndex + 1]
+            endTimes = endTimes[0: maxTWIndex + 1]
+        layerIndex = 0
+        for networkFile in networkFiles:
+            _,voxelCoordinates = readVoxelIndices(layersetwiseNetworkSavefolder+'/'+networkFile,layers='all')
+            for voxelCoordinatesPerLayer, startTime, endTime in zip(voxelCoordinates, startTimes[layerIndex:layerIndex+nLayers], endTimes[layerIndex:layerIndex+nLayers]):
+                ROISizes = [len(ROI) for ROI in voxelCoordinatesPerLayer]
+                nVoxelsPerLayer = sum(ROISizes)
+                ROIOnsetsPerLayer = [sum(ROISizes[0:i]) for i in range(len(ROISizes))]
+                allVoxelTs = np.zeros((nVoxels,nTime))
+                voxelIndices = []
+                offset = 0
+                for ROI in voxelCoordinatesPerLayer:
+                    s = len(ROI)
+                    for i, voxel in enumerate(ROI):
+                        allVoxelTs[offset+i,:]=imgdata[voxel[0],voxel[1],voxel[2],:]
+                    voxelIndices.append(np.arange(offset,offset+s))
+                    offset += s
+                allVoxelCorrelations = np.corrcoef(allVoxelTs[:,startTime:endTime])
+                triu_indices = np.triu_indices(nVoxels, k=1)
+                correlationsPerLayer = allVoxelCorrelations[triu_indices]
+                correlations[i].append(correlationsPerLayer)
+                nVoxels[i].append(nVoxelsPerLayer)
+                ROIOnsets[i].append(ROIOnsetsPerLayer)
+                
+    correlationData = {'dataFiles':dataFiles,'layersetwiseNetworkSavefolders':layersetwiseNetworkSavefolders,
+                       'networkFiles':networkFiles,'nLayers':nLayers,'timewindow':timewindow,
+                       'overlap':overlap,'correlations':correlations,'nVoxels':nVoxels,'ROIOnsets':ROIOnsets}
+    
+    if not savePath==None:
+        with open(savePath, 'wb') as f:
+            pickle.dump(correlationData, f, -1)
+            
+    return correlationData
         
 # ROI construction without optimization
     
