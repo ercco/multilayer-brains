@@ -1885,7 +1885,8 @@ def calculateCorrelationsInAndBetweenROIs(dataFiles,layersetwiseNetworkSavefolde
 
 def constructROIOrderedCorrelationMatrix(dataFiles,layersetwiseNetworkSavefolders,
                                          networkFiles,nLayers,timewindow,overlap,
-                                         subjectIndex=None, maxTWIndex=None, savePath=None):
+                                         subjectIndex=None, nWindowsToRead=None, remainder=0,
+                                         savePath=None):
     """
     Orders voxel time series by ROIs and calculates the voxel-level correlation matrix;
     the ordering places correlations inside ROIs as blogs at the diagonal.
@@ -1906,8 +1907,13 @@ def constructROIOrderedCorrelationMatrix(dataFiles,layersetwiseNetworkSavefolder
     subjectIndex: int, index of the subject to be analyzed. If subject index is not None, only
                   the subjectIndex-th dataFile and layersetwiseNetworkSaveFolder will be used.
                   (default = None)
-    maxTWIndex: int, index of the last time window to be analyzed. If maxTWIndex is not None, correlations are
-                calculated only for time windows from 0 to maxTWIndex. (default = None)
+    nWindowsToRead: int, number of time windows to be analyzed. If maxTWIndex is not None, correlations are
+                calculated only for nWindowsToReady first time windows. (default = None)
+    remainder: int, tells how many layers to read from the last networkFile (If same layer is saved
+               in multiple files, networkFiles may contain only each nLayers-th file. In this case,
+               it may be necessary to read some, but not all, layers from the last file. The value
+               of the remainder can be defined from n_networkFiles/nLayers = X + remainder where X is int.)
+               (default = 0, all layers of the last file are read)
     savePath: str, path to which to save the correlation matrix (if None, the matrix is returned instead of saving)
     
     Returns:
@@ -1930,39 +1936,45 @@ def constructROIOrderedCorrelationMatrix(dataFiles,layersetwiseNetworkSavefolder
         dataFiles = [dataFiles[subjectIndex]]
         layersetwiseNetworkSavefolders = [layersetwiseNetworkSavefolders[subjectIndex]]
     correlations = [[] for dataFile in dataFiles]
-    nVoxels = [[] for dataFiel in dataFiles]
+    nVoxels = [[] for dataFile in dataFiles]
     ROIOnsets = [[] for dataFile in dataFiles]
-    for i, dataFile, layersetwiseNetworkSavefolder in enumerate(zip(dataFiles, layersetwiseNetworkSavefolders)):
+    for i, (dataFile, layersetwiseNetworkSavefolder) in enumerate(zip(dataFiles, layersetwiseNetworkSavefolders)):
         img = nib.load(dataFile)
         imgdata = img.get_data()
         nTime = imgdata.shape[-1]
         k = network_construction.get_number_of_layers(imgdata.shape,timewindow,overlap)
         startTimes,endTimes = network_construction.get_start_and_end_times(k,timewindow,overlap)
-        if not maxTWIndex == None:
-            startTimes = startTimes[0: maxTWIndex + 1]
-            endTimes = endTimes[0: maxTWIndex + 1]
+        if not nWindowsToRead == None:
+            startTimes = startTimes[0: nWindowsToRead]
+            endTimes = endTimes[0: nWindowsToRead]
         layerIndex = 0
-        for networkFile in networkFiles:
+        for m, networkFile in enumerate(networkFiles):
+            if layerIndex >= nWindowsToRead:
+                break
             _,voxelCoordinates = readVoxelIndices(layersetwiseNetworkSavefolder+'/'+networkFile,layers='all')
-            for voxelCoordinatesPerLayer, startTime, endTime in zip(voxelCoordinates, startTimes[layerIndex:layerIndex+nLayers], endTimes[layerIndex:layerIndex+nLayers]):
+            if remainder > 0 and m == len(networkFiles) - 1:
+                voxelCoordinates = voxelCoordinates[(-1*remainder):]
+                layerIndex += (nLayers - remainder)
+            for l, (voxelCoordinatesPerLayer, startTime, endTime) in enumerate(zip(voxelCoordinates, startTimes[layerIndex:layerIndex+nLayers], endTimes[layerIndex:layerIndex+nLayers])):
+                if layerIndex + l >= nWindowsToRead:
+                    break
                 ROISizes = [len(ROI) for ROI in voxelCoordinatesPerLayer]
                 nVoxelsPerLayer = sum(ROISizes)
-                ROIOnsetsPerLayer = [sum(ROISizes[0:i]) for i in range(len(ROISizes))]
-                allVoxelTs = np.zeros((nVoxels,nTime))
+                ROIOnsetsPerLayer = [sum(ROISizes[0:n]) for n in range(len(ROISizes))]
+                allVoxelTs = np.zeros((nVoxelsPerLayer,nTime))
                 voxelIndices = []
                 offset = 0
-                for ROI in voxelCoordinatesPerLayer:
-                    s = len(ROI)
-                    for i, voxel in enumerate(ROI):
-                        allVoxelTs[offset+i,:]=imgdata[voxel[0],voxel[1],voxel[2],:]
-                    voxelIndices.append(np.arange(offset,offset+s))
-                    offset += s
+                for ROISize, ROIOnset in zip(ROISizes, ROIOnsetsPerLayer):
+                    for j, voxel in enumerate(ROI):
+                        allVoxelTs[ROIOnset+j,:]=imgdata[voxel[0],voxel[1],voxel[2],:]
+                    voxelIndices.append(np.arange(ROIOnset,ROIOnset+ROISize))
                 allVoxelCorrelations = np.corrcoef(allVoxelTs[:,startTime:endTime])
-                triu_indices = np.triu_indices(nVoxels, k=1)
+                triu_indices = np.triu_indices(nVoxelsPerLayer, k=1)
                 correlationsPerLayer = allVoxelCorrelations[triu_indices]
                 correlations[i].append(correlationsPerLayer)
                 nVoxels[i].append(nVoxelsPerLayer)
                 ROIOnsets[i].append(ROIOnsetsPerLayer)
+            layerIndex += nLayers
                 
     correlationData = {'dataFiles':dataFiles,'layersetwiseNetworkSavefolders':layersetwiseNetworkSavefolders,
                        'networkFiles':networkFiles,'nLayers':nLayers,'timewindow':timewindow,
