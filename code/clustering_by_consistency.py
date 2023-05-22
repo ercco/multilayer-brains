@@ -1964,13 +1964,13 @@ def constructROIOrderedCorrelationMatrix(dataFiles,layersetwiseNetworkSavefolder
                 allVoxelTs = np.zeros((nVoxelsPerLayer,nTime))
                 voxelIndices = []
                 offset = 0
-                for ROISize, ROIOnset in zip(ROISizes, ROIOnsetsPerLayer):
+                for ROI, ROISize, ROIOnset in zip(voxelCoordinatesPerLayer, ROISizes, ROIOnsetsPerLayer):
                     for j, voxel in enumerate(ROI):
                         allVoxelTs[ROIOnset+j,:]=imgdata[voxel[0],voxel[1],voxel[2],:]
                     voxelIndices.append(np.arange(ROIOnset,ROIOnset+ROISize))
                 allVoxelCorrelations = np.corrcoef(allVoxelTs[:,startTime:endTime])
                 triu_indices = np.triu_indices(nVoxelsPerLayer, k=1)
-                correlationsPerLayer = allVoxelCorrelations[triu_indices]
+                correlationsPerLayer = np.array([allVoxelCorrelations[triu_x,triu_y] for triu_x, triu_y in zip(triu_indices[0],triu_indices[1])])
                 correlations[i].append(correlationsPerLayer)
                 nVoxels[i].append(nVoxelsPerLayer)
                 ROIOnsets[i].append(ROIOnsetsPerLayer)

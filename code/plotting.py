@@ -363,12 +363,15 @@ def visualize_roi_ordered_correlation_matrix(correlations, n_voxels, ROI_onsets,
     """
     correlation_matrix = np.eye(n_voxels)
     triu_indices = np.triu_indices(n_voxels, k=1)
-    for correlation, triu_index in zip(correlations, triu_indices):
-        correlation_matrix(triu_index) = correlation
+    for correlation, triu_x, triu_y in zip(correlations, triu_indices[0], triu_indices[1]):
+        correlation_matrix[triu_x, triu_y] = correlation
+        correlation_matrix[triu_y, triu_x] = correlation
     plt.imshow(correlation_matrix)
-    for ROI_onset in ROI_onsets:
-        x = [ROI_onset - 0.5] * (n_voxels + 2)
-        y = np.arange(-0.5, n_voxels + 1.5)
+    y = np.arange(-0.5, n_voxels + 0.5)
+    for i, ROI_onset in enumerate(ROI_onsets):
+        x = [ROI_onset - 0.5] * (n_voxels + 1)
+        if len(x) < correlation_matrix.shape[0] or len(y) < correlation_matrix.shape[0]:
+            import pdb; pdb.set_trace()
         plt.plot(x, y)
         plt.plot(y, x)
     plt.tight_layout()
