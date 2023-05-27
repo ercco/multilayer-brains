@@ -1471,7 +1471,7 @@ def updateQueue(ROIIndex, priorityQueue, targetFunction, centroidTs, allVoxelTs,
 def calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, ROIVoxels,
                       centroidTs=[], consistencies=[], ROISizes=[], consistencyType='pearson c',
                       regularization=None,regExp=2,
-                      fTransform=False,sizeExp=1,norm_denominator=1,sizeMomentExp=2):
+                      fTransform=False,sizeExp=1,sizeMomentExp=2):
     """
     Calculates the priority value of a given ROI - voxel pair. A helper function
     for growOptimizedROIs. Note: this function returns maxheap prioritites; for using the priority measures for minheap, they
@@ -1547,15 +1547,15 @@ def calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, ROIVoxel
 
     #############################
     if regularization:
-        #print('inside regularization:',regularization)
+
         tempSizes = list(ROISizes)
         tempSizes[ROIIndex] += 1
         ROI_size_reg=0
         ROI_size_reg=sum(i**regExp for i in tempSizes)
+        # the regularization term is weighted on ROIs size and uses the sum of ROIs inside clusters as denominator
         reg_term=float(regularization*ROI_size_reg)/((sum(tempSizes))**regExp)
         #reg_term= float(regularization*ROI_size_reg)/(norm_denominator)
         priorityMeasure+=reg_term
-        #priorityMeasure+= regularization*ROI_size_reg/(41434969.0)
         #priorityMeasure+= regularization*ROI_size_reg
         #priorityMeasure+= regularization*pow(len(ROIVoxels),regExp)
     
@@ -2201,6 +2201,7 @@ def growOptimizedROIs(cfg,verbal=True):
                           (used when targetFunction in ['spatialConsistency', 'weightedMeanConsistency', 'meanConsistencyOverSizeStd]). 
                           (default = False)
          nCPUs: int, number of CPUs used for parallel calculations (for finding the ReHo-based seeds) (default = 5)
+         logging: bool, if True returns a dictionary with the weighted mean consistency and regularization at each clustering step (default=False)
     
     Returns:
     --------
@@ -2301,14 +2302,19 @@ def growOptimizedROIs(cfg,verbal=True):
     else:
         returnExcludedToQueue = False
     
+    if 'logging' in cfg.keys():
+        logging=cfg['logging']
+    else:
+        logging = False
+
     allVoxelTs = np.zeros((nVoxels,nTime))
     for i,voxel in enumerate(voxelCoordinates):
         allVoxelTs[i,:] = imgdata[voxel[0],voxel[1],voxel[2],:]
 
     # Setting up: defining initial priority queues, priority measures (centroid-voxel correlations) and candidate voxels to be added per ROI
     
-    norm_denominator=pow(nVoxels,regExp)
-    print('normalization denominator',norm_denominator)
+    # norm_denominator=pow(nVoxels,regExp)
+    # print('normalization denominator',norm_denominator)
     
     if includeNeighborhoods:
         #coordinates to 4d array
@@ -2367,13 +2373,12 @@ def growOptimizedROIs(cfg,verbal=True):
         for voxelIndex in neighbors:
             # priority measures are multiplied by -1 to match the minheap used by heapq
             priorityMeasure = -1*calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, ROI, centroid, consistencies,
-                                                   ROISizes, consistencyType,regularization,regExp, fTransform, sizeExp,norm_denominator)
+                                                   ROISizes, consistencyType,regularization,regExp, fTransform, sizeExp)
 
             heapq.heappush(priorityQueue,(priorityMeasure,(ROIIndex,voxelIndex))) # adding the measure - voxel pair to the priority queue
                     
     selectedMeasures = []
     # Actual optimization takes place inside the while loop:
-    end_timer=time.time()
     '''COUNTER=0
     DEBUG=False'''
 
@@ -2393,17 +2398,20 @@ def growOptimizedROIs(cfg,verbal=True):
         
         #save parameters at each step
 
-        #TODO add option to skip log
-        tempConsistencies = list(consistencies)
-        tempSizes = list(ROISizes)
-        ROI_size_reg=sum(i**regExp for i in tempSizes)
-        #reg_term=float(regularization*ROI_size_reg)/((sum(tempSizes))**regExp)
-        reg_term=float(ROI_size_reg)/((sum(tempSizes))**regExp)
-        #reg_term=float(ROI_size_reg)/(norm_denominator)
-        consist_term = sum([tempConsistency*tempSize**sizeExp for tempConsistency,tempSize 
-                                in zip(tempConsistencies,tempSizes)])/sum([size**sizeExp for size in tempSizes])
-        reg_array.append(reg_term)
-        consist_array.append(consist_term)
+        # this part is useful for logging the parameters
+        # I'm adding all this stuff that is inside the calculatepriority because I don't want to modify the output of the function
+        # otherwise you can get all these parameters from the calculate priority
+        if logging:
+            tempConsistencies = list(consistencies)
+            tempSizes = list(ROISizes)
+            ROI_size_reg=sum(i**regExp for i in tempSizes)
+            #reg_term=float(regularization*ROI_size_reg)/((sum(tempSizes))**regExp)
+            reg_term=float(ROI_size_reg)/((sum(tempSizes))**regExp)
+            #reg_term=float(ROI_size_reg)/(norm_denominator)
+            consist_term = sum([tempConsistency*tempSize**sizeExp for tempConsistency,tempSize 
+                                    in zip(tempConsistencies,tempSizes)])/sum([size**sizeExp for size in tempSizes])
+            reg_array.append(reg_term)
+            consist_array.append(consist_term)
 
 
         # Checking that adding the voxel doesn't yield sub-threshold consistencies
@@ -2430,7 +2438,7 @@ def growOptimizedROIs(cfg,verbal=True):
                                                            ROIInfo['ROIVoxels'][ROIIndex], centroidTs[ROIIndex],
                                                            consistencies, ROISizes, consistencyType,
                                                            regularization,regExp,
-                                                            fTransform,sizeExp,norm_denominator)
+                                                            fTransform,sizeExp)
                     heapq.heappush(priorityQueue,(priorityMeasure,(ROIIndex,voxelIndex)))
                 forbiddenPairs = []
                         
@@ -2493,7 +2501,7 @@ def growOptimizedROIs(cfg,verbal=True):
                 # priority values are multiplied by -1 since heapq uses minheap
                 updatedPriorityValue = -1*calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, 
                                                             ROIInfo['ROIVoxels'][ROIIndex], centroidTs, consistencies, ROISizes,
-                                                            consistencyType,regularization,regExp,fTransform, sizeExp,norm_denominator)
+                                                            consistencyType,regularization,regExp,fTransform, sizeExp)
                 priorityQueue[i] = (updatedPriorityValue, (ROIIndex, voxelIndex))
                     
         heapq.heapify(priorityQueue) # heapify to fix the queue order after removing and updating elements
@@ -2510,7 +2518,7 @@ def growOptimizedROIs(cfg,verbal=True):
                 # Priority value is multiplied by -1 since heapq uses minheap.
                 priorityValue = -1*calculatePriority(ROIToUpdate, ROIlessIndex, targetFunction, allVoxelTs,
                                                      ROIInfo['ROIVoxels'][ROIToUpdate], centroidTs, consistencies, ROISizes,
-                                                     consistencyType,regularization,regExp, fTransform, sizeExp,norm_denominator)
+                                                     consistencyType,regularization,regExp, fTransform, sizeExp)
                 heapq.heappush(priorityQueue,(priorityValue, (ROIToUpdate, ROIlessIndex)))
                         
         # Adding voxels excluded in thresholding back to the priority queue
@@ -2521,7 +2529,7 @@ def growOptimizedROIs(cfg,verbal=True):
                        # Priority value is multiplied by -1 since heapq uses minheap
                        priorityValue = -1*calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs,
                                                          ROIInfo['ROIVoxels'][ROIIndex], centroidTs, consistencies, ROISizes,
-                                                         consistencyType,regularization,regExp, fTransform, sizeExp,norm_denominator)
+                                                         consistencyType,regularization,regExp, fTransform, sizeExp)
                        heapq.heappush((priorityValue, (ROIIndex, voxelIndex)))
                             
         if verbal:
@@ -2537,11 +2545,12 @@ def growOptimizedROIs(cfg,verbal=True):
             print('DEBUG=',DEBUG)
             COUNTER+=1'''
     
+        if logging:
+            print('saving parameters of clustering at each step')
+            terms_dict={'reg_terms':reg_array,'consist_terms':consist_array}
+            return voxelLabels, voxelCoordinates,terms_dict
 
-        print('saving parameters of clustering at each step')
-        terms_dict={'reg_terms':reg_array,'consist_terms':consist_array}
-
-    return voxelLabels, voxelCoordinates,terms_dict
+    return voxelLabels, voxelCoordinates
     
 def growOptimizedROIsInParallel(cfg, nIter=100, nCPUs=5):
     """
