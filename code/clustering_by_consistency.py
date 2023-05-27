@@ -1243,8 +1243,9 @@ def getCentroidsByReHo(imgdata,nCentroids,nNeighbors=6,nCPUs=5,minDistancePercen
                 to be used to constrain the search of centroids inside the boundaries of each ROI 
                 (use 'ConstrainedReHo' in ReHoMeasure) (default=False)
     returnReHoValues: bool, set True to return both centroid voxels and their Reho values(default=False)
-    Returns:
+    Returns: 
     --------
+    (all are given with the returnarray)
     centroidCoordinates: nCentroids x 3 np.array, coordinates of a voxel (in voxels)
     centroidNeighbors: list of nNeighbours x 3 np.arrays (len(centroidNeighbors)=nCentroids), the neighborhoods used to
                        calculate the ReHo or consistency values of the centroids
@@ -1253,6 +1254,8 @@ def getCentroidsByReHo(imgdata,nCentroids,nNeighbors=6,nCPUs=5,minDistancePercen
     assert 0<= minDistancePercentage <= 1, "Bad minDistancePercentage, give a float between 0 and 1"
     #ReHoMeasure 'spatialConsistency' is used in calculateReHo
     assert ReHoMeasure in ['ReHo','spatialConsistency','ConstrainedReHo'], "Unknown ReHoMeasure, select 'ReHo' or 'spatialConsistency'"
+    
+    # it can either contain only centroids, or also centroids' reho values, or also centroids neighborhoods
     returnarray=[]
 
     if ReHoMeasure=='ConstrainedReHo':
@@ -1260,11 +1263,11 @@ def getCentroidsByReHo(imgdata,nCentroids,nNeighbors=6,nCPUs=5,minDistancePercen
             centroidCoordinates=constrainedReHoSearch(imgdata=imgdata,nCentroids=nCentroids,nNeighbors=nNeighbors,nCPUs=nCPUs,ReHoMeasure='ReHo',
                        consistencyType=consistencyType,fTransform=fTransform,template=template,returnReHoValues=returnReHoValues)
             returnarray.append(centroidCoordinates)
-            returnarray.append(centroidRehos)
         else:
             centroidCoordinates,centroidRehos=constrainedReHoSearch(imgdata=imgdata,nCentroids=nCentroids,nNeighbors=nNeighbors,nCPUs=nCPUs,ReHoMeasure='ReHo',
                        consistencyType=consistencyType,fTransform=fTransform,template=template,returnReHoValues=returnReHoValues)
             returnarray.append(centroidCoordinates)
+            returnarray.append(centroidRehos)
     
     else:
     
@@ -1328,8 +1331,6 @@ def getCentroidsByReHo(imgdata,nCentroids,nNeighbors=6,nCPUs=5,minDistancePercen
     
     return returnarray
     
-
-#ReHo test function definition
 
 def constrainedReHoSearch(imgdata,template,nCentroids,nNeighbors=6,nCPUs=5,ReHoMeasure='ReHo',
                        consistencyType='pearson c',fTransform=False,saveRehoValues=False):
@@ -1542,8 +1543,7 @@ def calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, ROIVoxel
             sizeMomentOrder = sizeExp
             sizeMoment = moment(tempSizes,moment=sizeMomentOrder)
             priorityMeasure = np.mean(tempConsistencies)/(sizeMoment + 1)
-            #sizeStd = np.std(tempSizes)
-            #priorityMeasure = np.mean(tempConsistencies)/((sizeStd + 1)**sizeExp)   
+ 
 
     #############################
     if regularization:
@@ -1554,10 +1554,8 @@ def calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, ROIVoxel
         ROI_size_reg=sum(i**regExp for i in tempSizes)
         # the regularization term is weighted on ROIs size and uses the sum of ROIs inside clusters as denominator
         reg_term=float(regularization*ROI_size_reg)/((sum(tempSizes))**regExp)
-        #reg_term= float(regularization*ROI_size_reg)/(norm_denominator)
         priorityMeasure+=reg_term
-        #priorityMeasure+= regularization*ROI_size_reg
-        #priorityMeasure+= regularization*pow(len(ROIVoxels),regExp)
+
     
     return priorityMeasure
 
@@ -2313,9 +2311,6 @@ def growOptimizedROIs(cfg,verbal=True):
 
     # Setting up: defining initial priority queues, priority measures (centroid-voxel correlations) and candidate voxels to be added per ROI
     
-    # norm_denominator=pow(nVoxels,regExp)
-    # print('normalization denominator',norm_denominator)
-    
     if includeNeighborhoods:
         #coordinates to 4d array
         ROIMaps = []
@@ -2388,9 +2383,8 @@ def growOptimizedROIs(cfg,verbal=True):
 
     while len(priorityQueue) > 0:
         
+        # used to log iteration time
         start_time=time.time()
-        #if (start_time-end_timer)>800:
-        #   exit()
 
         # Selecting the ROI to be updated and voxel to be added to that ROI (based on the priority measure)
         # we select best (globally)voxel on the border of a ROI each time
@@ -2405,9 +2399,9 @@ def growOptimizedROIs(cfg,verbal=True):
             tempConsistencies = list(consistencies)
             tempSizes = list(ROISizes)
             ROI_size_reg=sum(i**regExp for i in tempSizes)
-            #reg_term=float(regularization*ROI_size_reg)/((sum(tempSizes))**regExp)
+
             reg_term=float(ROI_size_reg)/((sum(tempSizes))**regExp)
-            #reg_term=float(ROI_size_reg)/(norm_denominator)
+
             consist_term = sum([tempConsistency*tempSize**sizeExp for tempConsistency,tempSize 
                                     in zip(tempConsistencies,tempSizes)])/sum([size**sizeExp for size in tempSizes])
             reg_array.append(reg_term)
