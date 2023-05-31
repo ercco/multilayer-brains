@@ -369,9 +369,11 @@ def visualize_roi_ordered_correlation_matrix(correlations, n_voxels, ROI_onsets,
         correlation_matrix[triu_x, triu_y] = correlation
         correlation_matrix[triu_y, triu_x] = correlation
     plt.imshow(correlation_matrix)
-    y = np.arange(-0.5, n_voxels + 0.5)
-    for i, ROI_onset in enumerate(ROI_onsets):
-        x = [ROI_onset - 0.5] * (n_voxels + 1)
+    ROI_sizes = [ROI_onsets[i+1] - ROI_onsets[i] for i in range(0,len(ROI_onsets)-1)]
+    ROI_sizes.append(n_voxels - ROI_onsets[-1])
+    for i, ROI_onset in enumerate(ROI_onsets[0:-1]):
+        x = [ROI_onset + ROI_sizes[i] - 0.5] * (ROI_sizes[i] + ROI_sizes[i+1] + 1)
+        y = np.arange(ROI_onset - 0.5, (ROI_onset + ROI_sizes[i] + ROI_sizes[i+1] + 0.5)) 
         plt.plot(x, y, color=ROI_boundary_color)
         plt.plot(y, x, color=ROI_boundary_color)
     plt.tight_layout()
