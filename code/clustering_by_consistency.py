@@ -3099,9 +3099,4 @@ def findSuccessors():
     changePercentages: array-like of doubles, percentages of voxels moving to other ROIs
                        than the successor.
     """
-    
-        
-    
-    
-    
-    
+ 
