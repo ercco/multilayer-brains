@@ -1524,7 +1524,7 @@ def calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, ROIVoxel
     elif targetFunction == 'spatialConsistency':
         priorityMeasure = updateSpatialConsistency(allVoxelTs, voxelIndex, ROIVoxels, consistencies[ROIIndex],
                                                    ROISizes[ROIIndex], consistencyType, fTransform) * (ROISizes[ROIIndex] + 1)**sizeExp
-    elif targetFunction in ['weighted mean consistency','meanConsistencyOverSizeStd','min consistency']:
+    elif targetFunction in ['weighted mean consistency','meanConsistencyOverSizeStd','min correlation']:
         # TODO: check if there's an easier formula for updating the weighted mean consistency (similarly as there is for consistency)
         tempConsistencies = list(consistencies)
         tempSizes = list(ROISizes)
@@ -2332,13 +2332,13 @@ def growOptimizedROIs(cfg,verbal=True):
     ROIInfo = {'ROIMaps':ROIMaps,'ROIVoxels':ROIVoxels,'ROISizes':np.array([len(voxels) for voxels in ROIVoxels],dtype=int),
                'ROINames':cfg['names']}
             
-    if targetFunction in ['spatialConsistency', 'weighted mean consistency','meanConsistencyOverSizeStd','min consistency'] and includeNeighborhoods:
+    if targetFunction in ['spatialConsistency', 'weighted mean consistency','meanConsistencyOverSizeStd','min correlation'] and includeNeighborhoods:
         #Consistencies of just neighbours
         consistencies = [calculateSpatialConsistency(({'allVoxelTs':allVoxelTs,'consistencyType':consistencyType,'fTransform':fTransform},ROI)) for ROI in ROIVoxels]
     else:
         consistencies = [1 for i in range(nROIs)]
         
-    if targetFunction in ['spatialConsistency', 'weighted mean consistency','meanConssitencyOverSizeStd','min consistency'] and includeNeighborhoods:
+    if targetFunction in ['spatialConsistency', 'weighted mean consistency','meanConssitencyOverSizeStd','min correlation'] and includeNeighborhoods:
         ROISizes = [len(ROI) for ROI in ROIVoxels]
     else:
         ROISizes = [1 for i in range(nROIs)]
@@ -2539,10 +2539,10 @@ def growOptimizedROIs(cfg,verbal=True):
             print('DEBUG=',DEBUG)
             COUNTER+=1'''
     
-        if logging:
-            print('saving parameters of clustering at each step')
-            terms_dict={'reg_terms':reg_array,'consist_terms':consist_array}
-            return voxelLabels, voxelCoordinates,terms_dict
+    if logging:
+        print('saving parameters of clustering at each step')
+        terms_dict={'reg_terms':reg_array,'consist_terms':consist_array}
+        return voxelLabels, voxelCoordinates,terms_dict
 
     return voxelLabels, voxelCoordinates
     
