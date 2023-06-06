@@ -345,7 +345,7 @@ def ni_to_nli(compinv_timeseries_dict_list,invdicts):
 
 #################### Visualization of voxel-level correlation matrices #####################################################################
     
-def visualize_roi_ordered_correlation_matrix(correlations, n_voxels, ROI_onsets, save_path, ROI_boundary_color='r'):
+def visualize_roi_ordered_correlation_matrix(correlations, n_voxels, ROI_onsets, save_path, n_ROIs_to_visualize='all', ROI_boundary_color='r'):
     """
     Visualizes as a heatmap the voxel-level correlation where voxels are ordered
     by their ROI identity.
@@ -356,6 +356,7 @@ def visualize_roi_ordered_correlation_matrix(correlations, n_voxels, ROI_onsets,
     n_voxels: int, the number of voxels
     ROI_onsets: 1D np.array, the row/column index of the first voxel of each ROI in the correlation matrix
     save_path: str, path to which to save the visualization
+    n_ROIs_to_visualize: int or str, number of ROIs to visualize; if 'all', all ROIs are visualized
     ROI_boundary_color: str, color for drawind the lines showing ROI boundaries
     
     Output:
@@ -363,15 +364,23 @@ def visualize_roi_ordered_correlation_matrix(correlations, n_voxels, ROI_onsets,
     saves the visualization as .pdf
     """
     plt.figure()
+    ROI_sizes = [ROI_onsets[i+1] - ROI_onsets[i] for i in range(0,len(ROI_onsets)-1)]
+    ROI_sizes.append(n_voxels - ROI_onsets[-1])
+    if not n_ROIs_to_visualize == 'all':
+        ROI_onsets = ROI_onsets[:n_ROIs_to_visualize]
+        ROI_sizes = ROI_sizes[:n_ROIs_to_visualize]
+        n_voxels_to_visualize = np.sum(ROI_sizes) 
     correlation_matrix = np.eye(n_voxels)
     triu_indices = np.triu_indices(n_voxels, k=1)
     for correlation, triu_x, triu_y in zip(correlations, triu_indices[0], triu_indices[1]):
         correlation_matrix[triu_x, triu_y] = correlation
         correlation_matrix[triu_y, triu_x] = correlation
+    if not n_ROIs_to_visualize == 'all':
+        correlation_matrix = correlation_matrix[0:n_voxels_to_visualize, 0:n_voxels_to_visualize]
     plt.imshow(correlation_matrix)
-    y = np.arange(-0.5, n_voxels + 0.5)
-    for i, ROI_onset in enumerate(ROI_onsets):
-        x = [ROI_onset - 0.5] * (n_voxels + 1)
+    for i, ROI_onset in enumerate(ROI_onsets[0:-1]):
+        x = [ROI_onset + ROI_sizes[i] - 0.5] * (ROI_sizes[i] + ROI_sizes[i+1] + 1)
+        y = np.arange(ROI_onset - 0.5, (ROI_onset + ROI_sizes[i] + ROI_sizes[i+1] + 0.5)) 
         plt.plot(x, y, color=ROI_boundary_color)
         plt.plot(y, x, color=ROI_boundary_color)
     plt.tight_layout()
