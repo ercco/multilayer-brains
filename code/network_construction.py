@@ -144,7 +144,8 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                                                     n_consistency_CPUs=5,consistency_save_path='spatial-consistency.pkl',
                                                     n_consistency_iters=100,consistency_percentage_ROIs_for_thresholding=0,
                                                     n_ReHo_neighbors=6,percentage_min_centroid_distance=0,ReHo_measure='ReHo',
-                                                    include_neighborhoods_in_centroids=False,return_excluded_voxels_to_queue=False):
+                                                    include_neighborhoods_in_centroids=False,return_excluded_voxels_to_queue=False,regularization=-100,
+                                                    reg_exp=2, logging=False):
     
     """
     Consistency-related inputs:
@@ -202,6 +203,9 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                                         is 'correlationWithCentroid', include_Neighborhoods_in_centroids must be set to False.
     return_excluded_voxels_to_queue: bool, should ROI - voxel pairs once excluded because of thresholding be considered again later 
                      (used when targetFunction in ['spatialConsistency', 'weightedMeanConsistency']). (default = False)
+    regularization: float, the weight for the regularization to control size (default=None)
+    reg_exp: float, the exponent for the reg function, used only if regularization (above) is used (default=2)
+    logging: bool, if True returns a dictionary with the weighted mean consistency and regularization at each clustering step (default=False)
     """
     
     
@@ -270,6 +274,7 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
             del(M)
     
     elif method == 'template':
+        #return dictionary with new voxel cluster numbers (starting from 0, eliminating zero voxels)
         voxels_in_clusters = get_voxels_in_clusters(template)
         for layerset in layersets:
             M = pn.MultiplexNetwork(couplings='ordinal',fullyInterconnected=True)
@@ -290,12 +295,14 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                 if calculate_consistency_while_clustering: #calculating spatial consistency of formed clusters
                     assert consistency_save_path != None, 'Path for saving spatial consistency is not defined. Please give a path as the consistency_save_path parameter (or set calculate_consistency_while_clustering to False).'
                     windowdata = imgdata[:,:,:,start_times[tw_no]:end_times[tw_no]]
+                    #take the name of the file without .pkl
                     if '.' in consistency_save_path:
                         name,extension = consistency_save_path.split('.')
                         consistency_save_path_final = name + '_' + str(tw_no) + '.' + extension
                     else:
                         consistency_save_path_final = name + '_' + str(tw_no) + '.pkl'
                     if calculate_consistency_while_clustering == 'aggregate':
+                        #the file it's actually saved at the end of the function
                         if tw_no not in consistency_dict_aggregated:
                             consistency_dict_aggregated[tw_no] = calculate_spatial_consistency(windowdata,voxels_in_clusters,f_transform_consistency,n_consistency_CPUs,None)
                     else:
@@ -315,7 +322,7 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                        'sizeExp':consistency_size_exp,'nCPUs':n_consistency_CPUs,
                        'nReHoNeighbors':n_ReHo_neighbors,'percentageMinCentroidDistance':percentage_min_centroid_distance,
                        'ReHoMeasure':ReHo_measure,'includeNeighborhoodsInCentroids':include_neighborhoods_in_centroids,
-                       'returnExcludedToQueue':return_excluded_voxels_to_queue}
+                       'returnExcludedToQueue':return_excluded_voxels_to_queue,'regularization':regularization,'regExp':reg_exp,'logging':logging}
                 if not tw_no in voxels_in_clusters_by_timewindow:
                     voxels_in_clusters = dict()
                     if ROI_centroids == 'random':
@@ -428,6 +435,7 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                     if min(np.abs(voxel_labels))>0: # if cluster indexing starts from a non-zero value, let's fix it to start from zero
                         voxel_labels[np.where(voxel_labels)>0] -= np.min(voxel_labels[np.where(voxel_labels)>0])
                     for ii, label in enumerate(voxel_labels):
+                        #if item does not exist insert label key, otherwise append value to key
                         voxels_in_clusters.setdefault(label,[]).append(voxel_coordinates[ii]) # voxels_in_clusters will contain label:[voxels with label] pairs; here, coordinates of each voxel are added to the correct list
                     if -1 in voxels_in_clusters:
                         del voxels_in_clusters[-1] # Voxels that are not located in any ROI (because of thresholding) have label -1. These should not be considered further in the pipeline.
@@ -564,6 +572,7 @@ def calculate_cluster_correlation_matrix(imgdata_tw,voxels_in_clusters):
     for cluster_number in voxels_in_clusters:
         for voxel in voxels_in_clusters[cluster_number]:
             voxel_timeseries = imgdata_tw[voxel]
+            #if key already exist get the value and add voxel_timeseries vector, otherwise put zeros vector
             cluster_timeseries[cluster_number] = cluster_timeseries.get(cluster_number,np.zeros(voxel_timeseries.shape)) + voxel_timeseries
     for cluster_number in cluster_timeseries:
         cluster_timeseries[cluster_number] = cluster_timeseries[cluster_number] / float(len(voxels_in_clusters[cluster_number]))
