@@ -2381,8 +2381,9 @@ def growOptimizedROIs(cfg,verbal=True):
 
     while len(priorityQueue) > 0:
         
-        # used to log iteration time
-        start_time=time.time()
+        if verbal:
+            # used to log iteration time
+            start_time=time.time()
 
         # Selecting the ROI to be updated and voxel to be added to that ROI (based on the priority measure)
         # we select best (globally)voxel on the border of a ROI each time
