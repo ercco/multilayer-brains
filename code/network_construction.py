@@ -144,7 +144,8 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                                                     n_consistency_CPUs=5,consistency_save_path='spatial-consistency.pkl',
                                                     n_consistency_iters=100,consistency_percentage_ROIs_for_thresholding=0,
                                                     n_ReHo_neighbors=6,percentage_min_centroid_distance=0,ReHo_measure='ReHo',
-                                                    include_neighborhoods_in_centroids=False,return_excluded_voxels_to_queue=False):
+                                                    include_neighborhoods_in_centroids=False,return_excluded_voxels_to_queue=False,regularization=-100,
+                                                    reg_exp=2, logging=False):
     
     """
     Consistency-related inputs:
@@ -202,6 +203,9 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                                         is 'correlationWithCentroid', include_Neighborhoods_in_centroids must be set to False.
     return_excluded_voxels_to_queue: bool, should ROI - voxel pairs once excluded because of thresholding be considered again later 
                      (used when targetFunction in ['spatialConsistency', 'weightedMeanConsistency']). (default = False)
+    regularization: float, the weight for the regularization to control size (default=None)
+    reg_exp: float, the exponent for the reg function, used only if regularization (above) is used (default=2)
+    logging: bool, if True returns a dictionary with the weighted mean consistency and regularization at each clustering step (default=False)
     """
     
     
@@ -318,7 +322,7 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                        'sizeExp':consistency_size_exp,'nCPUs':n_consistency_CPUs,
                        'nReHoNeighbors':n_ReHo_neighbors,'percentageMinCentroidDistance':percentage_min_centroid_distance,
                        'ReHoMeasure':ReHo_measure,'includeNeighborhoodsInCentroids':include_neighborhoods_in_centroids,
-                       'returnExcludedToQueue':return_excluded_voxels_to_queue}
+                       'returnExcludedToQueue':return_excluded_voxels_to_queue,'regularization':regularization,'regExp':reg_exp,'logging':logging}
                 if not tw_no in voxels_in_clusters_by_timewindow:
                     voxels_in_clusters = dict()
                     if ROI_centroids == 'random':

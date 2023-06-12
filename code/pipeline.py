@@ -158,6 +158,9 @@ def clustering_method_parser(image_array,timewindow,overlap,nlayers,clustering_m
         n_ReHo_neighbors = clustering_method_params.get('n_ReHo_neighbors',6)
         percentage_min_centroid_distance = clustering_method_params.get('percentage_min_centroid_distance',0)
         return_excluded_voxels_to_queue = clustering_method_params.get('return_excluded_voxels_to_queue', False)
+        regularization = clustering_method_params.get('regularization',None)
+        reg_exp = clustering_method_params.get('reg_exp',2)
+        logging = clustering_method_params.get('logging',False)
         return network_construction.yield_clustered_multilayer_network_in_layersets(image_array,nlayers,timewindow,overlap,
                                                                                     n_clusters=nclusters,method=method,
                                                                                     template=centroid_template_array,
@@ -174,7 +177,8 @@ def clustering_method_parser(image_array,timewindow,overlap,nlayers,clustering_m
                                                                                     percentage_min_centroid_distance=percentage_min_centroid_distance,
                                                                                     ReHo_measure = ReHo_measure,
                                                                                     include_neighborhoods_in_centroids=include_neighborhoods_in_centroids,
-                                                                                    return_excluded_voxels_to_queue=return_excluded_voxels_to_queue)
+                                                                                    return_excluded_voxels_to_queue=return_excluded_voxels_to_queue, 
+                                                                                    regularization=regularization, reg_exp=reg_exp, logging=logging)
     elif method=='random_balls':
         # required params
         ROI_centroids='random'

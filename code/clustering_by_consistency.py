@@ -1263,7 +1263,7 @@ def getCentroidsByReHo(imgdata,nCentroids,nNeighbors=6,nCPUs=5,minDistancePercen
             centroidCoordinates, centroidRehos =constrainedReHoSearch(imgdata=imgdata,nCentroids=nCentroids,nNeighbors=nNeighbors,nCPUs=nCPUs,ReHoMeasure='ReHo',
                        consistencyType=consistencyType,fTransform=fTransform,template=template,returnReHoValues=returnReHoValues)
             returnarray.append(centroidCoordinates)
-            returnarray.append(centroidRehos
+            returnarray.append(centroidRehos)
         else:
             centroidCoordinates = constrainedReHoSearch(imgdata=imgdata,nCentroids=nCentroids,nNeighbors=nNeighbors,nCPUs=nCPUs,ReHoMeasure='ReHo',
                        consistencyType=consistencyType,fTransform=fTransform,template=template,returnReHoValues=returnReHoValues)
@@ -2208,6 +2208,7 @@ def growOptimizedROIs(cfg,verbal=True):
     meanConsistency: double, mean consistency of the final ROIs (#all ROIs)
     """
     # Setting up: reading parameters
+    import pdb; pdb.set_trace()
     if cfg['targetFunction'] == 'local weighted consistency': # this is a case for backward compatibility; the 'local weighted consistency' option should not be used
         targetFunction = 'spatialConsistency'
     else:
