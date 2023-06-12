@@ -1260,14 +1260,14 @@ def getCentroidsByReHo(imgdata,nCentroids,nNeighbors=6,nCPUs=5,minDistancePercen
 
     if ReHoMeasure=='ConstrainedReHo':
         if returnReHoValues:
-            centroidCoordinates=constrainedReHoSearch(imgdata=imgdata,nCentroids=nCentroids,nNeighbors=nNeighbors,nCPUs=nCPUs,ReHoMeasure='ReHo',
+            centroidCoordinates, centroidRehos =constrainedReHoSearch(imgdata=imgdata,nCentroids=nCentroids,nNeighbors=nNeighbors,nCPUs=nCPUs,ReHoMeasure='ReHo',
                        consistencyType=consistencyType,fTransform=fTransform,template=template,returnReHoValues=returnReHoValues)
             returnarray.append(centroidCoordinates)
+            returnarray.append(centroidRehos
         else:
-            centroidCoordinates,centroidRehos=constrainedReHoSearch(imgdata=imgdata,nCentroids=nCentroids,nNeighbors=nNeighbors,nCPUs=nCPUs,ReHoMeasure='ReHo',
+            centroidCoordinates = constrainedReHoSearch(imgdata=imgdata,nCentroids=nCentroids,nNeighbors=nNeighbors,nCPUs=nCPUs,ReHoMeasure='ReHo',
                        consistencyType=consistencyType,fTransform=fTransform,template=template,returnReHoValues=returnReHoValues)
             returnarray.append(centroidCoordinates)
-            returnarray.append(centroidRehos)
     
     else:
     
