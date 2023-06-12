@@ -1524,7 +1524,9 @@ def calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, ROIVoxel
     elif targetFunction == 'spatialConsistency':
         priorityMeasure = updateSpatialConsistency(allVoxelTs, voxelIndex, ROIVoxels, consistencies[ROIIndex],
                                                    ROISizes[ROIIndex], consistencyType, fTransform) * (ROISizes[ROIIndex] + 1)**sizeExp
-    elif targetFunction in ['weighted mean consistency','meanConsistencyOverSizeStd','min correlation']:
+    elif targetFunction == 'min correlation':
+        priorityMeasure = minCorr(allVoxelTs, voxelIndex, ROIVoxels)
+    elif targetFunction in ['weighted mean consistency','meanConsistencyOverSizeStd']:
         # TODO: check if there's an easier formula for updating the weighted mean consistency (similarly as there is for consistency)
         tempConsistencies = list(consistencies)
         tempSizes = list(ROISizes)
@@ -1535,8 +1537,6 @@ def calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, ROIVoxel
         if targetFunction == 'weighted mean consistency':
             priorityMeasure = sum([tempConsistency*tempSize**sizeExp for tempConsistency,tempSize 
                                    in zip(tempConsistencies,tempSizes)])/sum([size**sizeExp for size in tempSizes])
-        elif targetFunction == 'min correlation':
-            priorityMeasure = minCorr(allVoxelTs, voxelIndex, ROIVoxels)
         elif targetFunction == 'meanConsistencyOverSizeStd':
             # TODO: if using the moment order makes sense, update this function to take it as an input parameter and
             # fix the following lines accordingly
