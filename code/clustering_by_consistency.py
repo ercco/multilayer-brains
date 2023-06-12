@@ -207,7 +207,7 @@ def readVoxelIndices(path, voxelCoordinates=[], layers=all):
         for node in nodes:
             voxelIndicesPerROI = []
             voxels = eval(node)
-            readVoxelCoordinatesPerLayer.append(voxels)
+            readVoxelCoordinatesPerLayer.append(np.array(voxels))
             if len(voxelCoordinates)>0:
                 for voxel in voxels:
                     voxelIndicesPerROI.append(np.where((voxelCoordinates==voxel).all(axis=1))[0][0])
@@ -966,7 +966,6 @@ def makeLocalConnectivity(imdat, thresh):
         if i % 1000 == 0: print 'voxel #', i
         # calculate the voxels that are in the 3D neighborhood
         # of the center voxel
-        # ?not clear what it does
         ndx3d=indx_1dto3d(iv[i],sz[:-1])+neighbors
         ndx1d=indx_3dto1d(ndx3d,sz[:-1])
         
@@ -1231,9 +1230,10 @@ def getCentroidsByReHo(imgdata,nCentroids,nNeighbors=6,nCPUs=5,minDistancePercen
     nCPUs: int, number of CPUs used for the parallel calculation (default = 5)
     minDistancePercentage: float (between 0 and 1), the minimum distance between two centroids
                           is set as minDistancePercentage of the dimensions of imgdata (default = 0)
-    ReHoMeasure: str, the measure of the neighbourhood similarity used to pick the centroits, options
-                 'ReHo', 'spatialConsistency', 'ConstrainedReHo' to search centroids
-                only inside the boundaries a given parcellation (default = 'ReHo')
+    ReHoMeasure: str, the measure of the neighbourhood similarity used to pick the centroits, options (default: 'ReHo'):
+                 'ReHo': regional homogeneity as per Zang et al. 2004
+                 'spatialConsistency': spatial consistency (i.e. mean Pearson correlation) of the neighbourhood
+                 'ConstrainedReHo': finds for each ROI defined in the template the voxel with the highest regional homogeneity
     consistencyType: str, definition of spatial consistency to be used if 
                      targetFunction == 'spatialConsistency' (default: 'pearson c' (mean Pearson correlation coefficient))
     fTransform: bool, should Fisher Z transform be applied if targetFunction == 'spatialConsistency' 
@@ -1500,7 +1500,7 @@ def calculatePriority(ROIIndex, voxelIndex, targetFunction, allVoxelTs, ROIVoxel
     centroidTs: np.array, nTimepoints x 1, time series of the ROI centroid. Used if targetFunction == 'correlationWithCentroid'
     consistencies: iterable (len(consistencies) = nROIs), spatial consistencies of all ROIs. Used if
                    targetFunction == 'weighted mean consistency'
-    ROISizes: iterable (len(consistencies = nROIs)), sizes of all ROIs. Used if targetFunction == 'weighted mean consistency' 
+    ROISizes: iterable (len(ROISizes = nROIs)), sizes of all ROIs. Used if targetFunction == 'weighted mean consistency' 
     or 'spatialConsistency'
     consistencyType: str, definition of spatial consistency to be used if 
                      targetFunction == 'spatialConsistency' (default: 'pearson c' (mean Pearson correlation coefficient))
@@ -2145,11 +2145,10 @@ def growOptimizedROIs(cfg,verbal=True):
                     of any other ROI. However, the same voxel can be considered again later.
                     - 'strict data-driven': similar as above but when a voxel has been found to be sub-threshold
                     for a ROI, it is entirely removed from the base of possible voxels for this ROI
-                    - 'voxel-wise': no voxel is added to a ROI if its average correlation to the voxels of this
-                    ROI is lower than its average correlation to at least N other ROIs. For setting N, see the
-                    percentageROIsForThresholding parameter below (default: N = nROIs, i.e. a voxel is not added to a ROI
-                    if it's more correlated to any other ROI)
-                    #check if higher consistency with non touching clusters
+                    - 'voxel-wise': no voxel is added to a ROI if the average correlation between the voxel and all
+                    voxels of this ROI is not among the N strongest average correlations between the voxel and all
+                    voxels of any ROI. For setting N, see the percentageROIsForThresholding parameter below 
+                    (default: N = 1, i.e. a voxel is not added to a ROI if it's more correlated to any other ROI)
                     - 'maximal-voxel-wise': same as voxel-wise above but only the N strongest average correlations per ROI
                     are taken into account; for setting N see the nCorrelationsForThresholding parameter below
                     - 'voxel-neighbor': no voxel is added to a ROI if its average correlation to the voxels of this
@@ -2183,9 +2182,10 @@ def growOptimizedROIs(cfg,verbal=True):
          verbal: bool, if verbal == True, more progress information is printed (default = True)
          nCorrelationsForThresholding: int, the number of strongest correlations considered if threshold == 'maximal-voxel-wise'
                                        (default = 5)
-         percentageROIsForThresholding: float (from 0 to 1), in thresholding a voxel can't be added to a ROI if it's more correlated to at least
-                                        percentageROIsForThresholding*nROIs other ROIs (default: 1/nROIs, i.e. to any other ROIs)
-                                        #lower= easier to be added
+         percentageROIsForThresholding: float (from 0 to 1), in thresholding a voxel can't be added to a ROI if its correlation
+                                        to this ROI is not among the percentageROIsForThresholding*nROIs strongest correlations
+                                        of this voxel to any ROI (default: 1/nROIs, i.e. the correlation to this ROI must be
+                                        stronger than to any other ROI). Note: if value 0 is given, 1/nROIs is used instead.
          percentageMinCentroidDistance: float (from 0 to 1), the minimal distance between ReHo-based seeds is set as 
                                         percentageMinCentroidDistance times maximal dimension of imgdata (default = 0).
          nReHoNeighbors: int, number or neighbors used for calculating ReHo if ReHo-based seeds are to be used; options: 6 (faces),
@@ -2374,8 +2374,6 @@ def growOptimizedROIs(cfg,verbal=True):
                     
     selectedMeasures = []
     # Actual optimization takes place inside the while loop:
-    '''COUNTER=0
-    DEBUG=False'''
 
     #used to log parameters
     reg_array=[]
@@ -2462,14 +2460,6 @@ def growOptimizedROIs(cfg,verbal=True):
                     
                     
         # Adding the voxel to the ROI and updating its consistency
-        '''if DEBUG:
-            DEBUG=False
-            print('REGULARIZATION:',regularization)
-            pkl_dict={'xmatrix':allVoxelTs[voxelToAdd],'ymatrix':allVoxelTs[ROIInfo['ROIVoxels'][ROIToUpdate]]}
-            #print('x matrix to Pearson',allVoxelTs[voxelToAdd])
-            #print('y matrix to Pearson',allVoxelTs[ROIInfo['ROIVoxels'][ROIToUpdate]])
-            with open('/scratch/cs/networks/delucp1/growing_alex_80/debug_dict_vwth'+str(COUNTER)+'.pkl', 'wb') as f:
-                pickle.dump(pkl_dict, f, -1)'''
         updatedConsistency = updateSpatialConsistency(allVoxelTs, voxelToAdd, ROIInfo['ROIVoxels'][ROIToUpdate],
                                                       consistencies[ROIToUpdate], ROISizes[ROIToUpdate], consistencyType,
                                                       fTransform)
@@ -2533,11 +2523,6 @@ def growOptimizedROIs(cfg,verbal=True):
             end_time=time.time()
             iteration_time=end_time-start_time
             print('this iteration took:',iteration_time,'seconds')
-        '''
-        if totalROISize == 586 or totalROISize ==587 or totalROISize ==588:
-            DEBUG=True
-            print('DEBUG=',DEBUG)
-            COUNTER+=1'''
     
     if logging:
         print('saving parameters of clustering at each step')
