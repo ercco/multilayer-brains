@@ -1245,9 +1245,8 @@ def getCentroidsByReHo(imgdata,nCentroids,nNeighbors=6,nCPUs=5,minDistancePercen
     returnReHoValues: bool, set True to return both centroid voxels and their Reho values(default=False)
     Returns: 
     --------
-    (all are given with the returnarray)
     centroidCoordinates: nCentroids x 3 np.array, coordinates of a voxel (in voxels)
-    centroidNeighbors: list of nNeighbours x 3 np.arrays (len(centroidNeighbors)=nCentroids), the neighborhoods used to
+    centroidNeighborhoods: list of nNeighbours x 3 np.arrays (len(centroidNeighbors)=nCentroids), the neighborhoods used to
                        calculate the ReHo or consistency values of the centroids
     centroidReHos: np.array of centroids' ReHo values
     """
@@ -1260,16 +1259,16 @@ def getCentroidsByReHo(imgdata,nCentroids,nNeighbors=6,nCPUs=5,minDistancePercen
 
     if ReHoMeasure=='ConstrainedReHo':
         if returnReHoValues:
-            centroidCoordinates, centroidRehos =constrainedReHoSearch(imgdata=imgdata,nCentroids=nCentroids,nNeighbors=nNeighbors,nCPUs=nCPUs,ReHoMeasure='ReHo',
+            centroidCoordinates, centroidReHos = constrainedReHoSearch(imgdata=imgdata,nCentroids=nCentroids,nNeighbors=nNeighbors,nCPUs=nCPUs,ReHoMeasure='ReHo',
                        consistencyType=consistencyType,fTransform=fTransform,template=template,returnReHoValues=returnReHoValues)
-            returnarray.append(centroidCoordinates)
-            returnarray.append(centroidRehos)
         else:
             centroidCoordinates = constrainedReHoSearch(imgdata=imgdata,nCentroids=nCentroids,nNeighbors=nNeighbors,nCPUs=nCPUs,ReHoMeasure='ReHo',
                        consistencyType=consistencyType,fTransform=fTransform,template=template,returnReHoValues=returnReHoValues)
-            returnarray.append(centroidCoordinates)
+            centroidReHos = []
     
     else:
+
+        centroidReHos = []
     
         voxelCoordinates = list(zip(*np.where(np.any(imgdata != 0, 3) == True)))
         x = [voxel[0] for voxel in voxelCoordinates]
@@ -1317,7 +1316,6 @@ def getCentroidsByReHo(imgdata,nCentroids,nNeighbors=6,nCPUs=5,minDistancePercen
                         centroidCoordinates.append(candidateCentroid)
                 i = i+1
         centroidCoordinates = np.array(centroidCoordinates)
-        returnarray.append(centroidCoordinates)
         
     if returnNeighborhood:
         centroidNeighborhoods = [findNeighbors(centroid,nNeighbors=nNeighbors,allVoxels=voxelCoordinates) for centroid in centroidCoordinates]
@@ -1327,13 +1325,14 @@ def getCentroidsByReHo(imgdata,nCentroids,nNeighbors=6,nCPUs=5,minDistancePercen
                     if neighbor in otherNeighborhood:
                         otherNeighborhood.remove(neighbor)
         centroidNeighborhoods = [np.array(neighborhood) for neighborhood in centroidNeighborhoods]
-        returnarray.append(centroidNeighborhoods)
+    else:
+        centroidNeighborhoods = []
     
-    return returnarray
+    return centroidCoordinates, centroidNeighborhoods, centroidReHos
     
 
 def constrainedReHoSearch(imgdata,template,nCentroids,nNeighbors=6,nCPUs=5,ReHoMeasure='ReHo',
-                       consistencyType='pearson c',fTransform=False,saveRehoValues=False):
+                       consistencyType='pearson c',fTransform=False,returnReHoValues=False):
     '''
     Finds the N voxels with the largest Regional Homogeneity inside a given parcellation template to be used as ROI centroids.
     
@@ -1355,7 +1354,6 @@ def constrainedReHoSearch(imgdata,template,nCentroids,nNeighbors=6,nCPUs=5,ReHoM
                      targetFunction == 'spatialConsistency' (default: 'pearson c' (mean Pearson correlation coefficient))
     fTransform: bool, should Fisher Z transform be applied if targetFunction == 'spatialConsistency' 
                 (default=False)
-    returnNeighborhood: bool, if True, both the centroid voxel and its ReHo neighbourhood are returned (default=False)
     template: template parcellation (already masked, 3d numpy array) with number of regions=nCentroids, 
                 to be used to constrain the search of centroids inside the boundaries of each ROI (default=False)
     returnReHoValues: bool, set True to return both centroid voxels and their Reho values(default=False)
@@ -1393,7 +1391,7 @@ def constrainedReHoSearch(imgdata,template,nCentroids,nNeighbors=6,nCPUs=5,ReHoM
     centroidCoordinates=np.array(centroidCoordinates)
     centroidRehos=np.array(centroidRehos)
 
-    if saveRehoValues:
+    if returnReHoValues:
         return centroidCoordinates,centroidRehos
     
     return centroidCoordinates
@@ -2122,6 +2120,7 @@ def growOptimizedROIs(cfg,verbal=True):
         3) the mean spatial consistency of all ROIs, possibly weighted by ROI size
         4) the mean spatial consistency of all ROIs divided by the standard deviation
            of ROI size + 1
+        5) the minimum correlation between the candidate voxel and any voxel in the ROI
     
     Parameters:
     -----------
@@ -2166,6 +2165,7 @@ def growOptimizedROIs(cfg,verbal=True):
                          - 'meanConsistencyOverSizeStd': the mean consistency (mean Pearson correlation coefficient of the voxels)
                          over all ROIs, divided by the standard deviation of the ROI size distribution + 1 (the + 1 term is 
                          needed to ensure that the divider > 0)
+                         -'min correlation': the minimum correlation between the candidate voxel and any voxel inside the ROI
          consistencyType: str, definition of spatial consistency to be used 
                           (default: 'pearson c' (mean Pearson correlation coefficient))
          regularization: float, the weight for the regularization to control size (default=None)
@@ -2208,7 +2208,6 @@ def growOptimizedROIs(cfg,verbal=True):
     meanConsistency: double, mean consistency of the final ROIs (#all ROIs)
     """
     # Setting up: reading parameters
-    import pdb; pdb.set_trace()
     if cfg['targetFunction'] == 'local weighted consistency': # this is a case for backward compatibility; the 'local weighted consistency' option should not be used
         targetFunction = 'spatialConsistency'
     else:
@@ -2264,13 +2263,15 @@ def growOptimizedROIs(cfg,verbal=True):
             ReHoMeasure = cfg['ReHoMeasure']
         else:
             ReHoMeasure = 'ReHo'
+        if ReHoMeasure == 'ConstrainedReHo':
+            template = cfg['template']
         if includeNeighborhoods:
             assert targetFunction != 'correlationWithCentroid', 'centroid neighborhoods cannot be included in seeds when using correlationWithCentroid as targetFunction. Please select different target function.'
-            ROICentroids, centroidNeighborhoods = getCentroidsByReHo(imgdata,cfg['nROIs'],nReHoNeighbors,nCPUs,percentageMinCentroidDistance,ReHoMeasure,
-                                          consistencyType,fTransform,returnNeighborhood=True)
+            ROICentroids, centroidNeighborhoods, _ = getCentroidsByReHo(imgdata,cfg['nROIs'],nReHoNeighbors,nCPUs,percentageMinCentroidDistance,ReHoMeasure,
+                                          consistencyType,fTransform,template=template,returnNeighborhood=True)
         else:
-            ROICentroids = getCentroidsByReHo(imgdata,cfg['nROIs'],nReHoNeighbors,nCPUs,percentageMinCentroidDistance,ReHoMeasure,
-                                          consistencyType,fTransform)
+            ROICentroids, _, _ = getCentroidsByReHo(imgdata,cfg['nROIs'],nReHoNeighbors,nCPUs,percentageMinCentroidDistance,ReHoMeasure,
+                                          consistencyType,fTransform,template=template)
     else:
         ROICentroids = cfg['ROICentroids']
     if 'threshold' in cfg.keys():

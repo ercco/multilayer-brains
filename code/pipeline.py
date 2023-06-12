@@ -138,7 +138,8 @@ def clustering_method_parser(image_array,timewindow,overlap,nlayers,clustering_m
             centroid_template_array = np.sum(np.abs(image_array),axis=3)
             ROI_centroids = 'random'
         elif seed_selection_method == 'ReHo':
-            centroid_template_array = np.sum(np.abs(image_array),axis=3)
+            centroid_template_data = nib.load(centroid_template_filename)
+            centroid_template_array = centroid_template_data.get_fdata()
             ROI_centroids = 'ReHo'
         elif seed_selection_method == 'template' or (centroid_template_filename and not use_random_seeds):
             centroid_template_data = nib.load(centroid_template_filename)
