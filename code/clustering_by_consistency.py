@@ -1364,13 +1364,15 @@ def constrainedReHoSearch(imgdata,template,nCentroids,nNeighbors=6,nCPUs=5,ReHoM
     '''
 
     #template has already been masked and has only nonzero voxels
-
     ROIIndices = list(np.unique(template))
     ROIIndices.remove(0)
     centroidCoordinates=[]
     centroidRehos=[]
     if (nCentroids != len(ROIIndices)):
-        raise Exception("number of ROIs wanted it's different than number in template")
+        if (nCentroids < len(ROIIndices)):
+            raise Exception("The template contains more ROIs than the desired number of ROIs, please check the template.")
+        else:
+            print("Only %d ROIs available in the template, skipping %d of the desired ROIs" % (len(ROIIndices),nCentroids-len(ROIIndices)))
 
     for ROIInd in ROIIndices:
         #gives a list with the coordinates of every voxel in a ROI
