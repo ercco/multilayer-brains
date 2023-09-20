@@ -116,3 +116,74 @@ def write_layersetwise_network(M,layersetwise_networks_savefolder):
     filename = layersetwise_networks_savefolder+net_name
     write_pickle_file(M,filename)
     return
+
+def read_consistency_data(consistency_save_stem,subject_id,run_number,clustering_method,nlayers,clustering_method_specifier=''):
+    """
+    Reads the ROI consistency and size data per subject, run, and clustering method.
+    
+    Parameters:
+    -----------
+    consistency_save_stem: str, parths of the consistency save path that are common to all subjects, runs, and clustering methods
+    subject_id: str, subject identifier
+    run_number: int
+    clustering_method: str, name of the clustering method applied
+    nlayers: int, the number of graphlet layers used in network construction
+    clustering_method_specifier: str, optional additional token with more info on the clustering method, e.g. threshold; 
+                                 used to separate different variants of the same method
+                                 
+    Returns:
+    --------
+    consistencies: dic, keys: time window indices, values: list of ROI consistencies in the given window
+    sizes: dic, keys: time window indices, values: list of ROI sizes in the given window
+    """
+    if clustering_method_specifier == '':
+        consistency_save_path = consistency_save_stem + '/' + subject_id + '/' + str(run_number) + '/' + clustering_method_specifier + '/' + str(nlayers) + '_layers' + '/spatial_consistency.pkl'
+    else:
+        consistency_save_path = consistency_save_stem + '/' + subject_id + '/' + str(run_number) + '/' + clustering_method_specifier + '/' + str(nlayers) + '_layers' + '/spatial_consistency_' + clustering_method_specifier + '.pkl'
+    f = open(consistency_save_path,'r')
+    consistency_data = pickle.load(f)
+    f.close()
+    consistencies = {}
+    sizes = {}
+    for window_number, layer in consistency_data.items():
+        consistencies[window_number] = layer['consistencies']
+        sizes[window_number] = layer['ROI_sizes']
+    return consistencies, sizes
+
+def pool_consistency_data(consistency_save_stem,subject_ids,run_numbers,clustering_methods,nlayers,clustering_method_specifiers=''):
+    """
+    Reads the ROI consistency and size of given set of subjects, runs, and clustering methods and pools them over subjects, runs,
+    and time windows (layers).
+    
+    Parameters:
+    -----------
+    consistency_save_stem: str, parths of the consistency save path that are common to all subjects, runs, and clustering methods
+    subject_ids: iterable of str, subject identifiers
+    run_numbers: iterable of int
+    clustering_methods: iterable of str, names of the clustering method applied
+    nlayers: int, the number of graphlet layers used in network construction
+    clustering_method_specifiers: iterable of str, optional additional token with more info on the clustering method, e.g. threshold; 
+                                 used to separate different variants of the same method
+                                 
+    Returns:
+    --------
+    pooled_consistencies: list of lists, consistencies per each clustering method pooled over other parameters
+    pooled_sizes: list of lists, sizes per each clustering method pooled over other parameters
+    """
+    if clustering_method_specifiers == '':
+        clustering_method_specifiers = ['' for clustering_method in clustering_methods]
+    pooled_consistencies = [[] for clustering_method in clustering_methods] # this is a clustering methods x ROIs list (ROIs pooled over subjects, layers, and runs)
+    pooled_sizes = [[] for clustering_method in clustering_methods]
+    for i, (clustering_method,clustering_method_specifier) in enumerate(zip(clustering_methods,clustering_method_specifiers)):
+        for subject_id in subject_ids:
+            for run_number in run_numbers:
+                consistencies, sizes = read_consistency_data(consistency_save_stem,subject_id,run_number,clustering_method,nlayers,clustering_method_specifier='')
+                pooled_consistencies[i].extend(consistencies.values())
+                pooled_sizes[i].extend(sizes.values())
+    return pooled_consistencies, pooled_values
+
+
+    
+        
+
+    
