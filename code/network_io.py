@@ -180,7 +180,7 @@ def pool_consistency_data(consistency_save_stem,subject_ids,run_numbers,clusteri
                 consistencies, sizes = read_consistency_data(consistency_save_stem,subject_id,run_number,clustering_method,nlayers,clustering_method_specifier='')
                 pooled_consistencies[i].extend(consistencies.values())
                 pooled_sizes[i].extend(sizes.values())
-    return pooled_consistencies, pooled_values
+    return pooled_consistencies, pooled_sizes
 
 
     
