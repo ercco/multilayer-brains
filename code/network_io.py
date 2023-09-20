@@ -137,9 +137,9 @@ def read_consistency_data(consistency_save_stem,subject_id,run_number,clustering
     sizes: dic, keys: time window indices, values: list of ROI sizes in the given window
     """
     if clustering_method_specifier == '':
-        consistency_save_path = consistency_save_stem + '/' + subject_id + '/' + str(run_number) + '/' + clustering_method_specifier + '/' + str(nlayers) + '_layers' + '/spatial_consistency.pkl'
+        consistency_save_path = consistency_save_stem + '/' + subject_id + '/' + str(run_number) + '/' + clustering_method + '/' + str(nlayers) + '_layers' + '/spatial_consistency.pkl'
     else:
-        consistency_save_path = consistency_save_stem + '/' + subject_id + '/' + str(run_number) + '/' + clustering_method_specifier + '/' + str(nlayers) + '_layers' + '/spatial_consistency_' + clustering_method_specifier + '.pkl'
+        consistency_save_path = consistency_save_stem + '/' + subject_id + '/' + str(run_number) + '/' + clustering_method + '/' + str(nlayers) + '_layers' + '/spatial_consistency_' + clustering_method_specifier + '.pkl'
     f = open(consistency_save_path,'r')
     consistency_data = pickle.load(f)
     f.close()
@@ -178,8 +178,9 @@ def pool_consistency_data(consistency_save_stem,subject_ids,run_numbers,clusteri
         for subject_id in subject_ids:
             for run_number in run_numbers:
                 consistencies, sizes = read_consistency_data(consistency_save_stem,subject_id,run_number,clustering_method,nlayers,clustering_method_specifier='')
-                pooled_consistencies[i].extend(consistencies.values())
-                pooled_sizes[i].extend(sizes.values())
+                for key in consistencies.keys():
+                    pooled_consistencies[i].extend(consistencies[key])
+                    pooled_sizes[i].extend(sizes[key])
     return pooled_consistencies, pooled_sizes
 
 
