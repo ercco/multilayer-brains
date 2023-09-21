@@ -96,14 +96,15 @@ def read_weighted_network(filename):
     
     return M
 
-def write_pickle_file(object,filename):
-    f = open(filename,'w')
-    pickle.dump(object,f)
+def write_pickle_file(obj,filename):
+    f = open(filename,'wb')
+    pickle.dump(obj,f)
     f.close()
     return
 
 def read_pickle_file(filename):
-    f = open(filename,'r')
+    f = open(filename,'rb')
+    # if doesn't work, add encoding='latin1'
     obj = pickle.load(f)
     f.close()
     return obj
