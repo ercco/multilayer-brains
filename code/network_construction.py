@@ -583,21 +583,51 @@ def calculate_cluster_correlation_matrix(imgdata_tw,voxels_in_clusters):
     return R
     
 def calculate_spatial_consistency(windowdata,voxels_in_clusters,f_transform_consistency,n_consistency_CPUs,consistency_save_path):
-    ROI_sizes = []
+    """
+    Calculates spatial consistency of the given clusters of voxels.
+    
+    Parameters:
+    -----------
+    windowdata: n_voxels x n_time np.array, voxel time series
+    voxels_in_clusters: dic, keys are ROI labels and values lists of voxel coordinates belonging to the ROI
+    f_transform_consistency: bool, re the correlations Fisher f transformed before averaging when 
+                             consistencyType = 'pearson c' (default=False)
+    n_consistency_CPUs: int, number of CPUs to be used for the parallel computing (default = 5)
+    consistency_save_path: str, path to which save the spatial consistency
+    
+    Returns:
+    --------
+    consistency_dict: dic, containing
+        consistency_type: definition of spatial consistency to be used; so far, this is always 'pearson c' 
+        (mean Pearson correlation coefficient)
+        ftransform: f_transform_consistency given as a parameter
+        consistencies: dic where keys are tuples of voxel coordinates of each ROI and spatial consistencies of the ROIs
+        ROI_sizes: dic where keys are tuples of voxel coordinates of each ROI and values ROI sizes, defined as number of voxels per ROI
+    if consistency_save_path is given, consistency_dict is saved instead of returning it
+    """
+    ROI_sizes = {}
     n_voxels = 0
-    for cluster in voxels_in_clusters.values():
+    clusters = tuple([tuple(cluster) for cluster in voxels_in_clusters.values()])
+    #for cluster in voxels_in_clusters.values():
+    #    n_voxels = n_voxels + len(cluster)
+    #    ROI_sizes.append(len(cluster))
+    for cluster in clusters:
         n_voxels = n_voxels + len(cluster)
-        ROI_sizes.append(len(cluster))
+        ROI_sizes[cluster] = len(cluster)
     n_time = windowdata.shape[3]
     all_voxel_ts = np.zeros((n_voxels,n_time))
     voxel_indices = []
     counter = 0
-    for voxels in voxels_in_clusters.values():
-        voxel_indices.append(np.arange(counter,counter + len(voxels)))
-        for i, voxel in enumerate(voxels):
+    for cluster in clusters:
+    #for voxels in voxels_in_clusters.values():
+        voxel_indices.append(np.arange(counter,counter + len(cluster)))
+        for i, voxel in enumerate(cluster):
             all_voxel_ts[i + counter] = windowdata[voxel]
-        counter = counter + len(voxels)
-    consistencies = cbc.calculateSpatialConsistencyInParallel(voxel_indices, all_voxel_ts,fTransform=f_transform_consistency,nCPUs=n_consistency_CPUs)
+        counter = counter + len(cluster)
+    consistencies_raw = cbc.calculateSpatialConsistencyInParallel(voxel_indices, all_voxel_ts,fTransform=f_transform_consistency,nCPUs=n_consistency_CPUs)
+    consistencies = {}
+    for cluster, consistency in zip(clusters, consistencies_raw):
+        consistencies[cluster] = consistency
     consistency_dict = {'consistency_type':'spatial with pearson c', 'ftransform':f_transform_consistency, 'consistencies':consistencies, 'ROI_sizes':ROI_sizes}
     if consistency_save_path is not None:
         with open(consistency_save_path, 'wb') as f:
