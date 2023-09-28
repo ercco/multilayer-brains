@@ -589,7 +589,7 @@ def calculate_spatial_consistency(windowdata,voxels_in_clusters,f_transform_cons
     Parameters:
     -----------
     windowdata: n_voxels x n_time np.array, voxel time series
-    voxels_in_clusters: dic, keys are ROI labels and values lists of voxel coordinates belonging to the ROI
+    voxels_in_clusters: dic, keys are ROI labels and values tuples of voxel coordinates belonging to the ROI
     f_transform_consistency: bool, re the correlations Fisher f transformed before averaging when 
                              consistencyType = 'pearson c' (default=False)
     n_consistency_CPUs: int, number of CPUs to be used for the parallel computing (default = 5)
