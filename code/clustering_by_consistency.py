@@ -1916,6 +1916,56 @@ def minCorr(allVoxelTs, voxelIndex, ROIVoxels):
     min_corr_value=min(newCorrelations)
     return min_corr_value
 
+def calculateSpatialConsistencyInNextWindow(consistencyData, imgdata, windowLength, windowOverlap=0, timelag=1, nCPUs=5):
+    """
+    Calculates the spatial consistency using ROI definitions from time window t
+    and data from time window t + timelag
+    
+    Parameters:
+    -----------
+    voxelsInClusters: dict, where keys are time window indices and values dicts containing:
+                          consistency_type: definition of spatial consistency to be used; so far, this is always 'pearson c' (mean Pearson correlation coefficient)
+                          ftransform: f_transform_consistency given as a parameter
+                          consistencies: dic where keys are tuples of voxel coordinates of each ROI and spatial consistencies of the ROIs
+                          ROI_sizes: dic where keys are tuples of voxel coordinates of each ROI and values ROI sizes, defined as number of voxels per ROI
+    imgdata: x*y*z*t np.array, fMRI measurement data to be used for the clustering.
+             Three first dimensions correspond to voxel coordinates while the fourth is time.
+             For voxels outside of the gray matter, all values must be set to 0.
+    windowLength: int, length of the time window (in samples)
+    windowOverlap: int, overlap between consequtive time windows (in samples) (default: 0, no overlap)
+    timelag: int, distance between the windows where ROI definitions are read and consistencies calculated (default: 1, consequtive windows)
+    nCPUs: int, number of CPUs to be used for the parallel computing (default = 5)
+    
+    Returns:
+    --------
+    consistencies: dict, where keys are tuples of voxel coordinates of each ROI and values are tuples of consistencies in 
+                   the window where the ROI was defined and in the window separated by timelage
+    """
+    consistencies = {}
+    consistencyType = consistencyData[0]['consistency_type']
+    fTransform = consistencyData[0]['ftransform']
+    windowIndices = np.sort(consistencyData.keys())
+    nWindows = network_construction.get_number_of_layers(imgdata.shape, windowLength, windowOverlap)
+    startTimes, endTimes = network_construction.get_start_and_end_times(nWindows, windowLength, windowOverlap)
+    for i, windowIndex in enumerate(windowIndices):
+        if nWindows - windowIndex > timelag:
+            nextWindowData = imgdata[:,:,:,startTimes[windowIndex+timelag]:endTimes[windowIndex+timelag]]
+            ROIs = consistencyData[windowIndex].keys()
+            allVoxelTs = np.zeros((imgdata.shape[0]*imgdata.shape[1]*imgdata.shape[2], windowLength))
+            voxelIndices = []
+            offset = 0
+            for ROI in ROIs:
+                s = consistencyData[windowIndex]['ROI_sizes'][ROI]
+                for j, voxel in enumerate(ROI):
+                    allVoxelTs[offset+i,:]=nextWindowData[voxel[0],voxel[1],voxel[2],:]
+                    voxelIndices.append(np.arange(offset,offset+s))
+                offset += s
+            consistenciesInNextWindow = calculateSpatialConsistencyInParallel(voxelIndices,allVoxelTs,consistencyType,fTransform,nCPUs)
+            for ROI, consistencyInNextWindow in zip(ROIs, consistenciesInNextWindow):
+                consistencyInPresentWindow = consistencyData[windowIndex][ROI]
+                consistencies[ROI] = (consistencyInPresentWindow, consistencyInNextWindow)
+    return consistencies
+
 def calculateCorrelationsInAndBetweenROIs(dataFiles,layersetwiseNetworkSavefolders,
                                       networkFiles,nLayers,timewindow,overlap,savePath=None,
                                       nBins=100,returnCorrelations=False,subjectIndex=None,
