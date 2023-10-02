@@ -1950,19 +1950,20 @@ def calculateSpatialConsistencyInNextWindow(consistencyData, imgdata, windowLeng
     for i, windowIndex in enumerate(windowIndices):
         if nWindows - windowIndex > timelag:
             nextWindowData = imgdata[:,:,:,startTimes[windowIndex+timelag]:endTimes[windowIndex+timelag]]
-            ROIs = consistencyData[windowIndex].keys()
-            allVoxelTs = np.zeros((imgdata.shape[0]*imgdata.shape[1]*imgdata.shape[2], windowLength))
+            ROIs = consistencyData[windowIndex]['consistencies'].keys()
+            nVoxels = np.sum(consistencyData[windowIndex]['ROI_sizes'].values())
+            allVoxelTs = np.zeros((nVoxels, windowLength))
             voxelIndices = []
             offset = 0
             for ROI in ROIs:
                 s = consistencyData[windowIndex]['ROI_sizes'][ROI]
                 for j, voxel in enumerate(ROI):
-                    allVoxelTs[offset+i,:]=nextWindowData[voxel[0],voxel[1],voxel[2],:]
-                    voxelIndices.append(np.arange(offset,offset+s))
+                    allVoxelTs[offset+j,:]=nextWindowData[voxel[0],voxel[1],voxel[2],:]
+                voxelIndices.append(np.arange(offset,offset+s))
                 offset += s
             consistenciesInNextWindow = calculateSpatialConsistencyInParallel(voxelIndices,allVoxelTs,consistencyType,fTransform,nCPUs)
             for ROI, consistencyInNextWindow in zip(ROIs, consistenciesInNextWindow):
-                consistencyInPresentWindow = consistencyData[windowIndex][ROI]
+                consistencyInPresentWindow = consistencyData[windowIndex]['consistencies'][ROI]
                 consistencies[ROI] = (consistencyInPresentWindow, consistencyInNextWindow)
     return consistencies
 

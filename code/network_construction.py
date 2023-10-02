@@ -628,7 +628,7 @@ def calculate_spatial_consistency(windowdata,voxels_in_clusters,f_transform_cons
     consistencies = {}
     for cluster, consistency in zip(clusters, consistencies_raw):
         consistencies[cluster] = consistency
-    consistency_dict = {'consistency_type':'spatial with pearson c', 'ftransform':f_transform_consistency, 'consistencies':consistencies, 'ROI_sizes':ROI_sizes}
+    consistency_dict = {'consistency_type':'pearson c', 'ftransform':f_transform_consistency, 'consistencies':consistencies, 'ROI_sizes':ROI_sizes}
     if consistency_save_path is not None:
         with open(consistency_save_path, 'wb') as f:
             pickle.dump(consistency_dict, f, -1)
