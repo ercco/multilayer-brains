@@ -601,16 +601,13 @@ def calculate_spatial_consistency(windowdata,voxels_in_clusters,f_transform_cons
         consistency_type: definition of spatial consistency to be used; so far, this is always 'pearson c' 
         (mean Pearson correlation coefficient)
         ftransform: f_transform_consistency given as a parameter
-        consistencies: dic where keys are tuples of voxel coordinates of each ROI and spatial consistencies of the ROIs
-        ROI_sizes: dic where keys are tuples of voxel coordinates of each ROI and values ROI sizes, defined as number of voxels per ROI
+        consistencies: dic where keys are frozensets of voxel coordinates of each ROI and spatial consistencies of the ROIs
+        ROI_sizes: dic where keys are frozensets of voxel coordinates of each ROI and values ROI sizes, defined as number of voxels per ROI
     if consistency_save_path is given, consistency_dict is saved instead of returning it
     """
     ROI_sizes = {}
     n_voxels = 0
-    clusters = tuple([tuple(cluster) for cluster in voxels_in_clusters.values()])
-    #for cluster in voxels_in_clusters.values():
-    #    n_voxels = n_voxels + len(cluster)
-    #    ROI_sizes.append(len(cluster))
+    clusters = tuple([frozenset(cluster) for cluster in voxels_in_clusters.values()])
     for cluster in clusters:
         n_voxels = n_voxels + len(cluster)
         ROI_sizes[cluster] = len(cluster)
@@ -619,7 +616,6 @@ def calculate_spatial_consistency(windowdata,voxels_in_clusters,f_transform_cons
     voxel_indices = []
     counter = 0
     for cluster in clusters:
-    #for voxels in voxels_in_clusters.values():
         voxel_indices.append(np.arange(counter,counter + len(cluster)))
         for i, voxel in enumerate(cluster):
             all_voxel_ts[i + counter] = windowdata[voxel]
