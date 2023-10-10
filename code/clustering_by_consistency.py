@@ -1967,7 +1967,7 @@ def calculateSpatialConsistencyInNextWindow(consistencyData, imgdata, windowLeng
                 if ROI in consistencies.keys():
                     consistencies[ROI].append((consistencyInPresentWindow, consistencyInNextWindow))
                 else:
-                    consistencies[ROI] = (consistencyInPresentWindow, consistencyInNextWindow)
+                    consistencies[ROI] = [(consistencyInPresentWindow, consistencyInNextWindow)]
     return consistencies
 
 def calculateCorrelationsInAndBetweenROIs(dataFiles,layersetwiseNetworkSavefolders,
