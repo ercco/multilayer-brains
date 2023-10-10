@@ -1964,7 +1964,10 @@ def calculateSpatialConsistencyInNextWindow(consistencyData, imgdata, windowLeng
             consistenciesInNextWindow = calculateSpatialConsistencyInParallel(voxelIndices,allVoxelTs,consistencyType,fTransform,nCPUs)
             for ROI, consistencyInNextWindow in zip(ROIs, consistenciesInNextWindow):
                 consistencyInPresentWindow = consistencyData[windowIndex]['consistencies'][ROI]
-                consistencies[ROI] = (consistencyInPresentWindow, consistencyInNextWindow)
+                if ROI in consistencies.keys():
+                    consistencies[ROI].append((consistencyInPresentWindow, consistencyInNextWindow))
+                else:
+                    consistencies[ROI] = (consistencyInPresentWindow, consistencyInNextWindow)
     return consistencies
 
 def calculateCorrelationsInAndBetweenROIs(dataFiles,layersetwiseNetworkSavefolders,
