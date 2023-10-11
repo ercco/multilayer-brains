@@ -32,9 +32,9 @@ excludeSingleVoxelROIs = True
 
 for jobLabel, clusteringMethod, color, alpha in zip(jobLabels, clusteringMethods, colors, alphas):
     if clusteringMethod == '':
-        figDataSavePath = consistencyInNextWindowFigDataSaveStem + '_' + jobLabel + '.pdf'
+        figDataSavePath = consistencyInNextWindowFigDataSaveStem + '_' + jobLabel + '.pkl'
     else:
-        figDataSavePath = consistencyInNextWindowFigDataSaveStem + '_' + jobLabel + '_' + clusteringMethod + '.pdf'
+        figDataSavePath = consistencyInNextWindowFigDataSaveStem + '_' + jobLabel + '_' + clusteringMethod + '.pkl'
     if os.path.isfile(figDataSavePath):
         f = open(figDataSavePath, 'rb')
         figData = pickle.load(f)
