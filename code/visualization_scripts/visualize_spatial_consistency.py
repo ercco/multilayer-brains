@@ -43,6 +43,7 @@ alphas = [0.9,0.5,0.9,0.9,0.9]
 excludeSizes = False
 excludeSingleVoxels = True
 
+import pdb; pdb.set_trace()
 if os.path.isfile(pooledDataSavePath):
         f = open(pooledDataSavePath, 'rb')
         pooledData = pickle.load(f)
