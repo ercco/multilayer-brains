@@ -1,6 +1,9 @@
 import pymnet as pn
 import numpy as np
-import cPickle as pickle
+try:
+    import cPickle as pickle
+except:
+    import pickle
 
 import corrs_and_mask_calculations
 import clustering
