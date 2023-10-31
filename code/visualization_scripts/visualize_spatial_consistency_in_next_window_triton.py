@@ -13,7 +13,7 @@ runNumbers = [2,3,4,5,6,7,8,9,10]
 
 # path parts for reading data
 consistencyInNextWindowSaveStem = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/spatial_consistency/next_window/consistency_in_next_window'
-jobLabels = ['template_brainnetome']#,'craddock','random_balls']#,'ReHo_seeds_weighted_mean_consistency_voxelwise_thresholding_03_regularization-100','ReHo_seeds_min_correlation_voxelwise_thresholding_03'] # This label specifies the job submitted to Triton; there may be several jobs saved under each subject
+jobLabels = ['template_brainnetome', 'craddock','random_balls','ReHo_seeds_weighted_mean_consistency_voxelwise_thresholding_03_regularization-100','ReHo_seeds_min_correlation_voxelwise_thresholding_03'] # This label specifies the job submitted to Triton; there may be several jobs saved under each subject
 clusteringMethods = ['','','','','']
 # NOTE: before running the script, check that data paths, jobLabels, clusteringMethods, and savePath (specified further below) match your data
 

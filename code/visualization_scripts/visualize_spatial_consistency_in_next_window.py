@@ -15,7 +15,7 @@ runNumbers = [2,3,4,5,6,7,8,9,10]
 
 # path parts for reading data
 consistencyInNextWindowSaveStem = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/spatial_consistency/next_window/consistency_in_next_window'
-jobLabels = ['craddock']#,'ReHo_seeds_weighted_mean_consistency_voxelwise_thresholding_03_regularization-100','ReHo_seeds_min_correlation_voxelwise_thresholding_03'] # This label specifies the job submitted to Triton; there may be several jobs saved under each subject
+jobLabels = ['template_brainnetome', 'random_balls', 'craddock','ReHo_seeds_weighted_mean_consistency_voxelwise_thresholding_03_regularization-100','ReHo_seeds_min_correlation_voxelwise_thresholding_03'] # This label specifies the job submitted to Triton; there may be several jobs saved under each subject
 clusteringMethods = ['','','','','']
 # NOTE: before running the script, check that data paths, jobLabels, clusteringMethods, and savePath (specified further below) match your data
 
@@ -29,6 +29,7 @@ nBins = 50
 colors = ['r','k','b','g','c']
 alphas = [0.9,0.5,0.9,0.9,0.9]
 excludeSingleVoxelROIs = True
+cmap = 'viridis'
 
 for jobLabel, clusteringMethod, color, alpha in zip(jobLabels, clusteringMethods, colors, alphas):
     if clusteringMethod == '':
@@ -70,10 +71,11 @@ for jobLabel, clusteringMethod, color, alpha in zip(jobLabels, clusteringMethods
         f.close()
     
     if excludeSingleVoxelROIs:
-        for c1, c2 in zip(presentWindowConsistencies, nextWindowConsistencies):
-            if c1 == 1 or c2 == 1:
-                presentWindowConsistencies.remove(c1)
-                nextWindowConsistencies.remove(c2)
+        presentWindowConsistencies = np.array(presentWindowConsistencies)
+        nextWindowConsistencies = np.array(nextWindowConsistencies)
+        mask = np.where(np.logical_and(presentWindowConsistencies != 1, nextWindowConsistencies != 1))
+        presentWindowConsistencies = presentWindowConsistencies[mask]
+        nextWindowConsistencies = nextWindowConsistencies[mask]        
 
     #fig = plt.figure()
     #ax = fig.add_subplot(111)
@@ -97,7 +99,8 @@ for jobLabel, clusteringMethod, color, alpha in zip(jobLabels, clusteringMethods
     ret = binned_statistic_2d(presentWindowConsistencies, nextWindowConsistencies, presentWindowConsistencies, statistic='count', bins=bins)
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    plt.pcolor(ret.x_edge, ret.y_edge, np.transpose(ret.statistic))
+    ret.statistic[np.where(ret.statistic == np.amin(ret.statistic))] = 'nan'
+    plt.pcolor(ret.x_edge, ret.y_edge, np.transpose(ret.statistic), cmap=cmap)
     ax.set_xlabel('Consistency in present window')
     ax.set_ylabel('Consistency in the window present + %x' %timelag)
     ax.set_title(title)
@@ -120,7 +123,8 @@ for jobLabel, clusteringMethod, color, alpha in zip(jobLabels, clusteringMethods
         if np.all(np.isnan(d)):
             d = np.zeros(len(d))
         dists[:, i] = d
-    plt.pcolor(ret.x_edge, ret.y_edge, dists)
+    dists[np.where(dists == np.amin(dists))] = 'nan'
+    plt.pcolor(ret.x_edge, ret.y_edge, dists, cmap=cmap)
     ax.set_xlabel('Consistency in present window')
     ax.set_ylabel('Consistency in the window present + %x' %timelag)
     ax.set_title(title)
