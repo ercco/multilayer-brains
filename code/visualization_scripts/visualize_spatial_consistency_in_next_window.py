@@ -35,6 +35,7 @@ cmap = 'viridis'
 presentWindowPercentiles = []
 nextWindowPercentiles = []
 
+binnedInfo = []
 distInfo = []
 pooledPresent = []
 pooledNext = []
@@ -101,11 +102,15 @@ for jobLabel, clusteringMethod, color, alpha in zip(jobLabels, clusteringMethods
         imshowSavePath = consistencyInNextWindowFigureSaveStem + '_' + jobLabel + '_' + clusteringMethod + '_binned.pdf'
         distributionSavePath = consistencyInNextWindowFigureSaveStem + '_' + jobLabel + '_' + clusteringMethod + '_ydist.pdf'
     bins = np.linspace(min(min(presentWindowConsistencies), min(nextWindowConsistencies)), max(max(nextWindowConsistencies),max(presentWindowConsistencies)), nBins + 1)
+    binCenters = bins[:-1] + (bins[1::] - bins[:-1])/2
     ret = binned_statistic_2d(presentWindowConsistencies, nextWindowConsistencies, presentWindowConsistencies, statistic='count', bins=bins)
+    maxLocation = np.array([binCenters[np.where(stat == np.max(stat))][0] for stat in ret.statistic])
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ret.statistic[np.where(ret.statistic == np.amin(ret.statistic))] = 'nan'
+    binnedInfo.append((ret.x_edge, ret.y_edge, binCenters, ret.statistic, maxLocation))
     plt.pcolor(ret.x_edge, ret.y_edge, np.transpose(ret.statistic), cmap=cmap)
+    plt.plot(binCenters, maxLocation, color='c')
     ax.set_xlabel('Consistency in present window')
     ax.set_ylabel('Consistency in the window present + %x' %timelag)
     ax.set_title(title)
@@ -114,6 +119,7 @@ for jobLabel, clusteringMethod, color, alpha in zip(jobLabels, clusteringMethods
     plt.plot(diagonal, diagonal, color='r')
     plt.tight_layout()
     plt.savefig(imshowSavePath,format='pdf',bbox_inches='tight')
+    plt.close()
     
     fig = plt.figure()
     ax = fig.add_subplot(111)
@@ -127,9 +133,11 @@ for jobLabel, clusteringMethod, color, alpha in zip(jobLabels, clusteringMethods
         if np.all(np.isnan(d)):
             d = np.zeros(len(d))
         dists[:, i] = d
+    maxLocation = np.array([binCenters[np.where(dist == np.max(dist))][0] for dist in dists.T])
     dists[np.where(dists == np.amin(dists))] = 'nan'
-    distInfo.append((ret.x_edge, ret.y_edge, dists))
+    distInfo.append((ret.x_edge, ret.y_edge, binCenters, dists, maxLocation))
     plt.pcolor(ret.x_edge, ret.y_edge, dists, cmap=cmap)
+    plt.plot(binCenters, maxLocation, color='c')
     ax.set_xlabel('Consistency in present window')
     ax.set_ylabel('Consistency in the window present + %x' %timelag)
     ax.set_title(title)
@@ -137,36 +145,65 @@ for jobLabel, clusteringMethod, color, alpha in zip(jobLabels, clusteringMethods
     plt.plot(diagonal, diagonal, color='r')
     plt.tight_layout()
     plt.savefig(distributionSavePath, format='pdf', bbox_inches='tight')
+    plt.close()
 
 x_min = np.amin(np.array(presentWindowPercentiles)[:,0])
 x_max = np.amax(np.array(presentWindowPercentiles)[:,1])
 y_min = np.amin(np.array(nextWindowPercentiles)[:,0])
 y_max = np.amax(np.array(nextWindowPercentiles)[:,1])
 
+zoom_min = min(x_min, y_min)
+zoom_max = max(x_max, y_max)
+
 print '5% and 95% percentiles in x direction:'
 print presentWindowPercentiles
 print '5% and 95% percentiles in y direction:'
 print nextWindowPercentiles
 
-for presentWindowConsistencies, nextWindowConsistencies, dist, clusteringMethod, jobLabel in zip(pooledPresent, pooledNext, distInfo, clusteringMethods, jobLabels):
+for presentWindowConsistencies, nextWindowConsistencies, ret, dist, clusteringMethod, jobLabel in zip(pooledPresent, pooledNext, binnedInfo, distInfo, clusteringMethods, jobLabels):
     if clusteringMethod == '':
+        zoomBinnedSavePath = consistencyInNextWindowFigureSaveStem + '_' + jobLabel + '_zoomed_binned.pdf'
         zoomSavePath = consistencyInNextWindowFigureSaveStem + '_' + jobLabel + '_zoomed.pdf'
         zoomDistSavePath = consistencyInNextWindowFigureSaveStem + '_' + jobLabel + '_zoomed_ydist.pdf'
         title = jobLabel
     else:
+        zoomBinnedSavePath = consistencyInNextWindowFigureSaveStem + '_' + jobLabel + '_' + clusteringMethod + '_zoomed_binned.pdf'
         zoomSavePath = consistencyInNextWindowFigureSaveStem + '_' + jobLabel + '_' + clusteringMethod + '_zoomed.pdf'
         zoomDistSavePath = consistencyInNextWindowFigureSaveStem + '_' + jobLabel + '_' + clusteringMethod + '_zoomed_ydist.pdf'
         title = jobLabel + ', ' + clusteringMethod
-    xmask = np.where((x_min < dist[0]) & (dist[0] < x_max))
-    ymask = np.where((y_min < dist[1]) & (dist[1] < y_max))
+    xmask = np.where((zoom_min < dist[0]) & (dist[0] < zoom_max))
+    ymask = np.where((zoom_min < dist[1]) & (dist[1] < zoom_max))
     x = dist[0][xmask]
     y = dist[1][ymask]
+    binCenterMask = np.where((zoom_min < dist[2]) & (dist[2] < zoom_max))
+    binCenters = dist[2][binCenterMask]
 
-    zoomedDist = dist[2][ymask].T[xmask].T # in dist[2], rows correspond to next window, columns to present window
+    zoomedStatistic = ret[3][xmask].T[ymask]
+    zoomedStatisticMaxLocation = ret[4][binCenterMask]
+    zoomedDist = dist[3][ymask].T[xmask].T # in dist[3], rows correspond to next window, columns to present window
+    zoomedDistMaxLocation = dist[4][binCenterMask]
+    if np.any(binCenters > max(x)) or np.any(binCenters < min(x)):
+        zoomedStatisticMaxLocation = zoomedStatisticMaxLocation[np.where((binCenters <= max(x)) & (binCenters >= min(x)))]
+        zoomedDistMaxLocation = zoomedDistMaxLocation[np.where((binCenters <= max(x)) & (binCenters >= min(x)))]
+        binCenters = binCenters[np.where((binCenters <= max(x)) & (binCenters >= min(x)))]
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    plt.pcolor(x, y, zoomedStatistic, cmap=cmap)
+    plt.plot(binCenters, zoomedStatisticMaxLocation, color='c')
+    ax.set_xlabel('Consistency in present window')
+    ax.set_ylabel('Consistency in the window present + %x' %timelag)
+    ax.set_title(title)
+    plt.colorbar(label='PDF(y)')
+    plt.plot([min(x), max(x)], [min(y), max(y)], color='r')
+    plt.tight_layout()
+    plt.savefig(zoomBinnedSavePath, format='pdf', bbox_inches='tight')
+    plt.close()
 
     fig = plt.figure()
     ax = fig.add_subplot(111)
     plt.pcolor(x, y, zoomedDist, cmap=cmap)
+    plt.plot(binCenters, zoomedDistMaxLocation, color='c')
     ax.set_xlabel('Consistency in present window')
     ax.set_ylabel('Consistency in the window present + %x' %timelag)
     ax.set_title(title)
@@ -174,6 +211,7 @@ for presentWindowConsistencies, nextWindowConsistencies, dist, clusteringMethod,
     plt.plot([min(x), max(x)], [min(y), max(y)], color='r')
     plt.tight_layout()
     plt.savefig(zoomSavePath, format='pdf', bbox_inches='tight')
+    plt.close()
 
     xBins = np.linspace(x_min, x_max, nZoomBins + 1)
     yBins = np.linspace(y_min, y_max, nZoomBins + 1)
@@ -205,4 +243,5 @@ for presentWindowConsistencies, nextWindowConsistencies, dist, clusteringMethod,
     plt.plot([x_min, x_max], [y_min, y_max], color='r')
     plt.tight_layout()
     plt.savefig(zoomDistSavePath, formt='pdf', bbox_inches='tight')
+    plt.close()
 

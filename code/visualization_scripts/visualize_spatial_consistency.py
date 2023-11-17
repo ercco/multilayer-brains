@@ -45,6 +45,8 @@ excludeSizes = False
 excludeSingleVoxels = True
 stdAlpha = 0.05
 
+# TODO: add an option for removing the last ROI before calculating distributions (lists without the last ROI are defined so that sum(ROISizes) < nRefVoxels)
+
 if os.path.isfile(pooledDataSavePath):
         f = open(pooledDataSavePath, 'rb')
         pooledData = pickle.load(f)
