@@ -6,7 +6,7 @@ import pickle
 import os.path
 import matplotlib.pylab as plt
 import numpy as np
-from scipy.stats import binned_statistic_2d
+from scipy.stats import binned_statistic, binned_statistic_2d
 
 import clustering_by_consistency as cbc
 
@@ -104,13 +104,13 @@ for jobLabel, clusteringMethod, color, alpha in zip(jobLabels, clusteringMethods
     bins = np.linspace(min(min(presentWindowConsistencies), min(nextWindowConsistencies)), max(max(nextWindowConsistencies),max(presentWindowConsistencies)), nBins + 1)
     binCenters = bins[:-1] + (bins[1::] - bins[:-1])/2
     ret = binned_statistic_2d(presentWindowConsistencies, nextWindowConsistencies, presentWindowConsistencies, statistic='count', bins=bins)
-    maxLocation = np.array([binCenters[np.where(stat == np.max(stat))][0] for stat in ret.statistic])
+    averageStat = binned_statistic(presentWindowConsistencies, nextWindowConsistencies, statistic='mean', bins=bins).statistic
     fig = plt.figure()
     ax = fig.add_subplot(111)
     ret.statistic[np.where(ret.statistic == np.amin(ret.statistic))] = 'nan'
-    binnedInfo.append((ret.x_edge, ret.y_edge, binCenters, ret.statistic, maxLocation))
+    binnedInfo.append((ret.x_edge, ret.y_edge, binCenters, ret.statistic, averageStat))
     plt.pcolor(ret.x_edge, ret.y_edge, np.transpose(ret.statistic), cmap=cmap)
-    plt.plot(binCenters, maxLocation, color='c')
+    plt.plot(binCenters, averageStat, color='c')
     ax.set_xlabel('Consistency in present window')
     ax.set_ylabel('Consistency in the window present + %x' %timelag)
     ax.set_title(title)
@@ -124,20 +124,23 @@ for jobLabel, clusteringMethod, color, alpha in zip(jobLabels, clusteringMethods
     fig = plt.figure()
     ax = fig.add_subplot(111)
     dists = np.zeros(ret.statistic.shape)
+    averageStat = np.zeros(ret.statistic.shape[0])
     for i in range(nBins):
         y = list(nextWindowConsistencies[np.where((bins[i] <= np.array(presentWindowConsistencies)) & (np.array(presentWindowConsistencies) < bins[i + 1]))])
         if i == nBins - 1:
             y2 = np.array(nextWindowConsistencies)[np.where(np.array(presentWindowConsistencies) == bins[i + 1])]
             y.extend(y2)
         d, _ = np.histogram(y, bins=bins, density=True)
+        m = np.nanmean(y)
         if np.all(np.isnan(d)):
             d = np.zeros(len(d))
+            m = 0
         dists[:, i] = d
-    maxLocation = np.array([binCenters[np.where(dist == np.max(dist))][0] for dist in dists.T])
+        averageStat[i] = m
     dists[np.where(dists == np.amin(dists))] = 'nan'
-    distInfo.append((ret.x_edge, ret.y_edge, binCenters, dists, maxLocation))
+    distInfo.append((ret.x_edge, ret.y_edge, binCenters, dists, averageStat))
     plt.pcolor(ret.x_edge, ret.y_edge, dists, cmap=cmap)
-    plt.plot(binCenters, maxLocation, color='c')
+    plt.plot(binCenters, averageStat, color='c')
     ax.set_xlabel('Consistency in present window')
     ax.set_ylabel('Consistency in the window present + %x' %timelag)
     ax.set_title(title)
@@ -179,22 +182,22 @@ for presentWindowConsistencies, nextWindowConsistencies, ret, dist, clusteringMe
     binCenters = dist[2][binCenterMask]
 
     zoomedStatistic = ret[3][xmask].T[ymask]
-    zoomedStatisticMaxLocation = ret[4][binCenterMask]
+    zoomedStatisticAverageStat = ret[4][binCenterMask]
     zoomedDist = dist[3][ymask].T[xmask].T # in dist[3], rows correspond to next window, columns to present window
-    zoomedDistMaxLocation = dist[4][binCenterMask]
+    zoomedDistAverageStat = dist[4][binCenterMask]
     if np.any(binCenters > max(x)) or np.any(binCenters < min(x)):
-        zoomedStatisticMaxLocation = zoomedStatisticMaxLocation[np.where((binCenters <= max(x)) & (binCenters >= min(x)))]
-        zoomedDistMaxLocation = zoomedDistMaxLocation[np.where((binCenters <= max(x)) & (binCenters >= min(x)))]
+        zoomedStatisticAverageStat = zoomedStatisticAverageStat[np.where((binCenters <= max(x)) & (binCenters >= min(x)))]
+        zoomedDistAverageStat = zoomedDistAverageStat[np.where((binCenters <= max(x)) & (binCenters >= min(x)))]
         binCenters = binCenters[np.where((binCenters <= max(x)) & (binCenters >= min(x)))]
 
     fig = plt.figure()
     ax = fig.add_subplot(111)
     plt.pcolor(x, y, zoomedStatistic, cmap=cmap)
-    plt.plot(binCenters, zoomedStatisticMaxLocation, color='c')
+    plt.plot(binCenters, zoomedStatisticAverageStat, color='c')
     ax.set_xlabel('Consistency in present window')
     ax.set_ylabel('Consistency in the window present + %x' %timelag)
     ax.set_title(title)
-    plt.colorbar(label='PDF(y)')
+    plt.colorbar(label='Count')
     plt.plot([min(x), max(x)], [min(y), max(y)], color='r')
     plt.tight_layout()
     plt.savefig(zoomBinnedSavePath, format='pdf', bbox_inches='tight')
@@ -203,7 +206,7 @@ for presentWindowConsistencies, nextWindowConsistencies, ret, dist, clusteringMe
     fig = plt.figure()
     ax = fig.add_subplot(111)
     plt.pcolor(x, y, zoomedDist, cmap=cmap)
-    plt.plot(binCenters, zoomedDistMaxLocation, color='c')
+    plt.plot(binCenters, zoomedDistAverageStat, color='c')
     ax.set_xlabel('Consistency in present window')
     ax.set_ylabel('Consistency in the window present + %x' %timelag)
     ax.set_title(title)

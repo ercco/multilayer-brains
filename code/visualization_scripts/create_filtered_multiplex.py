@@ -25,8 +25,8 @@ if len(blacklistedROIs) > 0:
 pooledDataSavePath = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/spatial_consistency/pooled_spatial_consistency_data_filtered_multiplex.pkl'
 
 if __name__=='__main__':
-    pooledConsistencies = [[] for i in range(len(filteredJobLabels) + 1)] # the list will contain two sets of consistencies for each filtered parcellation + the reference consistencies
-    pooledROISizes = [[] for i in range(len(filteredJobLabels) + 1)]
+    pooledConsistencies = [[] for i in range(len(filteredJobLabels)*2 + 1)] # the list will contain the original multiplex, filtered multiplex and reference
+    pooledROISizes = [[] for i in range(len(filteredJobLabels)*2 + 1)]
     nRefROIs = []
     nRefSingles = []
     meanNROIs = []
@@ -35,10 +35,13 @@ if __name__=='__main__':
     stdNSingles = []
     meanSizes = []
     stdSizes = []
+    totRefSizes = [[] for i in range(len(filteredJobLabels))]
 
-    for i, filteredJobLabel in enumerate(filteredJobLabels):
+    for i, filteredJobLabel in zip(np.arange(0, len(filteredJobLabels)*2, 2), filteredJobLabels): 
         nROIs = []
         nSingles = []
+        origNROIs = []
+        origNSingles = []
         for subjId in subjectIds:
             for runNumber in runNumbers:
                 referencePath = consistencySaveStem + '/' + subjId + '/' + str(runNumber) + '/' + referenceJobLabel + '/' + str(nLayers) + '_layers' + '/spatial_consistency.pkl'
@@ -119,39 +122,50 @@ if __name__=='__main__':
                         ROISizes = np.array(layer['ROI_sizes'].values())[consistencyIndices[::-1]]
 
                     refNVoxels = np.sum(refROISizes)
+                    totRefSizes[i].append(refNVoxels)
                     nVoxels = 0
                     index = 0
+                    pooledConsistencies[i+1].extend(consistencies)
+                    pooledROISizes[i+1].extend(ROISizes)
+                    origNROIs.append(len(ROISizes))
+                    origNSingles.append(np.sum(np.array(ROISizes)==1))
                     while nVoxels <= refNVoxels:
                         pooledConsistencies[i].append(consistencies[index])
                         pooledROISizes[i].append(ROISizes[index])
                         nVoxels += ROISizes[index]
                         index += 1
-                    pooledConsistencies[-1].extend(refConsistencies) # the last element of the lists contains the consistency and ROI size of the reference parcellation
-                    pooledROISizes[-1].extend(refROISizes)
-                    nROIs.append(len(ROISizes))
-                    nSingles.append(np.sum(np.array(ROISizes) == 1))
-                    if i == len(filteredJobLabels) - 1:
+                    nROIs.append(index-1)
+                    nSingles.append(np.sum(np.array(ROISizes[0:index]) == 1))
+                    if i == len(filteredJobLabels)*2 - 2:
+                        pooledConsistencies[-1].extend(refConsistencies) # the last element of the lists contains the consistency and ROI size of the reference parcellation
+                        pooledROISizes[-1].extend(refROISizes)
                         nRefROIs.append(len(refROISizes))
                         nRefSingles.append(np.sum(np.array(refROISizes) == 1))
-
-                meanNROIs.append(np.mean(nROIs))
-                stdNROIs.append(np.std(nROIs))
-                meanNSingles.append(np.mean(nSingles))
-                stdNSingles.append(np.std(nSingles))
-                sizes = np.array(pooledROISizes[i])
-                meanSizes.append(sizes[sizes>1].mean())
-                stdSizes.append(sizes[sizes>1].std())
-                if i == len(filteredJobLabels) - 1:
-                    meanNROIs.append(np.mean(nRefROIs))
-                    stdNROIs.append(np.std(nRefROIs))
-                    meanNSingles.append(np.mean(nRefSingles))
-                    stdNSingles.append(np.std(nRefSingles))
-                    sizes = np.array(pooledROISizes[-1])
-                    meanSizes.append(sizes[sizes>1].mean())
-                    stdSizes.append(sizes[sizes>1].std())
+        meanNROIs.append(np.mean(nROIs))
+        stdNROIs.append(np.std(nROIs))
+        meanNSingles.append(np.mean(nSingles))
+        stdNSingles.append(np.std(nSingles))
+        sizes = np.array(pooledROISizes[i])
+        meanSizes.append(sizes[sizes>1].mean())
+        stdSizes.append(sizes[sizes>1].std())
+        meanNROIs.append(np.mean(origNROIs))
+        stdNROIs.append(np.std(origNROIs))
+        meanNSingles.append(np.mean(origNSingles))
+        stdNSingles.append(np.std(origNSingles))
+        sizes = np.array(pooledROISizes[i+1])
+        meanSizes.append(sizes[sizes>1].mean())
+        stdSizes.append(sizes[sizes>1].std())        
+        if i == len(filteredJobLabels)*2 - 2:
+           meanNROIs.append(np.mean(nRefROIs))
+           stdNROIs.append(np.std(nRefROIs))
+           meanNSingles.append(np.mean(nRefSingles))
+           stdNSingles.append(np.std(nRefSingles))
+           sizes = np.array(pooledROISizes[-1])
+           meanSizes.append(sizes[sizes>1].mean())
+           stdSizes.append(sizes[sizes>1].std())
 
     f = open(pooledDataSavePath, 'wb')
-    pooledData = {'pooledConsistencies':pooledConsistencies,'ROISizes':ROISizes,'meanNROIs':meanNROIs,'stdNROIs':stdNROIs,'meanNSingles':meanNSingles,'stdNSingles':stdNSingles,'meanSizes':meanSizes,'stdSizes':stdSizes}
+    pooledData = {'pooledConsistencies':pooledConsistencies,'ROISizes':pooledROISizes,'meanNROIs':meanNROIs,'stdNROIs':stdNROIs,'meanNSingles':meanNSingles,'stdNSingles':stdNSingles,'meanSizes':meanSizes,'stdSizes':stdSizes,'nRefVoxels':totRefSizes}
     pickle.dump(pooledData, f)
     f.close()
 
