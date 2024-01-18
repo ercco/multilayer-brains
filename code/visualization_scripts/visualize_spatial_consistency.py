@@ -7,6 +7,7 @@ import matplotlib.pylab as plt
 import pickle
 import os
 import sys
+from scipy.stats import binned_statistic
 from databinner import binner
 
 import clustering_by_consistency as cbc
@@ -19,10 +20,10 @@ nLayers = 2
 
 # path parts for reading data
 consistencySaveStem = '/scratch/nbe/alex/private/tarmo/article_runs/maxcorr'
-jobLabels = ['template_brainnetome','craddock','random_balls','ReHo_seeds_weighted_mean_consistency_voxelwise_thresholding_03_regularization-100','ReHo_seeds_min_correlation_voxelwise_thresholding_03'] # This label specifies the job submitted to Triton; there may be several jobs saved under each subject
-clusteringMethods = ['','','','','']
+jobLabels = ['filtered Brainnetome left','filtered Brainnetome right','template','reference'] # This label specifies the job submitted to Triton; there may be several jobs saved under each subject
+clusteringMethods = ['','','','']
 # NOTE: before running the script, check that consistencySaveStem, jobLabel, clusteringMethods, and savePath (specified further below) match your data
-blacklistedROIs = range(211,247)
+blacklistedROIs = []#np.arange(211,247)
 blacklistWholeROIs = True # if True, all ROIs with blacklisted voxels are removed; if False, blacklisted voxels are removed but rest of the ROI kept, which affects size distribution
 windowLength = 80
 windowOverlap = 0
@@ -30,26 +31,32 @@ if len(blacklistedROIs) > 0:
     iniDataFolder = '/scratch/nbe/alex/private/janne/preprocessed_ini_data/'
 
 # path parths for saving
-pooledDataSavePath = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/spatial_consistency/pooled_spatial_consistency_data_for_fig.pkl'
-consFigureSavePath = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/consistency_distributions.pdf'
-sizeFigureSavePath = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/size_distributions.pdf'
-consSizeFigureSavePath = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/size_vs_consistency.pdf'
+pooledDataSavePath = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/spatial_consistency/pooled_spatial_consistency_data_filtered_multiplex.pkl'
+consFigureSavePath = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/consistency_distributions_filtered_multiplex.pdf'
+sizeFigureSavePath = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/size_distributions_filtered_multiplex.pdf'
+consSizeFigureSavePath = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/size_vs_consistency_filtered_multiplex.pdf'
 
 # distribution and visualization parameters
 nConsBins = 50
-sizeBinFactor = 1.2
+sizeBinFactor = 1.5
 colors = ['r','k','b','g','c']
 alphas = [0.9,0.5,0.9,0.9,0.9]
 excludeSizes = False
 excludeSingleVoxels = True
+stdAlpha = 0.05
+filteredMultiplex = True
 
-import pdb; pdb.set_trace()
+# TODO: add an option for removing the last ROI before calculating distributions (lists without the last ROI are defined so that sum(ROISizes) < nRefVoxels)
+
 if os.path.isfile(pooledDataSavePath):
         f = open(pooledDataSavePath, 'rb')
         pooledData = pickle.load(f)
         f.close()
         pooledConsistencies = pooledData['pooledConsistencies']
         ROISizes = pooledData['ROISizes']
+        if filteredMultiplex:
+            pooledConsistencies.insert(1, pooledConsistencies[0]) 
+            ROISizes.insert(1, ROISizes[0])
         meanNROIs = pooledData['meanNROIs']
         stdNROIs = pooledData['stdNROIs']
         meanNSingles = pooledData['meanNSingles']
@@ -91,7 +98,6 @@ else:
                 for windowIndex in spatialConsistencyData:
                     layer = spatialConsistencyData[windowIndex]
                     if len(blacklistedROIs) > 0:
-                        import nibabel as nib
                         dataMaskFileName = iniDataFolder+'ROI_parcellations/'+subjId+'/run'+str(runNumber)+'/'+subjId+'_final_BN_Atlas_246_1mm.nii'
                         maskImg = nib.load(dataMaskFileName)
                         maskData = maskImg.get_fdata()
@@ -191,6 +197,19 @@ if not excludeSizes:
     consSizeAx.set_xscale('log')
 
 for pooledConsistency, sizes, jobLabel, clusteringMethod, color, alpha in zip(pooledConsistencies, ROISizes, jobLabels, clusteringMethods, colors, alphas):
+    leftCounter = 0
+    if 'left' in jobLabel:
+        # the left distribution will contain N ROIs so that their total size is smaller than the number of voxels in the reference parcellation; the right
+        # distribution contains N+1 ROIs
+        nRefVoxels = pooledData['nRefVoxels'][leftCounter]
+        dind = []
+        tempSizes = np.copy(sizes)
+        for ref in nRefVoxels:
+            dind.append(np.where(np.cumsum(tempSizes) > ref)[0][0])
+            tempSizes[:dind[-1]+1] = 0
+        pooledConsistency = np.delete(pooledConsistency, dind)
+        sizes = np.delete(sizes, dind)
+        leftCounter += 1 
     if excludeSingleVoxels:
         sizes = np.array(sizes)
         pooledConsistency = np.array(pooledConsistency)
@@ -216,7 +235,9 @@ for pooledConsistency, sizes, jobLabel, clusteringMethod, color, alpha in zip(po
        
         consPerSizeData = np.array([[size, consistency] for consistency, size in zip(pooledConsistency, sizes)])
         consPerSize = sizeBins.bin_average(consPerSizeData)
+        consPerSizeStd,_,_ = binned_statistic(consPerSizeData[:, 0], consPerSizeData[:, 1], statistic='std', bins=sizeBinEdges)
         consSizeAx.plot(sizeBinCenters,consPerSize,color=color,alpha=alpha,label=label)
+        consSizeAx.fill_between(sizeBinCenters,consPerSize-consPerSizeStd,consPerSize+consPerSizeStd,color=color,alpha=stdAlpha,label=label)
 
 plt.figure(1)
 

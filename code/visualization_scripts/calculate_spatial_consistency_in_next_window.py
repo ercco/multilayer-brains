@@ -20,8 +20,8 @@ niiDataFileName = '/detrended_maxCorr5comp.nii'
 consistencySaveStem = '/scratch/nbe/alex/private/tarmo/article_runs/maxcorr'
 netIdentificator = '2_layers/net'
 nLayers = 2
-jobLabels = ['template_brainnetome']#,'craddock','random_balls','ReHo_seeds_weighted_mean_consistency_voxelwise_thresholding_03_regularization-100','ReHo_seeds_min_correlation_voxelwise_thresholding_03'] # This label specifies the job submitted to Triton; there may be several jobs saved under each subject
-clusteringMethods = ['','','','','']
+jobLabels = ['ReHo_seeds_min_correlation_voxelwise_thresholding_03']#,'craddock','random_balls','ReHo_seeds_weighted_mean_consistency_voxelwise_thresholding_03_regularization-100','ReHo_seeds_min_correlation_voxelwise_thresholding_03'] # This label specifies the job submitted to Triton; there may be several jobs saved under each subject
+clusteringMethods = ['','']
 # NOTE: before running the script, check that data paths, jobLabels, clusteringMethods, and savePath (specified further below) match your data
 
 # path parts for saving

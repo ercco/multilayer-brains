@@ -18,10 +18,10 @@ nLayers = 2
 
 # path parts for reading data
 consistencySaveStem = '/scratch/nbe/alex/private/tarmo/article_runs/maxcorr'
-jobLabels = ['ReHo_seeds_min_correlation_voxelwise_thresholding_03']#,['template_brainnetome','craddock','random_balls','ReHo_seeds_weighted_mean_consistency_voxelwise_thresholding_03_regularization-100','ReHo_seeds_min_correlation_voxelwise_thresholding_03'] # This label specifies the job submitted to Triton; there may be several jobs saved under each subject
+jobLabels = ['template_brainnetome','craddock','random_balls','ReHo_seeds_weighted_mean_consistency_voxelwise_thresholding_03_regularization-100','ReHo_seeds_min_correlation_voxelwise_thresholding_03'] # This label specifies the job submitted to Triton; there may be several jobs saved under each subject
 clusteringMethods = ['','','','','']
 # NOTE: before running the script, check that consistencySaveStem, jobLabel, clusteringMethods, and savePath (specified further below) match your data
-blacklistedROIs = range(211,247)
+blacklistedROIs = np.arange(211,247)
 blacklistWholeROIs = True # if True, all ROIs with blacklisted voxels are removed; if False, blacklisted voxels are removed but rest of the ROI kept, which affects size distribution
 windowLength = 80
 windowOverlap = 0
@@ -29,11 +29,7 @@ if len(blacklistedROIs) > 0:
     iniDataFolder = '/scratch/nbe/alex/private/janne/preprocessed_ini_data/'
 
 # path parths for saving
-pooledDataSavePath = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/spatial_consistency/pooled_spatial_consistency_data_for_fig.pkl'
-consFigureSavePath = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/consistency_distributions.pdf'
-sizeFigureSavePath = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/size_distributions.pdf'
-consSizeFigureSavePath = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/size_vs_consistency.pdf'
-
+pooledDataSavePath = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/spatial_consistency/pooled_spatial_consistency_data_for_fig_without_subcortical.pkl'
 # distribution and visualization parameters
 nConsBins = 50
 sizeBinFactor = 1.2
@@ -71,10 +67,9 @@ if __name__=='__main__':
                 f = open(savePath,'r')
                 spatialConsistencyData = pickle.load(f)
                 f.close()
-                for windowIndex in spatialConsistencyData:
+                for windowIndex in spatialConsistencyData.keys():
                     layer = spatialConsistencyData[windowIndex]
                     if len(blacklistedROIs) > 0:
-                        import nibabel as nib
                         ROISizesInLayer = []
                         dataMaskFileName = iniDataFolder+'ROI_parcellations/'+subjId+'/run'+str(runNumber)+'/'+subjId+'_final_BN_Atlas_246_1mm.nii'
                         maskImg = nib.load(dataMaskFileName)
