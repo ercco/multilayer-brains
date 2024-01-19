@@ -9,6 +9,8 @@ A script for creating the schematic figure (Fig. 1)
 """
 import nibabel as nib
 import numpy as np
+import matplotlib.pylab as plt
+
 from surfplot import Plot
 from surfplot.utils import threshold
 from neuromaps.datasets import fetch_fslr, fetch_fsaverage
@@ -17,9 +19,10 @@ from neuromaps.transforms import mni152_to_fslr, mni152_to_fsaverage
 #from brainspace.datasets import load_parcellation
 
 load_data = True
-template_path = '/home/onerva/projects/ROIplay/templates/brainnetome/BNA-MPM_thr25_4mm.nii'
-data_path = '/home/onerva/projects/multilayer-meta/epi_preprocessed_standard.nii'
-data_save_path = '/home/onerva/projects/multilayer-meta/article_figs/schematig_fig/epi_preprocessed_standard'
+template_path = '/m/cs/scratch/networks/aokorhon/ROIplay/templates/brainnetome/BNA-MPM_thr25_4mm.nii'
+data_path = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/schematic_fig/test_slice.nii'
+data_save_path = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/schematic_fig/test_slice'
+figure_save_path = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/schematic_fig/schematic_fig.pdf'
 
 # plotting the Brainnetome ROI boundaries on brain surface
 
@@ -44,7 +47,7 @@ if load_data:
     data_img = nib.load(data_path)
     data = data_img.get_fdata()
 
-    data_lh, data_rh = mni152_to_fslr(data)
+    data_lh, data_rh = mni152_to_fslr(data_path)
     np.save(data_save_path + '_lh', data_lh)
     np.save(data_save_path + '_rh', data_rh)
     
@@ -58,5 +61,5 @@ data_rh = threshold(data_rh.agg_data(), 3)
 p.add_layer({'left': data_lh, 'right': data_rh})
 
 fig = p.build()
-
+plt.savefig(figure_save_path, format='pdf',bbox_inches='tight')
 
