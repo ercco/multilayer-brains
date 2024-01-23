@@ -193,7 +193,7 @@ def roundNiiToInt(niiPath, savePath=''):
         savePath = niiPath
     img = nib.load(niiPath)
     data = img.get_fdata()
-    affine = img.affine()
+    affine = img.affine
     roundedData = np.rint(data)
     roundedImg = nib.Nifti1Image(roundedData, affine)
     nib.save(roundedImg, savePath)
