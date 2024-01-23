@@ -172,6 +172,32 @@ def createNii(ROIInfo, savePath, imgSize=[45,54,45], affine=np.eye(4)):
     img = nib.Nifti1Image(data,affine)     
     nib.save(img,savePath)
     
+def roundNiiToInt(niiPath, savePath=''):
+    """
+    Reads the given nii, rounds the value of each voxel to the closest integer,
+    and saves the nii again.
+    
+    Parameters
+    ----------
+    niiPath : str
+        path of the nii
+    savePath : str, optional
+        path to which to save the nii. The default is '', in which case the nii is saved to its original path
+        (and thus replaces the original file)
+
+    Returns
+    -------
+    None.
+    """
+    if savePath == '':
+        savePath = niiPath
+    img = nib.load(niiPath)
+    data = img.get_fdata()
+    affine = img.affine()
+    roundedData = np.rint(data)
+    roundedImg = nib.Nifti1Image(roundedData, affine)
+    nib.save(roundedImg, savePath)
+    
 def readVoxelIndices(path, voxelCoordinates=[], layers=all):
     """
     Reads the saved ROIs and based on them constructs the voxel indices for calculating
