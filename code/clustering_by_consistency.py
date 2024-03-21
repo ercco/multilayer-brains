@@ -2237,6 +2237,7 @@ def growSphericalROIs(ROICentroids, imgdata, nROIs=246, template=None, equalSize
     --------
     voxelLabels: nVoxels x 1 np.array, ROI labels of all voxels. Voxels that don't belong to any ROI have label -1.
     voxelCoordinates: list (len = nVoxels) of tuples (len = 3), coordinates (in voxels) of all voxels
+    radius : int, the radius of the largest ROI (in voxels)
     """
     if ROICentroids != 'random':
         nROIs = ROICentroids.shape[0]
