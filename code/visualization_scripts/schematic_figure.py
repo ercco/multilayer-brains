@@ -23,13 +23,13 @@ from brainspace.mesh.mesh_io import read_surface
 load_data = True
 #surface_folder = '/home/onerva/projects/multilayer-meta/article_figs/schematic_fig/surf/'
 #surface_type = 'pial'
-template_path = '/home/onerva/projects/ROIplay/templates/brainnetome/BNA-MPM_thr25_4mm.nii'
+template_path = '/m/cs/scratch/networks/aokorhon/ROIplay/templates/brainnetome/BNA-MPM_thr25_4mm.nii'
 #data_path = '/home/onerva/projects/multilayer-meta/article_figs/schematic_fig/test_slice.nii'
 #data_save_path = '/home/onerva/projects/multilayer-meta/article_figs/schematic_fig/test_slice'
-spherical_parcellation_save_path = '/home/onerva/projects/multilayer-meta/article_figs/schematic_fig/spherical_parcellation.nii'
-consistency_save_path = '/home/onerva/projects/multilayer-meta/article_figs/schematic_fig/consistency.nii'
-spherical_figure_save_path = '/home/onerva/projects/multilayer-meta/article_figs/schematic_fig/schematic_fig_spherical.pdf'
-brainnetome_figure_save_path = '/home/onerva/projects/multilayer-meta/article_figs/schematic_fig/schematic_fig_brainnetome.pdf'
+spherical_parcellation_save_path = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/schematic_fig/spherical_parcellation.nii'
+consistency_save_path = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/schematic_fig/consistency.nii'
+spherical_figure_save_path = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/schematic_fig/schematic_fig_spherical.pdf'
+brainnetome_figure_save_path = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/schematic_fig/schematic_fig_brainnetome.pdf'
 
 simulation_length = 1000
 distance_threshold = 10
@@ -247,6 +247,7 @@ consistency = np.zeros(simulated_data.shape[0:3])
 spherical_parcellation = np.zeros(simulated_data.shape[0:3])
 ROI_labels = np.unique(voxel_labels)
 for ROI in ROI_labels:
+    import pdb; pdb.set_trace()
     if ROI >= 0:
         ROI_voxels = np.array(voxel_coordinates)[np.where(voxel_labels == ROI)[0], :]
         ROI_size = ROI_voxels.shape[0]
