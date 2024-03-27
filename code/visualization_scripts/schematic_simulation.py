@@ -18,16 +18,16 @@ import pickle
 from clustering_by_consistency import growSphericalROIs, growOptimizedROIs
 from ROIplay import writeNii
 
-template_path = '/home/onerva/projects/ROIplay/templates/brainnetome/BNA-MPM_thr25_4mm.nii'
-underlying_parcellation_save_path = '/home/onerva/projects/multilayer-meta/article_figs/schematic_fig/spherical_parcellation.nii'
-underlying_voxel_labels_save_path = '/home/onerva/projects/multilayer-meta/article_figs/schematic_fig/spherical_parcellation_labels.pkl'
-optimized_voxel_labels_save_path = '/home/onerva/projects/multilayer-meta/article_figs/schematic_fig/optimized_parcellation_labels.pkl'
-optimized_parcellation_save_path = '/home/onerva/projects/multilayer-meta/article_figs/schematic_fig/optimized_parcellation.nii'
+template_path = '/m/cs/scratch/networks/aokorhon/ROIplay/templates/brainnetome/BNA-MPM_thr25_4mm.nii'
+underlying_parcellation_save_path = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/schematic_fig/spherical_parcellation.nii'
+underlying_voxel_labels_save_path = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/schematic_fig/spherical_parcellation_labels.pkl'
+optimized_voxel_labels_save_path = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/schematic_fig/optimized_parcellation_labels.pkl'
+optimized_parcellation_save_path = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/schematic_fig/optimized_parcellation.nii'
 
 simulation_length = 500
 n_seeds = 246
 sigma = 1
-new_seeds = False # set new_seeds to True to change the location or number of seeds
+new_seeds = True # set new_seeds to True to change the location or number of seeds
 
 def gaussian(x, mu, sigma):
     return 1/(np.sqrt(2 * np.pi)*sigma) * np.exp(-1/2 * ((x - mu)/sigma)**2)
@@ -43,7 +43,6 @@ if new_seeds:
     voxel_labels, voxel_coordinates, _ = growSphericalROIs(seeds, np.expand_dims(template_data, axis=3))
     with open(underlying_voxel_labels_save_path, 'wb') as f:
         pickle.dump({'voxel_labels':voxel_labels, 'voxel_coordinates':voxel_coordinates, 'ROI_seeds':seeds}, f, -1)
-    writeNii    
 else:
     f = open(underlying_voxel_labels_save_path, 'rb')
     parcellation_data = pickle.load(f)
@@ -58,15 +57,17 @@ simulated_data = np.zeros((template_img.shape[0], template_img.shape[1], templat
 for seed in seeds:
     simulated_data[seed[0], seed[1], seed[2], :] = np.random.rand(simulation_length)
 
+import pdb; pdb.set_trace()
 ROI_indices = np.unique(voxel_labels)
-for ROI, seed in zip(ROI_indices, seeds):
+for ROI in ROI_indices:
     if ROI < 0:
         continue
     else:
+        seed = seeds[ROI]
         ROI_voxels = np.array(voxel_coordinates)[np.where(voxel_labels == ROI)[0], :]
         seed_ts = simulated_data[seed[0], seed[1], seed[2], :]
         for voxel in ROI_voxels:
-            d = np.sqrt((voxel[0] - seed[0])**2 + (voxel[1] - seed[2]**2 + voxel[3] - seed[3])**2)
+            d = np.sqrt((voxel[0] - seed[0])**2 + (voxel[1] - seed[1]**2 + voxel[2] - seed[2])**2)
             centroid_weight = gaussian(d, 0, sigma) / gaussian(0, 0, sigma)
             simulated_data[voxel[0], voxel[1], voxel[2], :] = centroid_weight * seed_ts + (1 - centroid_weight) * np.random.rand(simulation_length)
             underlying_parcellation[voxel[0], voxel[1], voxel[2]] = ROI
