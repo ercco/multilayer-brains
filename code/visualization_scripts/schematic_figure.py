@@ -10,6 +10,7 @@ A script for creating the schematic figure (Fig. 1)
 import nibabel as nib
 import numpy as np
 import matplotlib.pylab as plt
+import pickle
 
 from surfplot import Plot
 from surfplot.utils import threshold
@@ -30,10 +31,19 @@ spherical_parcellation_save_path = '/m/cs/scratch/networks/aokorhon/multilayer/o
 consistency_save_path = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/schematic_fig/consistency.nii'
 spherical_figure_save_path = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/schematic_fig/schematic_fig_spherical.pdf'
 brainnetome_figure_save_path = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/schematic_fig/schematic_fig_brainnetome.pdf'
+voxel_labels_save_path = '/home/onerva/projects/multilayer-meta/article_figs/schematic_fig/spherical_parcellation_labels.pkl'
 
-simulation_length = 1000
-distance_threshold = 10
-sigma = 5
+simulation_length = 500
+distance_threshold = np.inf
+sigma = 0.4
+n_seeds = 50# used to be len(np.unique(template_data)) - 1
+seeds = np.array([12104, 3718, 571, 14541, 15637, 3659, 6573, 5986, 5532,
+                 16499, 8557, 13230, 8581, 5847, 4614, 4196, 4692, 8341,
+                 4895, 16813, 2024, 941, 3143, 1725, 15619, 3604, 12570,
+                 13451, 7128, 698, 4458, 15383, 3431, 8969, 13176, 16896,
+                 6080, 5145, 4826, 1507, 3865, 11714, 14539, 14256, 1355,
+                 12839, 6572, 6568, 3568, 1986])
+new_seeds = False # set new_seeds to True to change the number or location of seeds
 
 # loading surfaces
 
@@ -47,7 +57,7 @@ sigma = 5
 # functions
 
 def gaussian(x, mu, sigma):
-    return 1/(np.sqrt(2 * np.pi)) * np.exp(-1/2 * ((x - mu)/sigma)**2)
+    return 1/(np.sqrt(2 * np.pi)*sigma) * np.exp(-1/2 * ((x - mu)/sigma)**2)
 
 # NOTE: the following functions have been copied from clustering_by_consistency.
 # Importing them is not possible since clustering_by_consistency is written in Python 2.7.
@@ -215,6 +225,8 @@ def grow_spherical_ROIs(ROI_centroids, imgdata):
     voxel_labels = np.array([int(label) for label in voxel_labels])
     return voxel_labels, voxel_coordinates, radius
 
+###############################################################################
+
 # simulating data
 
 template_img = nib.load(template_path) # the Brainnetome template is used to get space dimensions
@@ -224,8 +236,10 @@ simulated_data = np.zeros((template_data.shape[0], template_data.shape[1], templ
 mask = np.transpose(np.array(np.where(template_data > 0)))
 for voxel in mask:
     simulated_data[voxel[0], voxel[1], voxel[2], :] = np.random.rand(simulation_length)
-n_seeds = len(np.unique(template_data)) - 1
-seeds = mask[np.random.choice(mask.shape[0], n_seeds, replace=False)]
+if new_seeds:
+    seeds = mask[np.random.choice(mask.shape[0], n_seeds, replace=False)]
+else:
+    seeds = np.array([mask[seed] for seed in seeds])
 seed_ts = simulated_data[seeds[:,0], seeds[:,1], seeds[:,2], :]
 distance_matrix = get_distance_matrix(seeds, mask)
 for i, voxel in enumerate(mask):
@@ -235,12 +249,20 @@ for i, voxel in enumerate(mask):
             d = distance_matrix[j, i]
             if d < distance_threshold:
                 multipliers[j] = gaussian(d, 0, sigma)
-        simulated_data[voxel[0], voxel[1], voxel[2], :] += np.sum(multipliers * np.transpose(seed_ts), axis = 1)
+        simulated_data[voxel[0], voxel[1], voxel[2], :] = np.sum(multipliers * np.transpose(seed_ts), axis = 1)
         simulated_data[voxel[0], voxel[1], voxel[2], :] = simulated_data[voxel[0], voxel[1], voxel[2], :] / np.sum(simulated_data[voxel[0], voxel[1], voxel[2], :])
 
 # creating "optimized ROIs" (= spheres around the centers)
-
-voxel_labels, voxel_coordinates, _ = grow_spherical_ROIs(seeds, simulated_data)
+if new_seeds:
+    voxel_labels, voxel_coordinates, _ = grow_spherical_ROIs(seeds, simulated_data)
+    with open(voxel_labels_save_path, 'wb') as f:
+        pickle.dump({'voxel_labels':voxel_labels, 'voxel_coordinates':voxel_coordinates}, f, -1)
+else:
+    f = open(voxel_labels_save_path, 'rb')
+    parcellation_data = pickle.load(f)
+    f.close()
+    voxel_labels = parcellation_data['voxel_labels']
+    voxel_coordinates = parcellation_data['voxel_coordinates']
 
 # calculating consistencies per voxel (= the average correlation of each voxel to other voxel's in its ROI)
 consistency = np.zeros(simulated_data.shape[0:3])
@@ -278,7 +300,7 @@ consistency_lh = consistency_gii_lh.agg_data()
 consistency_rh = consistency_gii_rh.agg_data()
 
 p = Plot(lh, rh)
-p.add_layer({'left': consistency_lh, 'right': consistency_rh}, cmap=nilearn_cmaps['cold_hot'])
+p.add_layer({'left': consistency_lh, 'right': consistency_rh}, cmap=nilearn_cmaps['black_red_r'])
 
 #fig = p.build()
 
@@ -302,7 +324,7 @@ consistency_lh = consistency_gii_lh.agg_data()
 consistency_rh = consistency_gii_rh.agg_data()
 
 p = Plot(lh, rh)
-p.add_layer({'left': consistency_lh, 'right': consistency_rh}, cmap=nilearn_cmaps['cold_hot'])
+p.add_layer({'left': consistency_lh, 'right': consistency_rh}, cmap=nilearn_cmaps['black_red_r'])
 
 #fig = p.build()
 
