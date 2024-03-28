@@ -14,8 +14,9 @@ function of the distance from the centroid.
 import numpy as np
 import nibabel as nib
 import pickle
+from concurrent.futures import ProcessPoolExecutor as Pool
 
-from clustering_by_consistency import growSphericalROIs, growOptimizedROIs
+from clustering_by_consistency import growSphericalROIs, growOptimizedROIs, calculateReHo
 from ROIplay import writeNii
 
 template_path = '/m/cs/scratch/networks/aokorhon/ROIplay/templates/brainnetome/BNA-MPM_thr25_4mm.nii'
@@ -23,6 +24,7 @@ underlying_parcellation_save_path = '/m/cs/scratch/networks/aokorhon/multilayer/
 underlying_voxel_labels_save_path = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/schematic_fig/spherical_parcellation_labels.pkl'
 optimized_voxel_labels_save_path = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/schematic_fig/optimized_parcellation_labels.pkl'
 optimized_parcellation_save_path = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/schematic_fig/optimized_parcellation.nii'
+ReHo_save_path = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/schematic_fig/ReHo.nii'
 
 simulation_length = 500
 n_seeds = 246
@@ -95,4 +97,15 @@ for ROI in ROI_indices:
         optimized_parcellation[voxel[0], voxel[1], voxel[2]] = ROI
 
 writeNii(optimized_parcellation, template_path, underlying_parcellation_save_path)
-        
+
+# calculating ReHo of all voxels
+
+param_space = [(cfg, voxel) for voxel in voxel_coordinates]
+pool = Pool(max_workers = cfg['nCPUs'])
+ReHos = list(pool.map(calculateReHo, param_space, chunksize=1))
+
+ReHo_data = np.zeros((template_img.shape[0], template_img.shape[1], template_img.shape[2]))
+for voxel, ReHo in zip(voxel_coordinates, ReHos):
+    ReHo_data[voxel[0], voxel[1], voxel[2]] = ReHo
+
+writeNii(ReHo_data, template_path, ReHo_save_path)
