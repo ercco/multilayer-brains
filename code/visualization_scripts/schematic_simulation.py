@@ -16,7 +16,7 @@ import nibabel as nib
 import pickle
 from concurrent.futures import ProcessPoolExecutor as Pool
 
-from clustering_by_consistency import growSphericalROIs, growOptimizedROIs, calculateReHo
+from clustering_by_consistency import growSphericalROIs, growOptimizedROIs, constrainedReHoSearch
 from ROIplay import writeNii
 
 template_path = '/m/cs/scratch/networks/aokorhon/ROIplay/templates/brainnetome/BNA-MPM_thr25_4mm.nii'
@@ -77,7 +77,7 @@ for ROI in ROI_indices:
 writeNii(underlying_parcellation, template_path, underlying_parcellation_save_path)
 
 # obtaining "optimized ROIs" from the simulated data
-cfg = {'ROICentroids':'ReHo','names':'','imgdata':simulated_data,
+cfg = {'names':'','imgdata':simulated_data,
        'threshold':'voxel-wise','targetFunction':'weighted_mean_consistency',
        'fTransform':False,'nROIs':246,'template':None,
        'percentageROIsForThresholding':0.3,
@@ -85,6 +85,13 @@ cfg = {'ROICentroids':'ReHo','names':'','imgdata':simulated_data,
        'nReHoNeighbors':6,'percentageMinCentroidDistance':0.1,
        'ReHoMeasure':'constrainedReHo','includeNeighborhoodsInCentroids':False,
        'returnExcludedToQueue':False,'regularization':-100,'regExp':2,'logging':False}
+
+ROI_centroids, centroid_ReHos, ReHo_data = constrainedReHoSearch(cfg['imgdata'],cfg['template'],cfg['nROIs'],
+                                                                 cfg['nReHoNeighbors'],cfg['nCPUs'],cfg['ReHoMeasure'],
+                                                                 fTransform=cfg['fTransform'], returnReHoValues=False,
+                                                                 returnReHoData=True)
+writeNii(ReHo_data, template_path, ReHo_save_path)
+cfg['ROICentroids'] = ROI_centroids
 optimized_voxel_labels, optimized_voxel_coordinates = growOptimizedROIs(cfg)
 with open(optimized_voxel_labels_save_path, 'wb') as f:
         pickle.dump({'voxel_labels':optimized_voxel_labels, 'voxel_coordinates':optimized_voxel_coordinates}, f, -1)
@@ -98,14 +105,4 @@ for ROI in ROI_indices:
 
 writeNii(optimized_parcellation, template_path, underlying_parcellation_save_path)
 
-# calculating ReHo of all voxels
 
-param_space = [(cfg, voxel) for voxel in voxel_coordinates]
-pool = Pool(max_workers = cfg['nCPUs'])
-ReHos = list(pool.map(calculateReHo, param_space, chunksize=1))
-
-ReHo_data = np.zeros((template_img.shape[0], template_img.shape[1], template_img.shape[2]))
-for voxel, ReHo in zip(voxel_coordinates, ReHos):
-    ReHo_data[voxel[0], voxel[1], voxel[2]] = ReHo
-
-writeNii(ReHo_data, template_path, ReHo_save_path)
