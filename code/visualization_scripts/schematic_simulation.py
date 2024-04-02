@@ -29,7 +29,7 @@ ReHo_save_path = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_fig
 simulation_length = 500
 n_seeds = 246
 sigma = 1
-new_seeds = True # set new_seeds to True to change the location or number of seeds
+new_seeds = False # set new_seeds to True to change the location or number of seeds
 
 def gaussian(x, mu, sigma):
     return 1/(np.sqrt(2 * np.pi)*sigma) * np.exp(-1/2 * ((x - mu)/sigma)**2)
@@ -51,7 +51,7 @@ else:
     f.close()
     voxel_labels = parcellation_data['voxel_labels']
     voxel_coordinates = parcellation_data['voxel_coordinates']
-    seeds = parcellation_data['seeds']
+    seeds = parcellation_data['ROI_seeds']
     
 # simulating data
 underlying_parcellation = -1 * np.ones((template_img.shape[0], template_img.shape[1], template_img.shape[2]))
@@ -69,7 +69,7 @@ for ROI in ROI_indices:
         ROI_voxels = np.array(voxel_coordinates)[np.where(voxel_labels == ROI)[0], :]
         seed_ts = simulated_data[seed[0], seed[1], seed[2], :]
         for voxel in ROI_voxels:
-            d = np.sqrt((voxel[0] - seed[0])**2 + (voxel[1] - seed[1]**2 + voxel[2] - seed[2])**2)
+            d = np.sqrt((voxel[0] - seed[0])**2 + (voxel[1] - seed[1])**2 + (voxel[2] - seed[2])**2)
             centroid_weight = gaussian(d, 0, sigma) / gaussian(0, 0, sigma)
             simulated_data[voxel[0], voxel[1], voxel[2], :] = centroid_weight * seed_ts + (1 - centroid_weight) * np.random.rand(simulation_length)
             underlying_parcellation[voxel[0], voxel[1], voxel[2]] = ROI
@@ -79,11 +79,11 @@ writeNii(underlying_parcellation, template_path, underlying_parcellation_save_pa
 # obtaining "optimized ROIs" from the simulated data
 cfg = {'names':'','imgdata':simulated_data,
        'threshold':'voxel-wise','targetFunction':'weighted_mean_consistency',
-       'fTransform':False,'nROIs':246,'template':None,
+       'fTransform':False,'nROIs':246,'template':template_data,
        'percentageROIsForThresholding':0.3,
        'sizeExp':1,'nCPUs':5,
        'nReHoNeighbors':6,'percentageMinCentroidDistance':0.1,
-       'ReHoMeasure':'constrainedReHo','includeNeighborhoodsInCentroids':False,
+       'ReHoMeasure':'ConstrainedReHo','includeNeighborhoodsInCentroids':False,
        'returnExcludedToQueue':False,'regularization':-100,'regExp':2,'logging':False}
 
 ROI_centroids, centroid_ReHos, ReHo_data = constrainedReHoSearch(cfg['imgdata'],cfg['template'],cfg['nROIs'],
