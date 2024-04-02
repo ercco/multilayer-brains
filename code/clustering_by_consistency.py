@@ -1278,7 +1278,7 @@ def getCentroidsByReHo(imgdata,nCentroids,nNeighbors=6,nCPUs=5,minDistancePercen
     """
     assert 0<= minDistancePercentage <= 1, "Bad minDistancePercentage, give a float between 0 and 1"
     #ReHoMeasure 'spatialConsistency' is used in calculateReHo
-    assert ReHoMeasure in ['ReHo','spatialConsistency','ConstrainedReHo'], "Unknown ReHoMeasure, select 'ReHo' or 'spatialConsistency'"
+    assert ReHoMeasure in ['ReHo','spatialConsistency','ConstrainedReHo'], "Unknown ReHoMeasure, select 'ReHo', 'ConstrainedReHo' or 'spatialConsistency'"
     
     # it can either contain only centroids, or also centroids' reho values, or also centroids neighborhoods
     returnarray=[]
