@@ -1358,7 +1358,8 @@ def getCentroidsByReHo(imgdata,nCentroids,nNeighbors=6,nCPUs=5,minDistancePercen
     
 
 def constrainedReHoSearch(imgdata,template,nCentroids,nNeighbors=6,nCPUs=5,ReHoMeasure='ReHo',
-                       consistencyType='pearson c',fTransform=False,returnReHoValues=False):
+                       consistencyType='pearson c',fTransform=False,returnReHoValues=False,
+                       returnReHoData=False):
     '''
     Finds the N voxels with the largest Regional Homogeneity inside a given parcellation template to be used as ROI centroids.
     
@@ -1383,10 +1384,13 @@ def constrainedReHoSearch(imgdata,template,nCentroids,nNeighbors=6,nCPUs=5,ReHoM
     template: template parcellation (already masked, 3d numpy array) with number of regions=nCentroids, 
                 to be used to constrain the search of centroids inside the boundaries of each ROI (default=False)
     returnReHoValues: bool, set True to return both centroid voxels and their Reho values(default=False)
+    returnReHoData : bool, set True to return the ReHo values of all voxels
+    
     Returns:
     --------
     centroidCoordinates: nCentroids x 3 np.array, coordinates of a voxel (in voxels)
     centroidReHos: np.array of centroids' ReHo values
+    ReHoData : np.array, ReHo values of all voxels in the same space as template
     '''
 
     #template has already been masked and has only nonzero voxels
@@ -1394,6 +1398,8 @@ def constrainedReHoSearch(imgdata,template,nCentroids,nNeighbors=6,nCPUs=5,ReHoM
     ROIIndices.remove(0)
     centroidCoordinates=[]
     centroidRehos=[]
+    if returnReHoData:
+        ReHoData = np.zeros(template.shape)
     if (nCentroids != len(ROIIndices)):
         if (nCentroids < len(ROIIndices)):
             raise Exception("The template contains more ROIs than the desired number of ROIs, please check the template.")
@@ -1411,6 +1417,9 @@ def constrainedReHoSearch(imgdata,template,nCentroids,nNeighbors=6,nCPUs=5,ReHoM
         pool = Pool(max_workers = nCPUs)
         #we calculate ReHos only for a single ROI at a time
         ReHos = list(pool.map(calculateReHo,paramSpace,chunksize=1))
+        if returnReHoData:
+            for voxel, ReHo in zip(ROIVoxels, ReHos):
+                ReHoData[voxel[0], voxel[1], voxel[2]] = ReHo
         maxReHoIndex=ReHos.index(max(ReHos))
         #coordinate of ROI centroid (highest ReHo)
         ROIcentroid=ROIVoxels[maxReHoIndex]
@@ -1421,8 +1430,10 @@ def constrainedReHoSearch(imgdata,template,nCentroids,nNeighbors=6,nCPUs=5,ReHoM
 
     if returnReHoValues:
         return centroidCoordinates,centroidRehos
-    
-    return centroidCoordinates
+    elif returnReHoData:
+        return centroidCoordinates, centroidRehos, ReHoData
+    else:
+        return centroidCoordinates
 
 
 def updateQueue(ROIIndex, priorityQueue, targetFunction, centroidTs, allVoxelTs, ROIVoxels,
