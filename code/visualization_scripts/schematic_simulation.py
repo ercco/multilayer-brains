@@ -59,7 +59,6 @@ simulated_data = np.zeros((template_img.shape[0], template_img.shape[1], templat
 for seed in seeds:
     simulated_data[seed[0], seed[1], seed[2], :] = np.random.rand(simulation_length)
 
-import pdb; pdb.set_trace()
 ROI_indices = np.unique(voxel_labels)
 for ROI in ROI_indices:
     if ROI < 0:
@@ -78,12 +77,12 @@ writeNii(underlying_parcellation, template_path, underlying_parcellation_save_pa
 
 # obtaining "optimized ROIs" from the simulated data
 cfg = {'names':'','imgdata':simulated_data,
-       'threshold':'voxel-wise','targetFunction':'weighted_mean_consistency',
+       'threshold':'voxel-wise','targetFunction':'weighted mean consistency',
        'fTransform':False,'nROIs':246,'template':template_data,
        'percentageROIsForThresholding':0.3,
        'sizeExp':1,'nCPUs':5,
        'nReHoNeighbors':6,'percentageMinCentroidDistance':0.1,
-       'ReHoMeasure':'ConstrainedReHo','includeNeighborhoodsInCentroids':False,
+       'ReHoMeasure':'ReHo','includeNeighborhoodsInCentroids':False,
        'returnExcludedToQueue':False,'regularization':-100,'regExp':2,'logging':False}
 
 ROI_centroids, centroid_ReHos, ReHo_data = constrainedReHoSearch(cfg['imgdata'],cfg['template'],cfg['nROIs'],
@@ -99,7 +98,7 @@ with open(optimized_voxel_labels_save_path, 'wb') as f:
 optimized_parcellation = np.zeros((template_img.shape[0], template_img.shape[1], template_img.shape[2]))
 ROI_indices = np.unique(optimized_voxel_labels)
 for ROI in ROI_indices:
-    ROI_voxels = np.array(optimized_voxel_coordinates)[np.where(voxel_labels == ROI)[0], :]
+    ROI_voxels = np.array(optimized_voxel_coordinates)[np.where(optimized_voxel_labels == ROI)[0], :]
     for voxel in ROI_voxels:
         optimized_parcellation[voxel[0], voxel[1], voxel[2]] = ROI
 
