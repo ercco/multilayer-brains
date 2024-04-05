@@ -14,7 +14,6 @@ function of the distance from the centroid.
 import numpy as np
 import nibabel as nib
 import pickle
-from concurrent.futures import ProcessPoolExecutor as Pool
 
 from clustering_by_consistency import growSphericalROIs, growOptimizedROIs, constrainedReHoSearch
 from ROIplay import writeNii
