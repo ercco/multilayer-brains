@@ -102,6 +102,6 @@ for ROI in ROI_indices:
     for voxel in ROI_voxels:
         optimized_parcellation[voxel[0], voxel[1], voxel[2]] = ROI
 
-writeNii(optimized_parcellation, template_path, underlying_parcellation_save_path)
+writeNii(optimized_parcellation, template_path, optimized_parcellation_save_path)
 
 
