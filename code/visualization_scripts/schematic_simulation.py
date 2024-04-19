@@ -27,7 +27,7 @@ ReHo_save_path = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_fig
 
 simulation_length = 500
 n_seeds = 246
-sigma = 1
+sigma = 5
 new_seeds = False # set new_seeds to True to change the location or number of seeds
 
 def gaussian(x, mu, sigma):
