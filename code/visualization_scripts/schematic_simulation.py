@@ -77,7 +77,7 @@ writeNii(underlying_parcellation, template_path, underlying_parcellation_save_pa
 # obtaining "optimized ROIs" from the simulated data
 cfg = {'names':'','imgdata':simulated_data,
        'threshold':'voxel-wise','targetFunction':'weighted mean consistency',
-       'fTransform':False,'nROIs':246,'template':template_data,
+       'fTransform':False,'nROIs':210,'template':template_data,
        'percentageROIsForThresholding':0.3,
        'sizeExp':1,'nCPUs':5,
        'nReHoNeighbors':6,'percentageMinCentroidDistance':0.1,
