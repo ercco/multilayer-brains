@@ -19,15 +19,15 @@ from clustering_by_consistency import growSphericalROIs, growOptimizedROIs, cons
 from ROIplay import writeNii
 
 template_path = '/m/cs/scratch/networks/aokorhon/ROIplay/templates/brainnetome/BNA-MPM_thr25_4mm_nosub.nii'
-underlying_parcellation_save_path = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/schematic_fig/spherical_parcellation.nii'
-underlying_voxel_labels_save_path = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/schematic_fig/spherical_parcellation_labels.pkl'
-optimized_voxel_labels_save_path = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/schematic_fig/optimized_parcellation_labels.pkl'
-optimized_parcellation_save_path = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/schematic_fig/optimized_parcellation.nii'
-ReHo_save_path = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/schematic_fig/ReHo.nii'
+underlying_parcellation_save_path = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/schematic_fig/spherical_parcellation_v1.nii'
+underlying_voxel_labels_save_path = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/schematic_fig/spherical_parcellation_labels_v1.pkl'
+optimized_voxel_labels_save_path = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/schematic_fig/optimized_parcellation_labels_v1.pkl'
+optimized_parcellation_save_path = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/schematic_fig/optimized_parcellation_v1.nii'
+ReHo_save_path = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/schematic_fig/ReHo_v1.nii'
 
 simulation_length = 500
 n_seeds = 210
-sigma = 1
+sigma = 5
 new_seeds = True # set new_seeds to True to change the location or number of seeds
 
 def gaussian(x, mu, sigma):
