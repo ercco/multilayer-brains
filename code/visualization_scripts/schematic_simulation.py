@@ -19,11 +19,11 @@ from clustering_by_consistency import growSphericalROIs, growOptimizedROIs, cons
 from ROIplay import writeNii
 
 template_path = '/m/cs/scratch/networks/aokorhon/ROIplay/templates/brainnetome/BNA-MPM_thr25_4mm_nosub.nii'
-underlying_parcellation_save_path = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/schematic_fig/spherical_parcellation_v1.nii'
-underlying_voxel_labels_save_path = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/schematic_fig/spherical_parcellation_labels_v1.pkl'
-optimized_voxel_labels_save_path = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/schematic_fig/optimized_parcellation_labels_v1.pkl'
-optimized_parcellation_save_path = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/schematic_fig/optimized_parcellation_v1.nii'
-ReHo_save_path = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/schematic_fig/ReHo_v1.nii'
+underlying_parcellation_save_path = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/schematic_fig/spherical_parcellation_sigma5_v2.nii'
+underlying_voxel_labels_save_path = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/schematic_fig/spherical_parcellation_labels_sigma5_v2.pkl'
+optimized_voxel_labels_save_path = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/schematic_fig/optimized_parcellation_labels_sigma5_v2.pkl'
+optimized_parcellation_save_path = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/schematic_fig/optimized_parcellation_sigma5_v2.nii'
+ReHo_save_path = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/schematic_fig/ReHo_sigma5_v2.nii'
 
 simulation_length = 500
 n_seeds = 210
@@ -77,7 +77,7 @@ writeNii(underlying_parcellation, template_path, underlying_parcellation_save_pa
 # obtaining "optimized ROIs" from the simulated data
 cfg = {'names':'','imgdata':simulated_data,
        'threshold':'voxel-wise','targetFunction':'weighted mean consistency',
-       'fTransform':False,'nROIs':246,'template':template_data,
+       'fTransform':False,'nROIs':210,'template':template_data,
        'percentageROIsForThresholding':0.3,
        'sizeExp':1,'nCPUs':5,
        'nReHoNeighbors':6,'percentageMinCentroidDistance':0.1,
