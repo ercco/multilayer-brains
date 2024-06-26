@@ -89,9 +89,12 @@ def read_data(data_path, dataset_name, subj_id, threshold=0, regularization=0, n
     consistency_data_frame : pandas.DataFrame()
         a data frame containing the consistency data
     """
-    f = open(save_path, 'rb')
-    data = pickle.load(f)
-    f.close()
+    try:
+        f = open(data_path, 'rb')
+        data = pickle.load(f)
+        f.close()
+    except:
+        print('file {path} not found'.format(path=data_path))
 
     ROI_sizes = []
     ROI_consistencies = []
@@ -133,7 +136,7 @@ def construct_pareto_optimal_front(consistency_data_frame, combined_array, n_tim
 
     Returns:
     --------
-    pareto_optimal_front : pandad.DataFrame()
+    pareto_optimal_front : pandas.DataFrame()
         the Pareto-optimal front
     """
     pareto_data = pd.DataFrame()
@@ -160,6 +163,78 @@ def construct_pareto_optimal_front(consistency_data_frame, combined_array, n_tim
                             best_row = row
 
     return pareto_optimal_front
+
+consistency_save_path_base = '/m/nbe/scratch/alex/private/tarmo/article_runs/maxcorr/'
+pareto_optimal_front_save_path_base = 'm/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/pareto_optimization/'
+figure_save_path = 'm/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/pareto_optimization/pareto_optimal_front_all_methods.pdf'
+
+subject_ids = ['b1k','d3a','d4w','d6i','e6x','g3r','i2p','i7c','m3s','m8f','n5n','n5s','n6z','o9e','p5n','p9u','q4c','r9j','t1u','t9n','t9u','v1i','v5b','y6g','z4t']
+run_number = 2
+n_time_windows = 56
+
+thresholds = [0.1, 0.2, 0.3, 0.4, 0.5]
+threshold_strs = ['01', '02', '03', '04', '05']
+regularizations = [-10, -100, -250, -500, -1000]
+
+craddock_data_threshold_str = '02' # the craddock files used for the main analysis are named differently than those used for the Pareto optimization, so a hack is needed for reading all the files
+
+methods = ['ReHo_seeds_min_correlation_voxelwise_thresholding', 'craddock']
+#['ReHo_seeds_weighted_mean_consistency_voxelwise_thresholding', 'ReHo_seeds_min_correlation_voxelwise_thresholding', 'craddock']
+
+calculate_pareto_optimal_front = True
+
+#import pdb; pdb.set_trace()
+if calculate_pareto_optimal_front:
+    for method in methods:
+        if method == 'ReHo_seeds_weighted_mean_cosistency_voxelwise_thresholding':
+            combined_array = list(itertools.product(subject_ids, threshold_strs, regularizations))
+        else:
+            combined_array = list(itertools.product(subject_ids, threshold_strs, ['']))
+        consistency_data_frame = pd.DataFrame()
+        for subj_id, threshold, regularization in combined_array:
+            if method == 'ReHo_seeds_weighted_mean_consistency_voxelwise_thresholding': 
+                consistency_save_path = consistency_save_path_base + '{subj_id}/{run_number}/{method}_{threshold}_regularization{regularization}/2_layers/spatial_consistency.pkl'.format(subj_id=subj_id, run_number=run_number, method=method, threshold=threshold, regularization=regularization)
+            elif method == 'ReHo_seeds_min_correlation_voxelwise_thresholding':
+                consistency_save_path = consistency_save_path_base + '{subj_id}/{run_number}/{method}_{threshold}/2_layers/spatial_consistency.pkl'.format(subj_id=subj_id, run_number=run_number, method=method, threshold=threshold)
+            elif method == 'craddock':
+                if threshold == craddock_data_threshold_str:
+                    consistency_save_path = consistency_save_path_base + '{subj_id}/{run_number}/{method}/2_layers/spatial_consistency.pkl'.format(subj_id=subj_id, run_number=run_number, method=method)
+                else:
+                    consistency_save_path = consistency_save_path_base + '{subj_id}/{run_number}/{method}_threshold_{threshold}/2_layers/spatial_consistency.pkl'.format(subj_id=subj_id, run_number=run_number, method=method, threshold=threshold)
+            dataset_name = '{subj_id}_{method}_{threshold}_{regularization}'.format(subj_id=subj_id, method=method, threshold=threshold, regularization=regularization)
+            consistency_data_frame = pd.concat([consistency_data_frame, read_data(consistency_save_path, dataset_name, subj_id, threshold, regularization, n_time_windows)])
+        pareto_optimal_front = construct_pareto_optimal_front(consistency_data_frame, combined_array, n_time_windows, method)
+        pareto_optimal_front_save_path = pareto_optimal_front_save_path_base + '_{method}.pkl'.format(method=method)
+        pareto_optimal_front.to_pickle(pareto_optimal_front_save_path)
+
+if not calculate_pareto_optimal_front: # assuming that the front has been calculated before and thus reading data
+    pareto_optimal_front_all_methods = pd.DataFrame()
+    for method in methods:
+        pareto_optimal_front_save_path = pareto_optimal_front_save_path_base + '_{method}.pkl'.format(method=method)
+        pareto_optimal_front = pd.read_pickle(pareto_optimal_fornt_save_path)
+        pareto_optimal_front_all_methods = pd.concat([pareto_optimal_front_all_methods, pareto_optimal_front])
+    
+# replacing subject ids with unique numerical indices
+i = 0
+pareto_optimal_front_all_methods = pareto_optimal_front_all_methods.sort_values('subj_id')
+for subj_id in pareto_optimal_front_all_methods.subj_id.unique():
+    pareto_optimal_front_all_methods.loc[pareto_optimal_front_all_methods['subj_id'] == subj_id, 'subj_id'] = i
+    i += 1
+
+# replacing threshold strings with numerical thresholds
+pareto_optimal_front_all_methods = pareto_optimal_front_all_methods.sort_values('threshold')
+for threshold_str, threshold in zip(pareto_optimal_front_all_methods.threshold.unique(), thresholds):
+    pareto_optimal_front_all_methods.loc[pareto_optimal_front_all_methods['threshold'] == threshold_str, 'threshold'] = threshold
+
+# visualization
+pareto_optimal_front_all_methods = pareto_optimal_front_all_methods.sort_values(['time_window', 'threshold', 'regularization', 'subj_id'])
+pareto_optimal_front_all_methods = pareto_optimal_front_all_methods.sort_values(['size_term', 'weighted_mean_consistency'])
+pareto_optimal_front_all_methods['threshold'] = pareto_optimal_front_all_methods['threshold'].astype(float)
+pareto_optimal_front_all_methods['time_window'] = pareto_optimal_front_all_methods['time_winodw'].astype(int)
+fig = px.line(pareto_optimal_front_all_methods, x='size_term', y='weighted_mean_consistency', title='pareto optimal front', color='method', markers=True, symbol_sequence=['circle', 'square', 'cross', 'star','triangle-up','x','diamond-tall','star-diamond'], line_group=pareto_optimal_front_all_methods[['time_window', 'subj_id']].astype(str).apply('-'.join, axis=1)) # TODO: consider adding range_x and range_y
+fig.update_traces(marker_size=10, marker_opacity=0.3)
+fig.update_layout(xaxis=dict(tick0=0, dtick=0.0005,title='size term'), yaxis=dict(title='weighted mean consistency'))
+fig.write_image('figure_save_path')
 
 
 
