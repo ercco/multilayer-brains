@@ -18,6 +18,9 @@ from scipy.stats import binned_statistic
 data_path_base = '/home/onervak/projects/multilayer-brains/article_figs/trajectories/' #'/m/nbe/scratch/alex/private/tarmo/trajectories/'
 clustering_methods = ['test'] #['ReHo_seeds_weighted_mean_consistency_voxelwise_thresholding_03_regularization-100', 'random', 'craddock']
 reference_layer = 0
+TR = 27.5E-3 # distance of time points in seconds
+
+intrinsic_scale_dist_save_path = '/home/onervak/projects/multilayer-brains/article_figs/trajectories/intrinsic_scale_distribution.pdf'
 
 n_bins = 100
 color = 'k'
@@ -54,48 +57,91 @@ for clustering_method in clustering_methods:
     intrinsic_scales = []
     A = []
     B = []
-    for subject in list(data.keys())[0:1]:
-        for run in list(data[subject].keys())[0:1]:
+    
+    good_autocorrelations = []
+    bad_autocorrelations = []
+    lags = []
+    
+    for subject in data.keys():
+        for run in data[subject].keys():
             for roi in data[subject][run].keys():
                 roi_trajectory = data[subject][run][roi]
                 lag, autocorrelation, _, _ = plt.acorr(roi_trajectory, maxlags=None)
                 lag = lag[len(roi_trajectory)::]
                 autocorrelation = autocorrelation[len(roi_trajectory)::]
-                fit = curve_fit(exponential_decay, lag, autocorrelation, p0=[25, 250, -1], maxfev=10000) # TODO: try to figure out an initial guess so the number of evaluations could be decreased
-                intrinsic_scales.append(fit[0][1])
-                A.append(fit[0][0])
-                B.append(fit[0][2])
-                print('fit for ' + subject + ', run ' + str(run))
                 
+                lag = lag * TR # lag given in seconds instead of samples
+                lags.append(lag)
+                
+                try:
+                    fit = curve_fit(exponential_decay, lag, autocorrelation, maxfev=5000) # TODO: try to figure out an initial guess so the number of evaluations could be decreased
+                    good_autocorrelations.append(autocorrelation)
+                    intrinsic_scales.append(fit[0][1])
+                    A.append(fit[0][0])
+                    B.append(fit[0][2])
+                    print('fit for ' + subject + ', run ' + str(run))
+                except:
+                    bad_autocorrelations.append(autocorrelation)
+                    continue
+    
     #import pdb; pdb.set_trace()
-    is_pdf, is_bin_edges, _ = binned_statistic(intrinsic_scales, intrinsic_scales, statistic='count', bins=n_bins)
-    is_pdf = is_pdf / float(np.sum(is_pdf * np.abs(is_bin_edges[0] - is_bin_edges[1])))
-    is_bin_centers = 0.5 * (is_bin_edges[:-1] + is_bin_edges[1:]) 
+    good_length = np.max([len(a) for a in good_autocorrelations])
+    bad_length = np.max([len(a) for a in bad_autocorrelations])
     
-    a_pdf, a_bin_edges, _ = binned_statistic(A, intrinsic_scales, statistic='count', bins=n_bins)
-    a_pdf = a_pdf / float(np.sum(a_pdf * np.abs(a_bin_edges[0] - a_bin_edges[1])))
-    a_bin_centers = 0.5 * (a_bin_edges[:-1] + a_bin_edges[1:])
-    b_pdf, b_bin_edges, _ = binned_statistic(B, intrinsic_scales, statistic='count', bins=n_bins)
-    b_pdf = b_pdf / float(np.sum(b_pdf * np.abs(b_bin_edges[0] - b_bin_edges[1])))
-    b_bin_centers = 0.5 * (b_bin_edges[:-1] + b_bin_edges[1:])
+    autocorrelations = np.zeros((max(good_length, bad_length), len(good_autocorrelations) + len(bad_autocorrelations)))
     
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    plt.plot(is_bin_centers, is_pdf, color=color, ls=ls)
-    ax.set_xlabel('Intrinsic scale')
-    ax.set_ylabel('PDF')
+    for i, a in enumerate(good_autocorrelations):
+        autocorrelations[0:len(a), i]  = a
+        
+    for j, a in enumerate(bad_autocorrelations):
+        autocorrelations[0:len(a), len(good_autocorrelations) + j] = a
+        
+    lag = np.arange(0, autocorrelations.shape[0])
     
-    fig = plt.figure()
-    ax = fig.add_subplot(111)
-    plt.plot(a_bin_centers, a_pdf, color=color, ls=ls)
-    ax.set_xlabel('A')
-    ax.set_ylabel('PDF')
+    colors = len(good_autocorrelations) * ['k']
+    colors.extend(len(bad_autocorrelations) * ['r'])
+    alpha = len(good_autocorrelations) * [0.05]
+    alpha.extend(len(bad_autocorrelations) * [1])
     
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    plt.plot(b_bin_centers, b_pdf, color=color, ls=ls)
-    ax.set_xlabel('B')
-    ax.set_ylabel('PDF')
+    
+    plt.gca().set_prop_cycle(color=colors, alpha=alpha)
+    
+    plt.plot(lag, autocorrelations)
+    ax.set_xlabel('lag')
+    ax.set_ylabel('autocorrelation')
+    plt.savefig('/home/onervak/projects/multilayer-brains/article_figs/trajectories/good_bad_autocorrelations.pdf', format='pdf', bbox_inches='tight')
+
+    # is_pdf, is_bin_edges, _ = binned_statistic(intrinsic_scales, intrinsic_scales, statistic='count', bins=n_bins)
+    # is_pdf = is_pdf / float(np.sum(is_pdf * np.abs(is_bin_edges[0] - is_bin_edges[1])))
+    # is_bin_centers = 0.5 * (is_bin_edges[:-1] + is_bin_edges[1:]) 
+    
+    # a_pdf, a_bin_edges, _ = binned_statistic(A, intrinsic_scales, statistic='count', bins=n_bins)
+    # a_pdf = a_pdf / float(np.sum(a_pdf * np.abs(a_bin_edges[0] - a_bin_edges[1])))
+    # a_bin_centers = 0.5 * (a_bin_edges[:-1] + a_bin_edges[1:])
+    # b_pdf, b_bin_edges, _ = binned_statistic(B, intrinsic_scales, statistic='count', bins=n_bins)
+    # b_pdf = b_pdf / float(np.sum(b_pdf * np.abs(b_bin_edges[0] - b_bin_edges[1])))
+    # b_bin_centers = 0.5 * (b_bin_edges[:-1] + b_bin_edges[1:])
+    
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111)
+    # plt.plot(is_bin_centers, is_pdf, color=color, ls=ls)
+    # ax.set_xlabel('Intrinsic scale')
+    # ax.set_ylabel('PDF')
+    # plt.savefig(intrinsic_scale_dist_save_path, format='pdf', bbox_inches='tight')
+    
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111)
+    # plt.plot(a_bin_centers, a_pdf, color=color, ls=ls)
+    # ax.set_xlabel('A')
+    # ax.set_ylabel('PDF')
+    
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111)
+    # plt.plot(b_bin_centers, b_pdf, color=color, ls=ls)
+    # ax.set_xlabel('B')
+    # ax.set_ylabel('PDF')
     
     
     
