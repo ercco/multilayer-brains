@@ -6,7 +6,6 @@ Written by Onerva Korhonen based on a script by Pietro de Luca.
 import nibabel as nib
 import numpy as np
 import pickle
-# TODO: does it really make sense to use plotly instead of matplotlib?
 import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
@@ -34,10 +33,10 @@ def get_weighted_mean_consistency(ROI_sizes, ROI_consistencies, size_exp=1):
         ROI_sizes = np.array(ROI_sizes)
     if not isinstance(ROI_consistencies, np.ndarray):
         ROI_consistencies = np.array(ROI_consistencies)
-    weighted_mean_consistency = np.sum(ROI_sizes**size_exp * ROI_consistencies) / np.sum(ROI_sizes**size_exp)
+    weighted_mean_consistency = np.sum(ROI_sizes**size_exp * ROI_consistencies) / np.float(np.sum(ROI_sizes**size_exp))
     return weighted_mean_consistency
 
-def get_size_term(ROI_sizes, regularization_exp, N_voxels=0):
+def get_size_term(ROI_sizes, regularization_exponent=2, N_voxels=0):
     """
     Calculates the size term sum(N^regularization_exp)/(X)^regularization_exp, where N is ROI size, the
     summation goes over ROIs, and X is either N_voxels or sum(N).
@@ -46,7 +45,7 @@ def get_size_term(ROI_sizes, regularization_exp, N_voxels=0):
     -----------
     ROI_sizes : iterable of ints
         sizes of ROIs
-    regularization_exp : int
+    regularization_exp : int (optional, default 2)
         explonent used for calculating the size term
     N_voxels : int (optional, default 0)
         total number of voxels in the brain, used for normalization. if not given, the sum of ROI sizes
@@ -58,11 +57,11 @@ def get_size_term(ROI_sizes, regularization_exp, N_voxels=0):
         the size term
     """
     if not isinstance(ROI_sizes, np.ndarray):
-        ROI_sixes = np.array(ROI_sizes)
+        ROI_sizes = np.array(ROI_sizes)
     if N_voxels > 0:
-        size_term = np.sum(ROI_sizes**regularization_exponent) / N_voxels**regularization_exponent
+        size_term = np.sum(ROI_sizes**regularization_exponent) / np.float(N_voxels**regularization_exponent)
     else:
-        size_term = np.sum(ROI_sizes**regularization_exponent) / (np.sum(ROI_sizes))**regularization_exponent
+        size_term = np.sum(ROI_sizes**regularization_exponent) / np.float(np.sum(ROI_sizes)**regularization_exponent)
     return size_term
 
 def read_data(data_path, dataset_name, subj_id, threshold=0, regularization=0, n_time_windows=0):
@@ -107,14 +106,14 @@ def read_data(data_path, dataset_name, subj_id, threshold=0, regularization=0, n
             ROI_consistencies.extend(layer['consistencies'].values())
             time_windows.extend(len(layer['ROI_sizes'].values()) * [window_index])
             window_index += 1
-        consistency_data = {'ROI_sizes':ROI_sizes, 'ROI_consistencies':ROI_consistencies, 'dataset':dataset_name, 'sub_id':subj_id, 'threshold':threshold, 'regularization':regularization, 'time_window':time_windows}
+        consistency_data = {'ROI_sizes':ROI_sizes, 'ROI_consistencies':ROI_consistencies, 'dataset':dataset_name, 'subj_id':subj_id, 'threshold':threshold, 'regularization':regularization, 'time_window':time_windows}
         consistency_data_frame = pd.DataFrame(consistency_data)
 
     else:
         for layer in data.values():
             ROI_sizes.extend(layer['ROI_sizes'].values())
             ROI_consistencies.extend(layer['ROI_consistencies'].values())
-        consistency_data = {'ROI_sizes':ROI_sizes, 'ROI_consistencies':ROI_consistencies, 'dataset':dataset_name, 'sub_id':subj_id, 'threshold':threshold, 'regularization':regularization}
+        consistency_data = {'ROI_sizes':ROI_sizes, 'ROI_consistencies':ROI_consistencies, 'dataset':dataset_name, 'subj_id':subj_id, 'threshold':threshold, 'regularization':regularization}
         consistency_data_frame = pd.DataFrame(consistency_data)
 
     return consistency_data_frame
@@ -139,36 +138,36 @@ def construct_pareto_optimal_front(consistency_data_frame, combined_array, n_tim
     pareto_optimal_front : pandas.DataFrame()
         the Pareto-optimal front
     """
-    pareto_data = pd.DataFrame()
+    pareto_data_frame = pd.DataFrame()
     for subj_id, threshold, regularization in combined_array:
-        name = '{sub_id}_{method}_{thr}_{reg}'.format(sub_id=sub_id, method=method, thr=threshold, reg=regularization)
+        name = '{subj_id}_{method}_{thr}_{reg}'.format(subj_id=subj_id, method=method, thr=threshold, reg=regularization)
         for i in range(n_time_windows):
             ROI_sizes = consistency_data_frame[(consistency_data_frame['dataset'] == name) & (consistency_data_frame['time_window'] == i)]['ROI_sizes']
             ROI_consistencies = consistency_data_frame[(consistency_data_frame['dataset'] == name) & (consistency_data_frame['time_window'] == i)]['ROI_consistencies']
             size_term = get_size_term(ROI_sizes)
             weighted_mean_consistency = get_weighted_mean_consistency(ROI_sizes, ROI_consistencies)
             pareto_data = {'size_term':size_term, 'weighted_mean_consistency':weighted_mean_consistency, 'subj_id':subj_id, 'method':method, 'threshold':threshold, 'regularization':regularization, 'time_window':i}
-            pareto_data_frame = pd.concat([pareto_data_frame, pd.DataFrame(pareto_data)], ignore_index=True)
+            pareto_data_frame = pd.concat([pareto_data_frame, pd.DataFrame([pareto_data])], ignore_index=True)
 
-            pareto_data_frame = pareto_data_frame.sort_values(['size_term'], ascending=True)
-            pareto_optimal_front = pd.DataFrame()
-            for subj_id in pareto_data_frame.subj_id.unique():
-                for time_window in pareto_data_frame.time_window.unique():
-                    time_window_data_frame = pareto_data_frame[(pareto_data_frame['time_window'] == time_window) & (pareto_data_frame['subj_id'] == subj_id)]
-                    time_window_data_frame = time_window_data_frame.reset_index(drop=True)
-                    best_row = time_window_data_frame.loc[0]
-                    for _, row in time_window_data_frame.iterrows():
-                        if best_row.weighted_mean_consistency < row.weighted_mean_cosnistency:
-                            pareto_optimal_front = pareto_optimal_front.append(row, ignore_index=True)
-                            best_row = row
+    pareto_data_frame = pareto_data_frame.sort_values(['size_term'], ascending=True)
+    pareto_optimal_front = pd.DataFrame()
+    for subj_id in pareto_data_frame.subj_id.unique():
+        for time_window in pareto_data_frame.time_window.unique():
+            time_window_data_frame = pareto_data_frame[(pareto_data_frame['time_window'] == time_window) & (pareto_data_frame['subj_id'] == subj_id)]
+            time_window_data_frame = time_window_data_frame.reset_index(drop=True)
+            best_row = time_window_data_frame.loc[0]
+            for _, row in time_window_data_frame.iterrows():
+                if best_row.weighted_mean_consistency < row.weighted_mean_consistency:
+                    pareto_optimal_front = pareto_optimal_front.append(row, ignore_index=True)
+                    best_row = row
 
     return pareto_optimal_front
 
 consistency_save_path_base = '/m/nbe/scratch/alex/private/tarmo/article_runs/maxcorr/'
-pareto_optimal_front_save_path_base = 'm/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/pareto_optimization/'
-figure_save_path = 'm/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/pareto_optimization/pareto_optimal_front_all_methods.pdf'
+pareto_optimal_front_save_path_base = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/pareto_optimization/pareto_optimal_front'
+figure_save_path = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/pareto_optimization/pareto_optimal_front_all_methods.pdf'
 
-subject_ids = ['b1k','d3a','d4w','d6i','e6x','g3r','i2p','i7c','m3s','m8f','n5n','n5s','n6z','o9e','p5n','p9u','q4c','r9j','t1u','t9n','t9u','v1i','v5b','y6g','z4t']
+subject_ids = ['b1k','d6i','e6x','i2p','i7c','m3s','m8f','n5n','n5s','n6z','o9e','p5n','p9u','q4c','r9j','t1u','t9n','v1i','v5b','y6g','z4t', 't9u', 'd3a', 'd4w', 'g3r']
 run_number = 2
 n_time_windows = 56
 
@@ -176,22 +175,26 @@ thresholds = [0.1, 0.2, 0.3, 0.4, 0.5]
 threshold_strs = ['01', '02', '03', '04', '05']
 regularizations = [-10, -100, -250, -500, -1000]
 
+greedy_data_threshold = 0.3
+data_regularization = -100
 craddock_data_threshold_str = '02' # the craddock files used for the main analysis are named differently than those used for the Pareto optimization, so a hack is needed for reading all the files
+craddock_data_threshold = 0.2
 
-methods = ['ReHo_seeds_min_correlation_voxelwise_thresholding', 'craddock']
-#['ReHo_seeds_weighted_mean_consistency_voxelwise_thresholding', 'ReHo_seeds_min_correlation_voxelwise_thresholding', 'craddock']
+methods = ['ReHo_seeds_weighted_mean_consistency_voxelwise_thresholding', 'ReHo_seeds_min_correlation_voxelwise_thresholding', 'craddock']
 
 calculate_pareto_optimal_front = True
+visualize = False
 
-#import pdb; pdb.set_trace()
 if calculate_pareto_optimal_front:
+    pareto_optimal_front_all_methods = pd.DataFrame()
     for method in methods:
-        if method == 'ReHo_seeds_weighted_mean_cosistency_voxelwise_thresholding':
+        if method == 'ReHo_seeds_weighted_mean_consistency_voxelwise_thresholding':
             combined_array = list(itertools.product(subject_ids, threshold_strs, regularizations))
         else:
             combined_array = list(itertools.product(subject_ids, threshold_strs, ['']))
         consistency_data_frame = pd.DataFrame()
         for subj_id, threshold, regularization in combined_array:
+            print('reading {method}, {subj_id}, {threshold}, {regularization}'.format(method=method, subj_id=subj_id, threshold=threshold, regularization=regularization))
             if method == 'ReHo_seeds_weighted_mean_consistency_voxelwise_thresholding': 
                 consistency_save_path = consistency_save_path_base + '{subj_id}/{run_number}/{method}_{threshold}_regularization{regularization}/2_layers/spatial_consistency.pkl'.format(subj_id=subj_id, run_number=run_number, method=method, threshold=threshold, regularization=regularization)
             elif method == 'ReHo_seeds_min_correlation_voxelwise_thresholding':
@@ -204,37 +207,62 @@ if calculate_pareto_optimal_front:
             dataset_name = '{subj_id}_{method}_{threshold}_{regularization}'.format(subj_id=subj_id, method=method, threshold=threshold, regularization=regularization)
             consistency_data_frame = pd.concat([consistency_data_frame, read_data(consistency_save_path, dataset_name, subj_id, threshold, regularization, n_time_windows)])
         pareto_optimal_front = construct_pareto_optimal_front(consistency_data_frame, combined_array, n_time_windows, method)
+        pareto_optimal_front_all_methods = pd.concat([pareto_optimal_front_all_methods, pareto_optimal_front])
         pareto_optimal_front_save_path = pareto_optimal_front_save_path_base + '_{method}.pkl'.format(method=method)
         pareto_optimal_front.to_pickle(pareto_optimal_front_save_path)
-
-if not calculate_pareto_optimal_front: # assuming that the front has been calculated before and thus reading data
+else: # assuming that the front has been calculated before and thus reading data
     pareto_optimal_front_all_methods = pd.DataFrame()
     for method in methods:
         pareto_optimal_front_save_path = pareto_optimal_front_save_path_base + '_{method}.pkl'.format(method=method)
-        pareto_optimal_front = pd.read_pickle(pareto_optimal_fornt_save_path)
+        pareto_optimal_front = pd.read_pickle(pareto_optimal_front_save_path)
         pareto_optimal_front_all_methods = pd.concat([pareto_optimal_front_all_methods, pareto_optimal_front])
-    
-# replacing subject ids with unique numerical indices
-i = 0
-pareto_optimal_front_all_methods = pareto_optimal_front_all_methods.sort_values('subj_id')
-for subj_id in pareto_optimal_front_all_methods.subj_id.unique():
-    pareto_optimal_front_all_methods.loc[pareto_optimal_front_all_methods['subj_id'] == subj_id, 'subj_id'] = i
-    i += 1
 
-# replacing threshold strings with numerical thresholds
-pareto_optimal_front_all_methods = pareto_optimal_front_all_methods.sort_values('threshold')
-for threshold_str, threshold in zip(pareto_optimal_front_all_methods.threshold.unique(), thresholds):
-    pareto_optimal_front_all_methods.loc[pareto_optimal_front_all_methods['threshold'] == threshold_str, 'threshold'] = threshold
+if visualize:
+    # replacing subject ids with unique numerical indices
+    i = 0
+    pareto_optimal_front_all_methods = pareto_optimal_front_all_methods.sort_values('subj_id')
+    for subj_id in pareto_optimal_front_all_methods.subj_id.unique():
+        pareto_optimal_front_all_methods.loc[pareto_optimal_front_all_methods['subj_id'] == subj_id, 'subj_id'] = i
+        i += 1
 
-# visualization
-pareto_optimal_front_all_methods = pareto_optimal_front_all_methods.sort_values(['time_window', 'threshold', 'regularization', 'subj_id'])
-pareto_optimal_front_all_methods = pareto_optimal_front_all_methods.sort_values(['size_term', 'weighted_mean_consistency'])
-pareto_optimal_front_all_methods['threshold'] = pareto_optimal_front_all_methods['threshold'].astype(float)
-pareto_optimal_front_all_methods['time_window'] = pareto_optimal_front_all_methods['time_winodw'].astype(int)
-fig = px.line(pareto_optimal_front_all_methods, x='size_term', y='weighted_mean_consistency', title='pareto optimal front', color='method', markers=True, symbol_sequence=['circle', 'square', 'cross', 'star','triangle-up','x','diamond-tall','star-diamond'], line_group=pareto_optimal_front_all_methods[['time_window', 'subj_id']].astype(str).apply('-'.join, axis=1)) # TODO: consider adding range_x and range_y
-fig.update_traces(marker_size=10, marker_opacity=0.3)
-fig.update_layout(xaxis=dict(tick0=0, dtick=0.0005,title='size term'), yaxis=dict(title='weighted mean consistency'))
-fig.write_image('figure_save_path')
+    # replacing threshold strings with numerical thresholds
+    pareto_optimal_front_all_methods = pareto_optimal_front_all_methods.sort_values('threshold')
+    for threshold_str, threshold in zip(pareto_optimal_front_all_methods.threshold.unique(), thresholds):
+        pareto_optimal_front_all_methods.loc[pareto_optimal_front_all_methods['threshold'] == threshold_str, 'threshold'] = threshold
+
+    # finding points corresponding to the param values used in the main analysis
+    pareto_optimal_markers_all_methods = pd.DataFrame()
+    for method in methods:
+        if method == 'ReHo_seeds_weighted_mean_consistency_voxelwise_thresholding':
+            pareto_optimal_front_markers = pareto_optimal_front_all_methods[(pareto_optimal_front_all_methods['method'] == method) & (pareto_optimal_front_all_methods['threshold'] == greedy_data_threshold) & (pareto_optimal_front_all_methods['regularization'] == data_regularization)]
+        elif method == 'ReHo_seeds_min_correlation_voxelwise_thresholding':
+            pareto_optimal_front_markers = pareto_optimal_front_all_methods[(pareto_optimal_front_all_methods['method'] == method) & (pareto_optimal_front_all_methods['threshold'] == greedy_data_threshold)]
+        elif method == 'craddock':
+            pareto_optimal_front_markers = pareto_optimal_front_all_methods[(pareto_optimal_front_all_methods['method'] == method) & (pareto_optimal_front_all_methods['threshold'] == craddock_data_threshold)]
+        pareto_optimal_markers_all_methods = pd.concat([pareto_optimal_markers_all_methods, pareto_optimal_front_markers])
+
+    # visualization
+    pareto_optimal_front_all_methods = pareto_optimal_front_all_methods.sort_values(['time_window', 'threshold', 'regularization', 'subj_id'])
+    pareto_optimal_front_all_methods = pareto_optimal_front_all_methods.sort_values(['size_term', 'weighted_mean_consistency'])
+    pareto_optimal_front_all_methods['threshold'] = pareto_optimal_front_all_methods['threshold'].astype(float)
+    pareto_optimal_front_all_methods['time_window'] = pareto_optimal_front_all_methods['time_window'].astype(int)
+    fig = go.Figure()
+    for i, method in enumerate(methods):
+        pareto_optimal_front = pareto_optimal_front_all_methods[(pareto_optimal_front_all_methods['method'] == method)]
+        pareto_optimal_markers = pareto_optimal_markers_all_methods[(pareto_optimal_markers_all_methods['method'] == method)]
+        for j, subj_id in enumerate(pareto_optimal_front.subj_id.unique()):
+            for k, time_window in enumerate(pareto_optimal_front.time_window.unique()):
+                subj_time_window_pareto_optimal_front = pareto_optimal_front[(pareto_optimal_front['subj_id'] == subj_id) & (pareto_optimal_front['time_window'] == time_window)]
+                subj_time_window_pareto_optimal_markers = pareto_optimal_markers[(pareto_optimal_markers['subj_id'] == subj_id) & (pareto_optimal_markers['time_window'] == time_window)]
+                if j == k == 0:
+                    fig.add_traces(go.Scatter(x=subj_time_window_pareto_optimal_front.size_term, y=subj_time_window_pareto_optimal_front.weighted_mean_consistency, mode='lines', line=dict(color=fig.layout['template']['layout']['colorway'][i], width=.5), legendgroup=method, name=method))
+                else:
+                    fig.add_traces(go.Scatter(x=subj_time_window_pareto_optimal_front.size_term, y=subj_time_window_pareto_optimal_front.weighted_mean_consistency, mode='lines', line=dict(color=fig.layout['template']['layout']['colorway'][i], width=.5), legendgroup=method, name=method, showlegend=False))
+                fig.add_traces(go.Scatter(x=subj_time_window_pareto_optimal_markers.size_term, y=subj_time_window_pareto_optimal_markers.weighted_mean_consistency, mode='markers', marker_color=fig.layout['template']['layout']['colorway'][i], marker_size=5, showlegend=False))
+    # TODO: consider setting range_x and range_y for the fig
+    fig.update_traces(marker={'opacity':1})
+    fig.update_layout(xaxis=dict(tick0=0, dtick=0.0005,title='size term'), yaxis=dict(title='weighted mean consistency'))
+    fig.write_image(figure_save_path)
 
 
 
