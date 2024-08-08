@@ -147,7 +147,10 @@ def construct_pareto_optimal_front(consistency_data_frame, combined_array, n_tim
                 ROI_consistencies = consistency_data_frame[(consistency_data_frame['dataset'] == name) & (consistency_data_frame['time_window'] == i)]['ROI_consistencies']
                 size_term = get_size_term(ROI_sizes)
                 weighted_mean_consistency = get_weighted_mean_consistency(ROI_sizes, ROI_consistencies)
-                pareto_data = {'size_term':size_term, 'weighted_mean_consistency':weighted_mean_consistency, 'subj_id':subj_id, 'method':method, 'threshold':threshold, 'regularization':regularization, 'time_window':i}
+                if front_per_window:
+                    pareto_data = {'size_term':size_term, 'weighted_mean_consistency':weighted_mean_consistency, 'subj_id':subj_id, 'method':method, 'threshold':threshold, 'regularization':regularization, 'time_window':i}
+                else:
+                    pareto_data = {'size_term':size_term, 'weighted_mean_consistency':weighted_mean_consistency, 'subj_id':subj_id, 'method':method, 'threshold':threshold, 'regularization':regularization, 'time_window':0} # while size term and weighted mean consistency are calculated separately for each window, windows are pooled before calculating the Pareto-optimal front
                 pareto_data_frame = pd.concat([pareto_data_frame, pd.DataFrame([pareto_data])], ignore_index=True)
         else:
             ROI_sizes = consistency_data_frame[(consistency_data_frame['dataset'] == name)]['ROI_sizes']
@@ -194,13 +197,18 @@ craddock_data_threshold = 0.2
 
 methods = ['ReHo_seeds_weighted_mean_consistency_voxelwise_thresholding', 'ReHo_seeds_min_correlation_voxelwise_thresholding', 'craddock']
 
-collapse_time = True # if True, one Pareto-optimal front is calculated per subject, pooling across time
+front_per_window = False # if True, a separate Pareto-optimal front is calculated for each time window; otherwise one front is calculated per subject
+collapse_time = False # if True, ROIs from all windows are pooled before calculating the Pareto-optimal front
+if collapse_time:
+    front_per_window = False # these two cannot be True at the same time
 calculate_pareto_optimal_front = True
 visualize = False
 
 if collapse_time:
     n_time_windows = 0
     figure_save_path = '{base}_collapsed.pdf'.format(base=figure_save_path_base)
+elif front_per_window:
+    figure_save_path = '{base}_per_window.pdf'.format(base=figure_save_path_base)
 else:
     figure_save_path = '{base}.pdf'.format(base=figure_save_path_base)
 
@@ -229,13 +237,20 @@ if calculate_pareto_optimal_front:
         pareto_optimal_front_all_methods = pd.concat([pareto_optimal_front_all_methods, pareto_optimal_front])
         if collapse_time:
             pareto_optimal_front_save_path = pareto_optimal_front_save_path_base + '_{method}_collapsed.pkl'.format(method=method)
+        elif front_per_window:
+            pareto_optimal_front_save_path = pareto_optimal_front_save_path_base + '_{method}_per_window.pkl'.format(method=method)
         else:
             pareto_optimal_front_save_path = pareto_optimal_front_save_path_base + '_{method}.pkl'.format(method=method)
         pareto_optimal_front.to_pickle(pareto_optimal_front_save_path)
 else: # assuming that the front has been calculated before and thus reading data
     pareto_optimal_front_all_methods = pd.DataFrame()
     for method in methods:
-        pareto_optimal_front_save_path = pareto_optimal_front_save_path_base + '_{method}.pkl'.format(method=method)
+        if collapse_time:
+            pareto_optimal_front_save_path = pareto_optimal_front_save_path_base + '_{method}_collapsed.pkl'.format(method=method)
+        elif front_per_window:
+            pareto_optimal_front_save_path = pareto_optimal_front_save_path_base + '_{method}_per_window.pkl'.format(method=method)
+        else:
+            pareto_optimal_front_save_path = pareto_optimal_front_save_path_base + '_{method}.pkl'.format(method=method)
         pareto_optimal_front = pd.read_pickle(pareto_optimal_front_save_path)
         pareto_optimal_front_all_methods = pd.concat([pareto_optimal_front_all_methods, pareto_optimal_front])
 
@@ -284,6 +299,7 @@ if visualize:
     # TODO: consider setting range_x and range_y for the fig
     fig.update_traces(marker={'opacity':1})
     fig.update_layout(xaxis=dict(tick0=0, dtick=0.0005,title='size term'), yaxis=dict(title='weighted mean consistency'))
+    fig.update_xaxes(range=[1.5, 4.5])
     fig.write_image(figure_save_path)
 
 
