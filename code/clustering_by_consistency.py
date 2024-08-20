@@ -2055,9 +2055,15 @@ def calculateCorrelationsInAndBetweenROIs(dataFiles,layersetwiseNetworkSavefolde
                               'inROIDistribution': np.array of floats, distribution of correlation values between voxels in the same ROI
                               'betweenROIDistribution': np.array of floats, distribution of correlation values between voxels in different ROIs
                               'binCenters': np.array of floats, centers of bins (same bins used both in-ROI and between-ROI distributions)
+                              'meanBetweenROICorrelation' : float, mean correlation between ROIs
+                              'meanWithinROICorrelation' : float, mean correlation within ROIs
     """
     inROICorrelations = []
     betweenROICorrelations = []
+    meanWithinROICorrelation = 0
+    meanBetweenROICorrelation = 0
+    nWithinROICorrelations = 0
+    nBetweenROICorrelations = 0
     if not subjectIndex == None:
         dataFiles = [dataFiles[subjectIndex]]
         layersetwiseNetworkSavefolders = [layersetwiseNetworkSavefolders[subjectIndex]]
@@ -2099,6 +2105,10 @@ def calculateCorrelationsInAndBetweenROIs(dataFiles,layersetwiseNetworkSavefolde
                 else:
                     inROIDistribution = inROIDistribution + binned_statistic(inCorrs,inCorrs,statistic='count',bins=bins)[0]
                     betweenROIDistribution = betweenROIDistribution + binned_statistic(betweenCorrs,betweenCorrs,statistic='count',bins=bins)[0]
+                meanWithinROICorrelation += np.sum(inCorrs)
+                meanBetweenROICorrelation += np.sum(betweenCorrs)
+                nWithinROICorrelations += len(inCorrs)
+                nBetweenROICorrelations += len(betweenCorrs)
                 if returnCorrelations:
                     inROICorrelations.extend(inCorrs)
                     betweenROICorrelations.extend(betweenCorrs)
@@ -2107,12 +2117,15 @@ def calculateCorrelationsInAndBetweenROIs(dataFiles,layersetwiseNetworkSavefolde
         # normalizing distributions
         inROIDistribution = inROIDistribution/float(np.sum(inROIDistribution*np.abs(binEdges[0]-binEdges[1])))        
         betweenROIDistribution = betweenROIDistribution/float(np.sum(betweenROIDistribution*np.abs(binEdges[0]-binEdges[1])))
-    binCenters = 0.5*(binEdges[:-1]+binEdges[1:])            
+    binCenters = 0.5*(binEdges[:-1]+binEdges[1:])           
+    meanWithinROICorrelation = meanWithinROICorrelation / nWithinROICorrelations
+    meanBetweenROICorrelation = meanBetweenROICorrelation / nBetweenROICorrelations
     correlationData = {'dataFiles':dataFiles,'layersetwiseNetworkSavefolders':layersetwiseNetworkSavefolders,
                                 'networkFiles':networkFiles,'nLayers':nLayers,'timewindow':timewindow,
                                 'overlap':overlap,'inROICorrelations':inROICorrelations,
                                 'betweenROICorrelations':betweenROICorrelations,'inROIDistribution':inROIDistribution,
-                                'betweenROIDistribution':betweenROIDistribution,'binCenters':binCenters}
+                                'betweenROIDistribution':betweenROIDistribution,'binCenters':binCenters,
+                                'meanWithinROICorrelation':meanWithinROICorrelation,'meanBetweenROICorrelation':meanBetweenROICorrelation}
     if not savePath==None:
         with open(savePath, 'wb') as f:
             pickle.dump(correlationData, f, -1)
