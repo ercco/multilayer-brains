@@ -201,16 +201,19 @@ front_per_window = False # if True, a separate Pareto-optimal front is calculate
 collapse_time = False # if True, ROIs from all windows are pooled before calculating the Pareto-optimal front
 if collapse_time:
     front_per_window = False # these two cannot be True at the same time
-calculate_pareto_optimal_front = True
-visualize = False
+calculate_pareto_optimal_front = False
+visualize = True
 
 if collapse_time:
     n_time_windows = 0
     figure_save_path = '{base}_collapsed.pdf'.format(base=figure_save_path_base)
+    full_figure_save_path = '{base_collapsed_full.pdf'.format(base=figure_save_path_base)
 elif front_per_window:
     figure_save_path = '{base}_per_window.pdf'.format(base=figure_save_path_base)
+    full_figure_save_path = '{base}_per_window_full.pdf'.format(base=figure_save_path_base)
 else:
     figure_save_path = '{base}.pdf'.format(base=figure_save_path_base)
+    full_figure_save_path = '{base}_full.pdf'.format(base=figure_save_path_base)
 
 if calculate_pareto_optimal_front:
     pareto_optimal_front_all_methods = pd.DataFrame()
@@ -243,6 +246,7 @@ if calculate_pareto_optimal_front:
             pareto_optimal_front_save_path = pareto_optimal_front_save_path_base + '_{method}.pkl'.format(method=method)
         pareto_optimal_front.to_pickle(pareto_optimal_front_save_path)
 else: # assuming that the front has been calculated before and thus reading data
+    #import pdb; pdb.set_trace()
     pareto_optimal_front_all_methods = pd.DataFrame()
     for method in methods:
         if collapse_time:
@@ -295,11 +299,24 @@ if visualize:
                     fig.add_traces(go.Scatter(x=subj_time_window_pareto_optimal_front.size_term, y=subj_time_window_pareto_optimal_front.weighted_mean_consistency, mode='lines', line=dict(color=fig.layout['template']['layout']['colorway'][i], width=.5), legendgroup=method, name=method))
                 else:
                     fig.add_traces(go.Scatter(x=subj_time_window_pareto_optimal_front.size_term, y=subj_time_window_pareto_optimal_front.weighted_mean_consistency, mode='lines', line=dict(color=fig.layout['template']['layout']['colorway'][i], width=.5), legendgroup=method, name=method, showlegend=False))
-                fig.add_traces(go.Scatter(x=subj_time_window_pareto_optimal_markers.size_term, y=subj_time_window_pareto_optimal_markers.weighted_mean_consistency, mode='markers', marker_color=fig.layout['template']['layout']['colorway'][i], marker_size=5, showlegend=False))
-    # TODO: consider setting range_x and range_y for the fig
+                fig.add_traces(go.Scatter(x=subj_time_window_pareto_optimal_markers.size_term, y=subj_time_window_pareto_optimal_markers.weighted_mean_consistency, mode='markers', marker_color=fig.layout['template']['layout']['colorway'][i], marker_size=7, showlegend=False))
     fig.update_traces(marker={'opacity':1})
-    fig.update_layout(xaxis=dict(tick0=0, dtick=0.0005,title='size term'), yaxis=dict(title='weighted mean consistency'))
-    fig.update_xaxes(range=[1.5, 4.5])
+    fig.update_traces(line={'width':1})
+    fig.update_layout(xaxis=dict(tick0=0, dtick=0.01,title='size term'), yaxis=dict(tick0=0, title='weighted mean consistency'))
+    fig.update_xaxes(showline=True, linecolor='black')
+    fig.update_yaxes(showline=True, linecolor='black')
+    #fig.update_xaxes(zeroline=True, zerolinewidth=1.5, zerolinecolor='black')
+    #fig.update_yaxes(zeroline=True, zerolinewidth=1.5, zerolinecolor='black')
+    fig.update_yaxes(range=[0,1])
+    fig.update_xaxes(ticks='outside', tickwidth=2)
+    fig.update_yaxes(ticks='outside', tickwidth=2)
+    fig.update_layout(plot_bgcolor='white')
+    fig.write_image(full_figure_save_path)
+    fig.update_layout(xaxis=dict(tick0=0.004, dtick=0.002))
+    fig.update_xaxes(range=[0.004, 0.014])
+    #fig.update_xaxes(zeroline=True, zerolinewidth=1.5, zerolinecolor='black')
+    #fig.update_yaxes(zeroline=True, zerolinewidth=1.5, zerolinecolor='black')
+    #fig.update_yaxes(showline=True, linecolor='black')
     fig.write_image(figure_save_path)
 
 
