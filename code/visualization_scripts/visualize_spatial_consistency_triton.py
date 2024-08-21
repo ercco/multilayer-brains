@@ -21,7 +21,7 @@ consistencySaveStem = '/scratch/nbe/alex/private/tarmo/article_runs/maxcorr'
 jobLabels = ['template_brainnetome','craddock','random_balls','ReHo_seeds_weighted_mean_consistency_voxelwise_thresholding_03_regularization-100','ReHo_seeds_min_correlation_voxelwise_thresholding_03'] # This label specifies the job submitted to Triton; there may be several jobs saved under each subject
 clusteringMethods = ['','','','','']
 # NOTE: before running the script, check that consistencySaveStem, jobLabel, clusteringMethods, and savePath (specified further below) match your data
-blacklistedROIs = np.arange(211,247)
+blacklistedROIs = [] # use np.arange(211,247) to remove subcortical areas
 blacklistWholeROIs = True # if True, all ROIs with blacklisted voxels are removed; if False, blacklisted voxels are removed but rest of the ROI kept, which affects size distribution
 windowLength = 80
 windowOverlap = 0
@@ -29,7 +29,7 @@ if len(blacklistedROIs) > 0:
     iniDataFolder = '/scratch/nbe/alex/private/janne/preprocessed_ini_data/'
 
 # path parths for saving
-pooledDataSavePath = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/spatial_consistency/pooled_spatial_consistency_data_for_fig_without_subcortical.pkl'
+pooledDataSavePath = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/spatial_consistency/pooled_spatial_consistency_data_for_fig_max_size.pkl'
 # distribution and visualization parameters
 nConsBins = 50
 sizeBinFactor = 1.2
@@ -49,6 +49,8 @@ if __name__=='__main__':
     stdNSingles = []
     meanSizes = []
     stdSizes = []
+    meanMaxSize = []
+    stdMaxSize = []
     if len(blacklistedROIs) > 0:
         nBlacklisted = []
         nModified = []
@@ -56,6 +58,7 @@ if __name__=='__main__':
     for i, (jobLabel,clusteringMethod) in enumerate(zip(jobLabels,clusteringMethods)):
         nROIs = []
         nSingles = []
+        maxSize = []
         blacklistCounter = 0
         modifiedCounter = 0
         for subjId in subjectIds:
@@ -108,6 +111,7 @@ if __name__=='__main__':
                     ROISizes[i].extend(ROISizesInLayer)
                     nROIs.append(len(ROISizesInLayer))
                     nSingles.append(np.sum(np.array(ROISizesInLayer) == 1))
+                    maxSize.append(np.amax(ROISizesInLayer))
         meanNROIs.append(np.mean(nROIs))
         stdNROIs.append(np.std(nROIs))
         meanNSingles.append(np.mean(nSingles))
@@ -115,12 +119,14 @@ if __name__=='__main__':
         sizes = np.array(ROISizes[i])
         meanSizes.append(sizes[sizes>1].mean())
         stdSizes.append(sizes[sizes>1].std())
+        meanMaxSize.append(np.mean(maxSize))
+        stdMaxSize.append(np.std(maxSize))
         if len(blacklistedROIs) > 0:
             nBlacklisted.append(blacklistCounter/(len(subjectIds)*len(runNumbers)*nWindows))
             nModified.append(modifiedCounter/(len(subjectIds)*len(runNumbers)*nWindows))
 
     f = open(pooledDataSavePath, 'wb')
-    pooledData = {'pooledConsistencies':pooledConsistencies,'ROISizes':ROISizes,'meanNROIs':meanNROIs,'stdNROIs':stdNROIs,'meanNSingles':meanNSingles,'stdNSingles':stdNSingles,'meanSizes':meanSizes,'stdSizes':stdSizes}
+    pooledData = {'pooledConsistencies':pooledConsistencies,'ROISizes':ROISizes,'meanNROIs':meanNROIs,'stdNROIs':stdNROIs,'meanNSingles':meanNSingles,'stdNSingles':stdNSingles,'meanSizes':meanSizes,'stdSizes':stdSizes, 'meanMaxSize':meanMaxSize, 'stdMaxSize':stdMaxSize}
     if len(blacklistedROIs) > 0:
         pooledData['nBlacklisted'] = nBlacklisted
         pooledData['nModified'] = nModified
