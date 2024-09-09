@@ -22,19 +22,22 @@ if len(blacklistedROIs) > 0:
     iniDataFolder = '/scratch/nbe/alex/private/janne/preprocessed_ini_data/'
 
 # path parths for saving
-pooledDataSavePath = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/spatial_consistency/pooled_spatial_consistency_data_filtered_multiplex.pkl'
+pooledDataSavePath = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/spatial_consistency/pooled_spatial_consistency_data_filtered_multiplex_max_size.pkl'
 
 if __name__=='__main__':
     pooledConsistencies = [[] for i in range(len(filteredJobLabels)*2 + 1)] # the list will contain the original multiplex, filtered multiplex and reference
     pooledROISizes = [[] for i in range(len(filteredJobLabels)*2 + 1)]
     nRefROIs = []
     nRefSingles = []
+    refMaxSizes = []
     meanNROIs = []
     stdNROIs = []
     meanNSingles = []
     stdNSingles = []
     meanSizes = []
     stdSizes = []
+    meanMaxSizes = []
+    stdMaxSizes = []
     totRefSizes = [[] for i in range(len(filteredJobLabels))]
 
     for i, filteredJobLabel in zip(np.arange(0, len(filteredJobLabels)*2, 2), filteredJobLabels): 
@@ -42,6 +45,8 @@ if __name__=='__main__':
         nSingles = []
         origNROIs = []
         origNSingles = []
+        maxSizes = []
+        origMaxSizes = []
         for subjId in subjectIds:
             for runNumber in runNumbers:
                 referencePath = consistencySaveStem + '/' + subjId + '/' + str(runNumber) + '/' + referenceJobLabel + '/' + str(nLayers) + '_layers' + '/spatial_consistency.pkl'
@@ -125,22 +130,28 @@ if __name__=='__main__':
                     totRefSizes[i].append(refNVoxels)
                     nVoxels = 0
                     index = 0
+                    maxSize = 0
                     pooledConsistencies[i+1].extend(consistencies)
                     pooledROISizes[i+1].extend(ROISizes)
                     origNROIs.append(len(ROISizes))
                     origNSingles.append(np.sum(np.array(ROISizes)==1))
+                    origMaxSizes.append(np.max(ROISizes))
                     while nVoxels <= refNVoxels:
                         pooledConsistencies[i].append(consistencies[index])
                         pooledROISizes[i].append(ROISizes[index])
                         nVoxels += ROISizes[index]
+                        if maxSize < ROISizes[index]:
+                            maxSize = ROISizes[index]
                         index += 1
                     nROIs.append(index-1)
                     nSingles.append(np.sum(np.array(ROISizes[0:index]) == 1))
+                    maxSizes.append(maxSize)
                     if i == len(filteredJobLabels)*2 - 2:
                         pooledConsistencies[-1].extend(refConsistencies) # the last element of the lists contains the consistency and ROI size of the reference parcellation
                         pooledROISizes[-1].extend(refROISizes)
                         nRefROIs.append(len(refROISizes))
                         nRefSingles.append(np.sum(np.array(refROISizes) == 1))
+                        refMaxSizes.append(np.max(refROISizes))
         meanNROIs.append(np.mean(nROIs))
         stdNROIs.append(np.std(nROIs))
         meanNSingles.append(np.mean(nSingles))
@@ -148,6 +159,8 @@ if __name__=='__main__':
         sizes = np.array(pooledROISizes[i])
         meanSizes.append(sizes[sizes>1].mean())
         stdSizes.append(sizes[sizes>1].std())
+        meanMaxSizes.append(np.mean(maxSizes))
+        stdMaxSizes.append(np.std(maxSizes))
         meanNROIs.append(np.mean(origNROIs))
         stdNROIs.append(np.std(origNROIs))
         meanNSingles.append(np.mean(origNSingles))
@@ -155,6 +168,8 @@ if __name__=='__main__':
         sizes = np.array(pooledROISizes[i+1])
         meanSizes.append(sizes[sizes>1].mean())
         stdSizes.append(sizes[sizes>1].std())        
+        meanMaxSizes.append(np.mean(origMaxSizes))
+        stdMaxSizes.append(np.std(origMaxSizes))
         if i == len(filteredJobLabels)*2 - 2:
            meanNROIs.append(np.mean(nRefROIs))
            stdNROIs.append(np.std(nRefROIs))
@@ -163,9 +178,11 @@ if __name__=='__main__':
            sizes = np.array(pooledROISizes[-1])
            meanSizes.append(sizes[sizes>1].mean())
            stdSizes.append(sizes[sizes>1].std())
+           meanMaxSizes.append(np.mean(refMaxSizes))
+           stdMaxSizes.append(np.std(refMaxSizes))
 
     f = open(pooledDataSavePath, 'wb')
-    pooledData = {'pooledConsistencies':pooledConsistencies,'ROISizes':pooledROISizes,'meanNROIs':meanNROIs,'stdNROIs':stdNROIs,'meanNSingles':meanNSingles,'stdNSingles':stdNSingles,'meanSizes':meanSizes,'stdSizes':stdSizes,'nRefVoxels':totRefSizes}
+    pooledData = {'pooledConsistencies':pooledConsistencies,'ROISizes':pooledROISizes,'meanNROIs':meanNROIs,'stdNROIs':stdNROIs,'meanNSingles':meanNSingles,'stdNSingles':stdNSingles,'meanSizes':meanSizes,'stdSizes':stdSizes,'nRefVoxels':totRefSizes,'meanMaxSize':meanMaxSizes,'stdMaxSize':stdMaxSizes}
     pickle.dump(pooledData, f)
     f.close()
 
