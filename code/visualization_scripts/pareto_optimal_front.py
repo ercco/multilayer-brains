@@ -180,7 +180,7 @@ def construct_pareto_optimal_front(consistency_data_frame, combined_array, n_tim
 
 consistency_save_path_base = '/m/nbe/scratch/alex/private/tarmo/article_runs/maxcorr/'
 pareto_optimal_front_save_path_base = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/pareto_optimization/pareto_optimal_front'
-figure_save_path_base = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/pareto_optimization/pareto_optimal_front_all_methods'
+figure_save_path_base = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/article_figs/pareto_optimization/pareto_optimal_front'
 
 subject_ids = ['b1k','d6i','e6x','i2p','i7c','m3s','m8f','n5n','n5s','n6z','o9e','p5n','p9u','q4c','r9j','t1u','t9n','v1i','v5b','y6g','z4t', 't9u', 'd3a', 'd4w', 'g3r']
 run_number = 2
@@ -197,6 +197,8 @@ craddock_data_threshold = 0.2
 
 methods = ['ReHo_seeds_weighted_mean_consistency_voxelwise_thresholding', 'ReHo_seeds_min_correlation_voxelwise_thresholding', 'craddock']
 
+colors = ['green','aqua','silver']
+
 front_per_window = False # if True, a separate Pareto-optimal front is calculated for each time window; otherwise one front is calculated per subject
 collapse_time = False # if True, ROIs from all windows are pooled before calculating the Pareto-optimal front
 if collapse_time:
@@ -206,14 +208,14 @@ visualize = True
 
 if collapse_time:
     n_time_windows = 0
-    figure_save_path = '{base}_collapsed.pdf'.format(base=figure_save_path_base)
-    full_figure_save_path = '{base_collapsed_full.pdf'.format(base=figure_save_path_base)
+    figure_save_path_base = '{base}_collapsed'.format(base=figure_save_path_base)
+    full_figure_save_path_base = '{base_collapsed_full'.format(base=figure_save_path_base)
 elif front_per_window:
-    figure_save_path = '{base}_per_window.pdf'.format(base=figure_save_path_base)
-    full_figure_save_path = '{base}_per_window_full.pdf'.format(base=figure_save_path_base)
+    figure_save_path_base = '{base}_per_window'.format(base=figure_save_path_base)
+    full_figure_save_path_base = '{base}_per_window_full'.format(base=figure_save_path_base)
 else:
-    figure_save_path = '{base}.pdf'.format(base=figure_save_path_base)
-    full_figure_save_path = '{base}_full.pdf'.format(base=figure_save_path_base)
+    figure_save_path_base = '{base}'.format(base=figure_save_path_base)
+    full_figure_save_path_base = '{base}_full'.format(base=figure_save_path_base)
 
 if calculate_pareto_optimal_front:
     pareto_optimal_front_all_methods = pd.DataFrame()
@@ -246,7 +248,6 @@ if calculate_pareto_optimal_front:
             pareto_optimal_front_save_path = pareto_optimal_front_save_path_base + '_{method}.pkl'.format(method=method)
         pareto_optimal_front.to_pickle(pareto_optimal_front_save_path)
 else: # assuming that the front has been calculated before and thus reading data
-    #import pdb; pdb.set_trace()
     pareto_optimal_front_all_methods = pd.DataFrame()
     for method in methods:
         if collapse_time:
@@ -287,37 +288,38 @@ if visualize:
     pareto_optimal_front_all_methods = pareto_optimal_front_all_methods.sort_values(['size_term', 'weighted_mean_consistency'])
     pareto_optimal_front_all_methods['threshold'] = pareto_optimal_front_all_methods['threshold'].astype(float)
     pareto_optimal_front_all_methods['time_window'] = pareto_optimal_front_all_methods['time_window'].astype(int)
-    fig = go.Figure()
-    for i, method in enumerate(methods):
+    #fig = go.Figure()
+    for i, (method, color) in enumerate(zip(methods, colors)):
+        figure_save_path = '{base}_{method}.pdf'.format(base=figure_save_path_base, method=method)
+        full_figure_save_path = '{base}_{method}.pdf'.format(base=full_figure_save_path_base, method=method)
+        fig = go.Figure()
         pareto_optimal_front = pareto_optimal_front_all_methods[(pareto_optimal_front_all_methods['method'] == method)]
         pareto_optimal_markers = pareto_optimal_markers_all_methods[(pareto_optimal_markers_all_methods['method'] == method)]
+        n_markers = np.unique(np.array(pareto_optimal_markers['subj_id'])).shape[0]
+        print('{method}: {n_markers} markers in pareto optimal front'.format(method=method, n_markers=n_markers))
         for j, subj_id in enumerate(pareto_optimal_front.subj_id.unique()):
             for k, time_window in enumerate(pareto_optimal_front.time_window.unique()):
                 subj_time_window_pareto_optimal_front = pareto_optimal_front[(pareto_optimal_front['subj_id'] == subj_id) & (pareto_optimal_front['time_window'] == time_window)]
                 subj_time_window_pareto_optimal_markers = pareto_optimal_markers[(pareto_optimal_markers['subj_id'] == subj_id) & (pareto_optimal_markers['time_window'] == time_window)]
                 if j == k == 0:
-                    fig.add_traces(go.Scatter(x=subj_time_window_pareto_optimal_front.size_term, y=subj_time_window_pareto_optimal_front.weighted_mean_consistency, mode='lines', line=dict(color=fig.layout['template']['layout']['colorway'][i], width=.5), legendgroup=method, name=method))
+                    #fig.add_traces(go.Scatter(x=subj_time_window_pareto_optimal_front.size_term, y=subj_time_window_pareto_optimal_front.weighted_mean_consistency, mode='lines', line=dict(color=fig.layout['template']['layout']['colorway'][i], width=.5), legendgroup=method, name=method))
+                    fig.add_traces(go.Scatter(x=subj_time_window_pareto_optimal_front.size_term, y=subj_time_window_pareto_optimal_front.weighted_mean_consistency, mode='lines', line=dict(color=color, width=.5), legendgroup=method, name=method))
                 else:
-                    fig.add_traces(go.Scatter(x=subj_time_window_pareto_optimal_front.size_term, y=subj_time_window_pareto_optimal_front.weighted_mean_consistency, mode='lines', line=dict(color=fig.layout['template']['layout']['colorway'][i], width=.5), legendgroup=method, name=method, showlegend=False))
-                fig.add_traces(go.Scatter(x=subj_time_window_pareto_optimal_markers.size_term, y=subj_time_window_pareto_optimal_markers.weighted_mean_consistency, mode='markers', marker_color=fig.layout['template']['layout']['colorway'][i], marker_size=7, showlegend=False))
-    fig.update_traces(marker={'opacity':1})
-    fig.update_traces(line={'width':1})
-    fig.update_layout(xaxis=dict(tick0=0, dtick=0.01,title='size term'), yaxis=dict(tick0=0, title='weighted mean consistency'))
-    fig.update_xaxes(showline=True, linecolor='black')
-    fig.update_yaxes(showline=True, linecolor='black')
-    #fig.update_xaxes(zeroline=True, zerolinewidth=1.5, zerolinecolor='black')
-    #fig.update_yaxes(zeroline=True, zerolinewidth=1.5, zerolinecolor='black')
-    fig.update_yaxes(range=[0,1])
-    fig.update_xaxes(ticks='outside', tickwidth=2)
-    fig.update_yaxes(ticks='outside', tickwidth=2)
-    fig.update_layout(plot_bgcolor='white')
-    fig.write_image(full_figure_save_path)
-    fig.update_layout(xaxis=dict(tick0=0.004, dtick=0.002))
-    fig.update_xaxes(range=[0.004, 0.014])
-    #fig.update_xaxes(zeroline=True, zerolinewidth=1.5, zerolinecolor='black')
-    #fig.update_yaxes(zeroline=True, zerolinewidth=1.5, zerolinecolor='black')
-    #fig.update_yaxes(showline=True, linecolor='black')
-    fig.write_image(figure_save_path)
+                    fig.add_traces(go.Scatter(x=subj_time_window_pareto_optimal_front.size_term, y=subj_time_window_pareto_optimal_front.weighted_mean_consistency, mode='lines', line=dict(color=color, width=.5), legendgroup=method, name=method, showlegend=False))
+                fig.add_traces(go.Scatter(x=subj_time_window_pareto_optimal_markers.size_term, y=subj_time_window_pareto_optimal_markers.weighted_mean_consistency, mode='markers', marker_color=color, marker_size=7, showlegend=False))
+        fig.update_traces(marker={'opacity':1})
+        fig.update_traces(line={'width':1})
+        fig.update_layout(xaxis=dict(tick0=0, dtick=0.01,title='size term'), yaxis=dict(tick0=0, title='weighted mean consistency'))
+        fig.update_xaxes(showline=True, linecolor='black')
+        fig.update_yaxes(showline=True, linecolor='black')
+        fig.update_yaxes(range=[0,1])
+        fig.update_xaxes(ticks='outside', tickwidth=2)
+        fig.update_yaxes(ticks='outside', tickwidth=2)
+        fig.update_layout(plot_bgcolor='white')
+        fig.write_image(full_figure_save_path)
+        fig.update_layout(xaxis=dict(tick0=0.004, dtick=0.002))
+        fig.update_xaxes(range=[0.004, 0.012])
+        fig.write_image(figure_save_path)
 
 
 
