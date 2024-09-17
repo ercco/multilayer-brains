@@ -1953,14 +1953,14 @@ def minCorr(allVoxelTs, voxelIndex, ROIVoxels):
     min_corr_value=min(newCorrelations)
     return min_corr_value
 
-def calculateSpatialConsistencyInNextWindow(consistencyData, imgdata, windowLength, windowOverlap=0, timelag=1, nCPUs=5):
+def calculateSpatialConsistencyInNextWindow(consistencyData, imgdata, windowLength, windowOverlap=0, timelag=1, nCPUs=5, removeSingleVoxels=False):
     """
     Calculates the spatial consistency using ROI definitions from time window t
     and data from time window t + timelag
     
     Parameters:
     -----------
-    voxelsInClusters: dict, where keys are time window indices and values dicts containing:
+    consistencyData: dict, where keys are time window indices and values dicts containing:
                           consistency_type: definition of spatial consistency to be used; so far, this is always 'pearson c' (mean Pearson correlation coefficient)
                           ftransform: f_transform_consistency given as a parameter
                           consistencies: dic where keys are tuples of voxel coordinates of each ROI and spatial consistencies of the ROIs
@@ -1972,6 +1972,7 @@ def calculateSpatialConsistencyInNextWindow(consistencyData, imgdata, windowLeng
     windowOverlap: int, overlap between consequtive time windows (in samples) (default: 0, no overlap)
     timelag: int, distance between the windows where ROI definitions are read and consistencies calculated (default: 1, consequtive windows)
     nCPUs: int, number of CPUs to be used for the parallel computing (default = 5)
+    removeSingleVoxels : bln, if True, ROIs containing only a single voxel are excluded from calculations (default: False)
     
     Returns:
     --------
@@ -1994,6 +1995,9 @@ def calculateSpatialConsistencyInNextWindow(consistencyData, imgdata, windowLeng
             offset = 0
             for ROI in ROIs:
                 s = consistencyData[windowIndex]['ROI_sizes'][ROI]
+                if excludeSingleVoxels:
+                    if s = 1:
+                        continue
                 for j, voxel in enumerate(ROI):
                     allVoxelTs[offset+j,:]=nextWindowData[voxel[0],voxel[1],voxel[2],:]
                 voxelIndices.append(np.arange(offset,offset+s))
