@@ -93,15 +93,17 @@ for jobLabel, clusteringMethod, color, alpha in zip(jobLabels, clusteringMethods
     relativeDifference = (np.array(presentWindowConsistencies) - np.array(nextWindowConsistencies)) / np.array(presentWindowConsistencies)
     meanRelativeDifference = np.mean(relativeDifference)
     stdRelativeDifference = np.std(relativeDifference)
+    relativeSummary = np.mean(absoluteDifference) / np.mean(presentWindowConsistencies)
     pooledPresent.append(presentWindowConsistencies)
     pooledNext.append(nextWindowConsistencies)
     presentWindowPercentiles.append(np.percentile(presentWindowConsistencies, [5, 95]))
     nextWindowPercentiles.append(np.percentile(nextWindowConsistencies, [5, 95]))
 
-    print('%s, mean absolute present - next: %f') % (jobLabel, meanAbsoluteDifference)
-    print('%s, std absolute present - next: %f') % (jobLabel, stdAbsoluteDifference)
-    print('%s, mean relative present - next: %f') % (jobLabel, meanRelativeDifference)
-    print('%s, std relative present - next: %f') % (jobLabel, stdRelativeDifference)
+    print('%s, mean absolute present - next: %.10f') % (jobLabel, meanAbsoluteDifference)
+    print('%s, std absolute present - next: %.10f') % (jobLabel, stdAbsoluteDifference)
+    print('%s, mean relative present - next: %.10f') % (jobLabel, meanRelativeDifference)
+    print('%s, std relative present - next: %.10f') % (jobLabel, stdRelativeDifference)
+    print('%s, relative summary measure: %.10f') % (jobLabel, relativeSummary)
 
     if visualize:
         if clusteringMethod == '':
