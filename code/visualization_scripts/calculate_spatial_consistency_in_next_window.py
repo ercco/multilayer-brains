@@ -20,12 +20,12 @@ niiDataFileName = '/detrended_maxCorr5comp.nii'
 consistencySaveStem = '/scratch/nbe/alex/private/tarmo/article_runs/maxcorr'
 netIdentificator = '2_layers/net'
 nLayers = 2
-jobLabels = ['ReHo_seeds_min_correlation_voxelwise_thresholding_03']#,'craddock','random_balls','ReHo_seeds_weighted_mean_consistency_voxelwise_thresholding_03_regularization-100','ReHo_seeds_min_correlation_voxelwise_thresholding_03'] # This label specifies the job submitted to Triton; there may be several jobs saved under each subject
-clusteringMethods = ['','']
+jobLabels = ['template_brainnetome','craddock','random_balls','ReHo_seeds_weighted_mean_consistency_voxelwise_thresholding_03_regularization-100','ReHo_seeds_min_correlation_voxelwise_thresholding_03'] # This label specifies the job submitted to Triton; there may be several jobs saved under each subject
+clusteringMethods = ['','','','','']
 # NOTE: before running the script, check that data paths, jobLabels, clusteringMethods, and savePath (specified further below) match your data
 
 # path parts for saving
-consistencyInNextWindowSaveStem = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/spatial_consistency/next_window/consistency_in_next_window'
+consistencyInNextWindowSaveStem = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/spatial_consistency/next_window/consistency_in_next_window_no_single_voxels'
 
 # time window parameters
 timewindow = 80 # This is the time window length used to construct the ROIs
@@ -34,6 +34,7 @@ overlap = 0 # This is the overlap between consequent time windows
 # parameters for calculating consistency
 timelag = 1
 nCPUs = 5
+excludeSingleVoxels = True
 
 # visualization parameters
 
@@ -55,7 +56,7 @@ if __name__ == '__main__':
         imgdata = img.get_fdata()
         if 'pearson c' in spatialConsistencyData[0]['consistency_type']:
             spatialConsistencyData[0]['consistency_type'] = 'pearson c' # this is a hack: before 2023-10-02, the consistency type was mistyped in calculation phase
-        nextWindowConsistencyData = cbc.calculateSpatialConsistencyInNextWindow(spatialConsistencyData, imgdata, timewindow, overlap, timelag, nCPUs)
+        nextWindowConsistencyData = cbc.calculateSpatialConsistencyInNextWindow(spatialConsistencyData, imgdata, timewindow, overlap, timelag, nCPUs, excludeSingleVoxels)
         if clusteringMethod == '':
             savePath = consistencyInNextWindowSaveStem + '_' + jobLabel + '_subject_' + subjId + '_run_' + str(runNumber) + '.pkl'
         else:

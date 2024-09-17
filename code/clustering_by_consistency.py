@@ -1996,7 +1996,7 @@ def calculateSpatialConsistencyInNextWindow(consistencyData, imgdata, windowLeng
             for ROI in ROIs:
                 s = consistencyData[windowIndex]['ROI_sizes'][ROI]
                 if excludeSingleVoxels:
-                    if s = 1:
+                    if s == 1:
                         continue
                 for j, voxel in enumerate(ROI):
                     allVoxelTs[offset+j,:]=nextWindowData[voxel[0],voxel[1],voxel[2],:]
