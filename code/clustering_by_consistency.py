@@ -1953,7 +1953,7 @@ def minCorr(allVoxelTs, voxelIndex, ROIVoxels):
     min_corr_value=min(newCorrelations)
     return min_corr_value
 
-def calculateSpatialConsistencyInNextWindow(consistencyData, imgdata, windowLength, windowOverlap=0, timelag=1, nCPUs=5, removeSingleVoxels=False):
+def calculateSpatialConsistencyInNextWindow(consistencyData, imgdata, windowLength, windowOverlap=0, timelag=1, nCPUs=5, excludeSingleVoxels=False):
     """
     Calculates the spatial consistency using ROI definitions from time window t
     and data from time window t + timelag
@@ -1972,7 +1972,7 @@ def calculateSpatialConsistencyInNextWindow(consistencyData, imgdata, windowLeng
     windowOverlap: int, overlap between consequtive time windows (in samples) (default: 0, no overlap)
     timelag: int, distance between the windows where ROI definitions are read and consistencies calculated (default: 1, consequtive windows)
     nCPUs: int, number of CPUs to be used for the parallel computing (default = 5)
-    removeSingleVoxels : bln, if True, ROIs containing only a single voxel are excluded from calculations (default: False)
+    excludeSingleVoxels : bln, if True, ROIs containing only a single voxel are excluded from calculations (default: False)
     
     Returns:
     --------
