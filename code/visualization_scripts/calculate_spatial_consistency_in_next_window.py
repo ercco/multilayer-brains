@@ -9,7 +9,7 @@ import pickle
 
 import clustering_by_consistency as cbc
 
-subjectIds = ['d4w','b1k','d3a','d4w','d6i','e6x','g3r','i2p','i7c','m3s','m8f','n5n','n5s','n6z','o9e','p5n','p9u','q4c','r9j','t1u','t9n','t9u','v1i','v5b','y6g','z4t']
+subjectIds = ['b1k','d3a','d4w','d6i','e6x','g3r','i2p','i7c','m3s','m8f','n5n','n5s','n6z','o9e','p5n','p9u','q4c','r9j','t1u','t9n','t9u','v1i','v5b','y6g','z4t']
 runNumbers = [2,3,4,5,6,7,8,9,10]
 
 combinedArray = list(itertools.product(subjectIds,runNumbers))

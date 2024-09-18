@@ -14,14 +14,14 @@ subjectIds = ['b1k','d3a','d4w','d6i','e6x','g3r','i2p','i7c','m3s','m8f','n5n',
 runNumbers = [2,3,4,5,6,7,8,9,10]
 
 # path parts for reading data
-consistencyInNextWindowSaveStem = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/spatial_consistency/next_window/consistency_in_next_window'
+consistencyInNextWindowSaveStem = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/spatial_consistency/next_window/consistency_in_next_window_no_single_voxels'
 jobLabels = ['template_brainnetome', 'random_balls', 'craddock','ReHo_seeds_weighted_mean_consistency_voxelwise_thresholding_03_regularization-100','ReHo_seeds_min_correlation_voxelwise_thresholding_03'] # This label specifies the job submitted to Triton; there may be several jobs saved under each subject
 clusteringMethods = ['','','','','']
 # NOTE: before running the script, check that data paths, jobLabels, clusteringMethods, and savePath (specified further below) match your data
 
 # path parts for saving
-consistencyInNextWindowFigDataSaveStem = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/spatial_consistency/next_window/pooled_data'
-consistencyInNextWindowFigureSaveStem = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/consistency_in_next_window'
+consistencyInNextWindowFigDataSaveStem = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/spatial_consistency/next_window/pooled_data_no_single_voxels'
+consistencyInNextWindowFigureSaveStem = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/consistency_in_next_window_no_single_voxels'
 
 # visualization parameters
 timelag = 1
@@ -31,7 +31,7 @@ colors = ['r','k','b','g','c']
 alphas = [0.9,0.5,0.9,0.9,0.9]
 excludeSingleVoxelROIs = True
 cmap = 'viridis'
-visualize = False
+visualize = True
 
 presentWindowPercentiles = []
 nextWindowPercentiles = []

@@ -1993,22 +1993,24 @@ def calculateSpatialConsistencyInNextWindow(consistencyData, imgdata, windowLeng
             allVoxelTs = np.zeros((nVoxels, windowLength))
             voxelIndices = []
             offset = 0
-            for ROI in ROIs:
+            ROIMask = np.ones(len(ROIs))
+            for r, ROI in enumerate(ROIs):
                 s = consistencyData[windowIndex]['ROI_sizes'][ROI]
                 if excludeSingleVoxels:
                     if s == 1:
-                        continue
+                        ROIMask[r] = 0
                 for j, voxel in enumerate(ROI):
                     allVoxelTs[offset+j,:]=nextWindowData[voxel[0],voxel[1],voxel[2],:]
                 voxelIndices.append(np.arange(offset,offset+s))
                 offset += s
             consistenciesInNextWindow = calculateSpatialConsistencyInParallel(voxelIndices,allVoxelTs,consistencyType,fTransform,nCPUs)
-            for ROI, consistencyInNextWindow in zip(ROIs, consistenciesInNextWindow):
-                consistencyInPresentWindow = consistencyData[windowIndex]['consistencies'][ROI]
-                if ROI in consistencies.keys():
-                    consistencies[ROI].append((consistencyInPresentWindow, consistencyInNextWindow))
-                else:
-                    consistencies[ROI] = [(consistencyInPresentWindow, consistencyInNextWindow)]
+            for ROI, consistencyInNextWindow, ROIm in zip(ROIs, consistenciesInNextWindow, ROIMask):
+                if ROIm:
+                    consistencyInPresentWindow = consistencyData[windowIndex]['consistencies'][ROI]
+                    if ROI in consistencies.keys():
+                        consistencies[ROI].append((consistencyInPresentWindow, consistencyInNextWindow))
+                    else:
+                        consistencies[ROI] = [(consistencyInPresentWindow, consistencyInNextWindow)]
     return consistencies
 
 def calculateCorrelationsInAndBetweenROIs(dataFiles,layersetwiseNetworkSavefolders,
