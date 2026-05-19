@@ -2416,12 +2416,13 @@ def growOptimizedROIs(cfg,verbal=True):
                           (default = False)
          nCPUs: int, number of CPUs used for parallel calculations (for finding the ReHo-based seeds) (default = 5)
          logging: bool, if True returns a dictionary with the weighted mean consistency and regularization at each clustering step (default=False)
+         returnMeanConsistency : bool, if True, the function calculates and returns the mean consistency across final ROIs (default = False)
     
     Returns:
     --------
     voxelLabels: nVoxels x 1 np.array, ROI labels of all voxels. Voxels that don't belong to any ROI have label -1.
     voxelCoordinates: list (len = nVoxels) of tuples (len = 3), coordinates (in voxels) of all voxels
-    meanConsistency: double, mean consistency of the final ROIs (#all ROIs)
+    meanConsistency: double, mean consistency of the final ROIs (#all ROIs) (only returned if returnMeanConsistency is True)
     """
     # Setting up: reading parameters
     if cfg['targetFunction'] == 'local weighted consistency': # this is a case for backward compatibility; the 'local weighted consistency' option should not be used
@@ -2458,6 +2459,10 @@ def growOptimizedROIs(cfg,verbal=True):
         includeNeighborhoods = cfg['includeNeighborhoodsInCentroids']
     else:
         includeNeighborhoods = False
+    if 'returnMeanConsistency' in cfg.keys():
+        returnMeanConsistency = cfg['returnMeanConsistency']
+    else:
+        returnMeanConsistency = False
     if cfg['ROICentroids'] == 'random':
         template = cfg['template']
         nROIs = cfg['nROIs']
@@ -2747,13 +2752,17 @@ def growOptimizedROIs(cfg,verbal=True):
         print('saving parameters of clustering at each step')
         terms_dict={'reg_terms':reg_array,'consist_terms':consist_array}
         return voxelLabels, voxelCoordinates,terms_dict
-
-    return voxelLabels, voxelCoordinates
+    
+    if returnMeanConsistency:
+        meanConsistency = np.mean(consistencies)
+        return voxelLabels, voxelCoordinates, meanConsistency
+    else:
+        return voxelLabels, voxelCoordinates
     
 def growOptimizedROIsInParallel(cfg, nIter=100, nCPUs=5):
     """
     Creates nIter sets of random seeds and creates optimized ROIs based on these
-    seeds, aftr which finds the best set of ROIs based on mean spatial consistency.
+    seeds, after which finds the best set of ROIs based on mean spatial consistency.
     
     Parameters:
     cfg: dict, contains:
@@ -2785,7 +2794,9 @@ def growOptimizedROIsInParallel(cfg, nIter=100, nCPUs=5):
         cfg['nROIs'] = 100
     #cfg['verbal'] = False
     print('Starting optimization')
-    
+   
+    cfg['returnMeanConsistency'] = True
+
     if False:
         paramSpace = [(cfg) for iterInd in np.arange(nIter)]
         pool = Pool(max_workers = nCPUs)
@@ -2802,7 +2813,7 @@ def growOptimizedROIsInParallel(cfg, nIter=100, nCPUs=5):
         voxelCoordinateList = []
         meanConsistencies = []
         for i in range(nIter):
-            voxelLabels,voxelCoordinates,meanConsistency = growOptimizedROIs(cfg)
+            voxelLabels,voxelCoordinates, meanConsistency = growOptimizedROIs(cfg)
             voxelLabelList.append(voxelLabels)
             voxelCoordinateList.append(voxelCoordinates)
             meanConsistencies.append(meanConsistency)
