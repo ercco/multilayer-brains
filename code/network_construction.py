@@ -214,9 +214,15 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
     
     # If event_time_stamps is specified, then they are used to compute start_times, end_times and k (and timewindow and overlap are ignored).
     # Otherwise, timewindow and overlap are used ot compute start_times, end_times and k.
+
     if event_time_stamps == None:
-        k = get_number_of_layers(imgdata.shape,timewindow,overlap)
-        start_times,end_times = get_start_and_end_times(k,timewindow,overlap)
+        if isinstance(timewindow, int):
+            k = get_number_of_layers(imgdata.shape,timewindow,overlap)
+            start_times,end_times = get_start_and_end_times(k,timewindow,overlap)
+        elif timewindow == 'full_run':
+            k = 1
+            start_times = [0]
+            end_times = [imgdata.shape[-1]]
     else:
         assert isinstance(event_time_stamps,list)
         k = len(event_time_stamps) + 1
@@ -332,6 +338,7 @@ def yield_clustered_multilayer_network_in_layersets(imgdata,layerset_size,timewi
                         voxel_labels, voxel_coordinates = cbc.growOptimizedROIsInParallel(cfg,n_consistency_iters,n_consistency_CPUs)
                     else:
                         voxel_labels, voxel_coordinates = cbc.growOptimizedROIs(cfg)
+
                     for ii, label in enumerate(voxel_labels):
                         voxels_in_clusters.setdefault(label,[]).append(voxel_coordinates[ii]) # voxels_in_clusters will contain label:[voxels with label] pairs; here, coordinates of each voxel are added to the correct list
                     if -1 in voxels_in_clusters:
