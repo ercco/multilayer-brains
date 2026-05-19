@@ -6,7 +6,7 @@ import pickle
 import os.path
 import matplotlib.pylab as plt
 import numpy as np
-from scipy.stats import binned_statistic, binned_statistic_2d
+from scipy.stats import binned_statistic, binned_statistic_2d, ttest_ind
 
 import clustering_by_consistency as cbc
 
@@ -15,7 +15,7 @@ runNumbers = [2,3,4,5,6,7,8,9,10]
 
 # path parts for reading data
 consistencyInNextWindowSaveStem = '/m/cs/scratch/networks/aokorhon/multilayer/outcome/spatial_consistency/next_window/consistency_in_next_window'
-jobLabels = ['ReHo_seeds_weighted_mean_consistency_voxelwise_thresholding_03_regularization-100']#['template_brainnetome', 'random_balls', 'craddock','ReHo_seeds_weighted_mean_consistency_voxelwise_thresholding_03_regularization-100','ReHo_seeds_min_correlation_voxelwise_thresholding_03'] # This label specifies the job submitted to Triton; there may be several jobs saved under each subject
+jobLabels = ['random_balls', 'template_brainnetome', 'craddock','ReHo_seeds_weighted_mean_consistency_voxelwise_thresholding_03_regularization-100','ReHo_seeds_min_correlation_voxelwise_thresholding_03'] # This label specifies the job submitted to Triton; there may be several jobs saved under each subject
 clusteringMethods = ['','','','','']
 # NOTE: before running the script, check that data paths, jobLabels, clusteringMethods, and savePath (specified further below) match your data
 
@@ -31,7 +31,9 @@ colors = ['r','k','b','g','c']
 alphas = [0.9,0.5,0.9,0.9,0.9]
 excludeSingleVoxelROIs = True
 cmap = 'viridis'
-visualize = True
+visualize = False
+calculatePValues = True # use this to calculate p-values of change compared to random ROIs
+randomJobLabel = 'random_balls'
 
 presentWindowPercentiles = []
 nextWindowPercentiles = []
@@ -40,6 +42,9 @@ binnedInfo = []
 distInfo = []
 pooledPresent = []
 pooledNext = []
+
+if calculatePValues:
+    assert jobLabels[0] == randomJobLabel, 'For calculating p-values, make sure that the first job label corresponds to that of random ROIs; otherwise, set calculatePValues to False'
 
 for jobLabel, clusteringMethod, color, alpha in zip(jobLabels, clusteringMethods, colors, alphas):
     if clusteringMethod == '':
@@ -104,6 +109,16 @@ for jobLabel, clusteringMethod, color, alpha in zip(jobLabels, clusteringMethods
     print('%s, mean relative present - next: %.10f') % (jobLabel, meanRelativeDifference)
     print('%s, std relative present - next: %.10f') % (jobLabel, stdRelativeDifference)
     print('%s, relative summary measure: %.10f') % (jobLabel, relativeSummary)
+
+    if calculatePValues and jobLabel == randomJobLabel:
+        referenceAbsoluteDifference = absoluteDifference
+        referenceRelativeDifference = relativeDifference
+    elif calculatePValues:
+        _, pAbsolute = ttest_ind(referenceAbsoluteDifference, absoluteDifference)
+        _, pRelative = ttest_ind(referenceRelativeDifference, relativeDifference)
+
+        print('%s, p-value (vs random ROIs) for absolute difference: %.10f') % (jobLabel, pAbsolute)
+        print('%s, p-value (vs random ROIs) for relative difference: %.10f') % (jobLabel, pRelative)
 
     if visualize:
         if clusteringMethod == '':
