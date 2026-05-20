@@ -267,6 +267,35 @@ def getRandomCentroids(nROIs, template):
     ROICentroids = np.array(random.sample(voxelCoordinates, nROIs))
     return ROICentroids
 
+def getConstrainedRandomCentroids(template):
+    """
+    Picks random seed voxels so that there is exactly one seed voxel per ROI defined
+    in the template. The number of selected seeds is defined by the number of ROIs in 
+    the template.
+
+    Parameters:
+    -----------
+    nROIs: int, number of centroids
+    template: 3D numpy array where each element corresponds to a voxel. The 
+              value of each voxel included to the analysis should be >0 (e.g.
+              the index of the ROI the voxel belongs to).
+              Voxels outside of ROIs (= outside of the gray matter) have value 0.
+                                                  
+    Returns:
+    --------
+    ROICentroids: nROIs x 3 np.array, coordinates (in voxels) of the random centroids
+    """
+    ROIIndices = list(np.unique(template))
+    ROIIndices.remove(0)
+    ROICentroids=[]
+
+    for ROIInd in ROIIndices:
+        ROIVoxels = np.transpose(np.array(np.where(template == ROIInd)))
+        ROICentroids.append(random.choice(ROIVoxels))
+    
+    ROICentroids=np.array(ROICentroids)
+    return ROICentroids
+
 def findNeighbors(voxelCoords, resolution=1, allVoxels=[], nNeighbors=6):
     """
     Returns the neighbors (the ones sharing a face) of a voxel.
@@ -2340,7 +2369,8 @@ def growOptimizedROIs(cfg,verbal=True):
     cfg: dict, contains:
          ROICentroids: nROIs x 3 np.array, coordinates of the centroids of the ROIs.
                   This can be a ROI centroid from an atlas but also any other
-                  (arbitrary) point. Set ROICentroids to 'random' to use random seeds or 'ReHo'
+                  (arbitrary) point. Set ROICentroids to 'random' to use random seeds, 'constrainedRandom'
+                  to use random seeds constrained spatially by a template or 'ReHo'
                   to use seeds selected by Regional Homogeneity or spatial consistency.
          names: list of strs, names of the ROIs, can be e.g. the anatomical name associated with
                   the centroid. Default = ''.
@@ -2390,8 +2420,8 @@ def growOptimizedROIs(cfg,verbal=True):
                    and 'meanConsistencyOverSizeStd' and 0 for 'spatialConsistency')
          template: 3D numpy array where each element corresponds to a voxel. The value of voxels included in the analysis should
                    be >0 (e.g. the index of the ROI the voxel belongs to). Voxels outside of ROIs (= outside of the gray matter) 
-                   have value 0. Template is used only if cfg[ROICentroids] == 'random' (default = None)
-         nROIs: int, number of ROIs. Only used if cfg[ROICentroids] == 'random' (default = 100)
+                   have value 0. Template is used if cfg[ROICentroids] == 'random', 'constrainedRandom' or 'ReHo' (and ReHoMeasure == 'ConstrainedReHo') (default = None)
+         nROIs: int, number of ROIs. Used if cfg[ROICentroids] == 'random', or 'ReHo' (and ReHoMeasure == 'ConstrainedReHo') (default = 100)
          verbal: bool, if verbal == True, more progress information is printed (default = True)
          nCorrelationsForThresholding: int, the number of strongest correlations considered if threshold == 'maximal-voxel-wise'
                                        (default = 5)
@@ -2464,6 +2494,9 @@ def growOptimizedROIs(cfg,verbal=True):
         template = cfg['template']
         nROIs = cfg['nROIs']
         ROICentroids = getRandomCentroids(nROIs,template)
+    elif cfg['ROICentroids'] == 'constrainedRandom':
+        template = cfg['template']
+        ROICentroids = getConstrainedRandomCentroids(template)
     elif cfg['ROICentroids'] == 'ReHo':
         if 'percentageMinCentroidDistance' in cfg.keys():
             percentageMinCentroidDistance = cfg['percentageMinCentroidDistance']
