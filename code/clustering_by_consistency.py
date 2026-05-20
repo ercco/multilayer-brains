@@ -264,10 +264,7 @@ def getRandomCentroids(nROIs, template):
     nVoxels = len(x)
     assert nVoxels >= nROIs,'Number of ROIs is larger than number of voxels, select a smaller number of ROIs'
     voxelCoordinates = np.concatenate((x,y,z)).reshape(3,nVoxels).T
-    indices = random.sample(np.arange(nVoxels),nROIs)
-    ROICentroids = np.zeros((nROIs,3),dtype=int)
-    for i, index in enumerate(indices):
-        ROICentroids[i,:] = voxelCoordinates[index,:]
+    ROICentroids = np.array(random.sample(voxelCoordinates, nROIs))
     return ROICentroids
 
 def findNeighbors(voxelCoords, resolution=1, allVoxels=[], nNeighbors=6):
