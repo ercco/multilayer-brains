@@ -7,7 +7,7 @@ import matplotlib.pylab as plt
 import pickle
 import os
 import sys
-from scipy.stats import binned_statistic
+from scipy.stats import binned_statistic, ttest_ind
 from databinner import binner
 
 import clustering_by_consistency as cbc
@@ -44,7 +44,10 @@ alphas = [0.9,0.5,0.9,0.9,0.9]
 excludeSizes = False
 excludeSingleVoxels = True
 stdAlpha = 0.05
-filteredMultiplex = True
+filteredMultiplex = False
+
+calculatePValues = True
+pValuePairs = [('ReHo_seeds_weighted_mean_consistency_voxelwise_thresholding_03_regularization-100', 'ReHo_seeds_weighted_mean_consistency_voxelwise_thresholding_03_regularization-100_full_run')]
 
 # TODO: add an option for removing the last ROI before calculating distributions (lists without the last ROI are defined so that sum(ROISizes) < nRefVoxels)
 
@@ -164,6 +167,16 @@ print 'STD ROI size:', stdSizes
 if len(blacklistedROIs) > 0:
     print 'On average N ROIs removed by blacklisting:', nBlacklisted
     print 'On average N ROIs modified by blacklisting:', nModified
+
+# calculating p-values for desired clustering method pairs
+if calculatePValues:
+    for pValuePair in pValuePairs:
+        assert pValuePair[0] in jobLabels, 'unknown job label in desired p-value pairs, please check'
+        assert pValuePair[1] in jobLabels, 'unknown job label in desired p-value pairs, please check'
+        ind1 = jobLabels.index(pValuePair[0])
+        ind2 = jobLabels.index(pValuePair[1])
+        _, p = ttest_ind(pooledConsistencies[ind1], pooledConsistencies[ind2])
+        print('p-value between %s and %s: %.10f') % (pValuePair[0], pValuePair[1], p) 
 
 # calculating and visualizing consistency distributions
 consFig = plt.figure(1)

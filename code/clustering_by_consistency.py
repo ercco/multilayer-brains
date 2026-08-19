@@ -2538,7 +2538,7 @@ def growOptimizedROIs(cfg,verbal=True):
             nCorrelationsForThresholding = cfg['nCorrelationsForThresholding']
         else:
             nCorrelationsForThresholding = 5
-    
+   
     nVoxels = len(voxelCoordinates)
     nROIs = len(ROICentroids)
     nTime = imgdata.shape[3]
@@ -2827,7 +2827,7 @@ def growOptimizedROIsInParallel(cfg, nIter=100, nCPUs=5):
    
     cfg['returnMeanConsistency'] = True
 
-    if False:
+    if True:
         paramSpace = [(cfg) for iterInd in np.arange(nIter)]
         pool = Pool(max_workers = nCPUs)
         results = list(pool.map(growOptimizedROIs,paramSpace,chunksize=1))
