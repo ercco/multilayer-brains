@@ -71,14 +71,16 @@ def t_tests_for_two_dict_lists(list1,list2,equal_var=False,map_ni_to_nli=False,n
 
 
 #################### Basic properties ######################################################################################################
-
-def find_number_and_weights_of_interlayer_edges(network):
+def find_number_and_weights_of_interlayer_edges(network,ROI_size_lower_limit=1):
     number_of_interlayer_edges = 0
     weights = []
     for edge in list(network.edges):
         if edge[2] != edge[3]:
-            number_of_interlayer_edges = number_of_interlayer_edges + 1
-            weights.append(edge[4])
+            ROI1 = edge[0]
+            ROI2 = edge[1]
+            if len(eval(ROI1)) >= ROI_size_lower_limit and len(eval(ROI2)) >= ROI_size_lower_limit:
+                number_of_interlayer_edges = number_of_interlayer_edges + 1
+                weights.append(edge[4])
     return number_of_interlayer_edges,weights
     
 def find_all_interlayer_information(network):
